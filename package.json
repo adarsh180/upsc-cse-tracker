@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "node .\\node_modules\\prisma\\build\\index.js generate",
-    "db:push": "node .\\node_modules\\prisma\\build\\index.js db push",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
