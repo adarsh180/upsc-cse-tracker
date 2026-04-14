@@ -1,0 +1,48 @@
+{
+  "name": "upsc-cse-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "node .\\node_modules\\prisma\\build\\index.js generate",
+    "db:push": "node .\\node_modules\\prisma\\build\\index.js db push",
+    "db:seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^2.0.0",
+    "@prisma/client": "^6.7.0",
+    "@tidbcloud/prisma-adapter": "^6.6.0",
+    "@tidbcloud/serverless": "^0.3.0",
+    "ai": "^6.0.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
+    "jose": "^6.0.11",
+    "katex": "^0.16.45",
+    "lucide-react": "^0.525.0",
+    "next": "^16.0.0",
+    "pdf-parse": "^1.1.1",
+    "prop-types": "15.8.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.15.4",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "swr": "^2.3.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/d3-shape": "^3.1.7",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "prisma": "^6.7.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

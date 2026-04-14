@@ -1,0 +1,152 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StudyNode {
+  id            String          @id @default(cuid())
+  title         String
+  slug          String          @unique
+  type          String
+  overview      String?         @db.Text
+  details       String?         @db.LongText
+  accent        String?
+  sortOrder     Int             @default(0)
+  parentId      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  parent        StudyNode?      @relation("StudyTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children      StudyNode[]     @relation("StudyTree")
+  studyLogs     StudyLog[]
+  testRecords   TestRecord[]
+  topicProgress TopicProgress?
+}
+
+model TopicProgress {
+  id             String     @id @default(cuid())
+  studyNodeId    String     @unique
+  checked        Boolean    @default(false)
+  checkedAt      DateTime?
+  revisionCount  Int        @default(0)
+  lastRevisedAt  DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  studyNode      StudyNode  @relation(fields: [studyNodeId], references: [id], onDelete: Cascade)
+}
+
+model StudyLog {
+  id           String     @id @default(cuid())
+  studyNodeId  String?
+  title        String
+  logDate      DateTime
+  hours        Float
+  topicCount   Int        @default(0)
+  completion   Int        @default(0)
+  focusScore   Int?
+  notes        String?    @db.Text
+  studyNode    StudyNode? @relation(fields: [studyNodeId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model DailyLog {
+  id              String   @id @default(cuid())
+  logDate         DateTime @unique
+  primaryFocus    String
+  totalHours      Float
+  wins            String?  @db.Text
+  blockers        String?  @db.Text
+  tomorrowPlan    String?  @db.Text
+  disciplineScore Int      @default(0)
+  completion      Int      @default(0)
+  questionsSolved Int      @default(0)
+  topicsStudied   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MoodEntry {
+  id          String   @id @default(cuid())
+  moodDate    DateTime @unique
+  label       String
+  energy      Int
+  focus       Int
+  stress      Int
+  confidence  Int
+  consistency Int
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TestRecord {
+  id                 String     @id @default(cuid())
+  studyNodeId        String?
+  title              String
+  examStage          String
+  testType           String
+  testDate           DateTime
+  totalMarks         Float
+  score              Float
+  correctQuestions   Int?
+  incorrectQuestions Int?
+  attemptedQuestions Int?
+  percentile         Float?
+  timeMinutes        Int?
+  notes              String?    @db.Text
+  studyNode          StudyNode? @relation(fields: [studyNodeId], references: [id], onDelete: SetNull)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model EssaySubmission {
+  id          String   @id @default(cuid())
+  title       String
+  prompt      String   @db.Text
+  content     String   @db.LongText
+  feedback    String?  @db.LongText
+  score       Float?
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiConversation {
+  id        String      @id @default(cuid())
+  title     String
+  persona   String      @default("guru")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AiMessage[]
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String
+  content        String         @db.LongText
+  attachmentText String?        @db.LongText
+  createdAt      DateTime       @default(now())
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model AiMemoryProfile {
+  id          String   @id @default(cuid())
+  persona     String   @unique
+  summaryText String   @db.LongText
+  summaryJson String?  @db.LongText
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
