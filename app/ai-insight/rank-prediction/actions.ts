@@ -49,6 +49,7 @@ export async function generateRankPredictionAction(): Promise<{
     performanceSummary: ctx.performanceSummary,
     moodSummary: ctx.moodSummary,
     benchmarkProfile: ctx.benchmarkProfile,
+    executionSummary: ctx.executionSummary,
     latestEssay: ctx.latestEssay,
     strictnessLevel: ctx.strictnessLevel,
     recentTests: ctx.recentTests?.slice(0, 10) ?? [],

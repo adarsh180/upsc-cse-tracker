@@ -33,6 +33,7 @@ model StudyNode {
   studyLogs     StudyLog[]
   testRecords   TestRecord[]
   topicProgress TopicProgress?
+  agentTasks    AgentTask[]
 }
 
 model TopicProgress {
@@ -149,4 +150,56 @@ model AiMemoryProfile {
   summaryJson String?  @db.LongText
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model AgentMission {
+  id                  String      @id @default(cuid())
+  title               String
+  goal                String?     @db.Text
+  mode                String      @default("MISSION_CONTROL")
+  status              String      @default("READY")
+  summary             String?     @db.LongText
+  executionWindow     String?
+  urgency             String?
+  plannerNotes        String?     @db.LongText
+  risksJson           String?     @db.LongText
+  followUpsJson       String?     @db.LongText
+  whyNowJson          String?     @db.LongText
+  todayPlanJson       String?     @db.LongText
+  dailyLogDraftJson   String?     @db.LongText
+  contextSnapshotJson String?     @db.LongText
+  model               String?
+  launchedAt          DateTime    @default(now())
+  lastActivatedAt     DateTime?
+  appliedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  tasks               AgentTask[]
+}
+
+model AgentTask {
+  id                String        @id @default(cuid())
+  missionId         String
+  linkedStudyNodeId String?
+  title             String
+  detail            String?       @db.Text
+  rationale         String?       @db.Text
+  taskType          String        @default("TASK")
+  status            String        @default("TODO")
+  priority          String        @default("MEDIUM")
+  energyBand        String?
+  source            String        @default("AI")
+  checklistJson     String?       @db.LongText
+  dueLabel          String?
+  estimatedMinutes  Int?
+  scheduledFor      DateTime?
+  orderIndex        Int           @default(0)
+  completionNotes   String?       @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  mission           AgentMission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  linkedStudyNode   StudyNode?    @relation(fields: [linkedStudyNodeId], references: [id], onDelete: SetNull)
+
+  @@index([missionId, status, orderIndex])
 }

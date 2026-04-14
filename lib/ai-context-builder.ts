@@ -111,6 +111,24 @@ type BaseUPSCContext = {
     topRevised: { topic: string; chapter: string | null; count: number }[];
     leastRevised: { topic: string; chapter: string | null; count: number }[];
   };
+  executionSummary: {
+    missionsLaunched: number;
+    activeMissions: number;
+    missionsCompleted: number;
+    tasksCreated: number;
+    tasksCompleted: number;
+    tasksSkipped: number;
+    tasksInProgress: number;
+    taskCompletionRate: number;
+    taskSkipRate: number;
+    aiTaskCount: number;
+    manualTaskCount: number;
+    strongestExecutionTypes: { type: string; completed: number; total: number; completionRate: number }[];
+    weakestExecutionTypes: { type: string; completed: number; total: number; completionRate: number }[];
+    repeatedSkipSignals: string[];
+    missionPatternSignals: string[];
+    currentBacklogHighlights: string[];
+  };
   memory: {
     summaryText: string;
     recurringStrengths: string[];
@@ -229,6 +247,114 @@ function extractConversationThemes(messages: { content: string }[]) {
     .map((theme) => theme.key);
 }
 
+function deriveExecutionSummary(
+  missions: Array<{ status: string }>,
+  agentTasks: Array<{
+    status: string;
+    source: string;
+    taskType: string;
+    priority: string;
+    title: string;
+    linkedStudyNode: { title: string } | null;
+  }>,
+) {
+  const tasksCompleted = agentTasks.filter((task) => task.status === "DONE");
+  const tasksSkipped = agentTasks.filter((task) => task.status === "SKIPPED");
+  const tasksInProgress = agentTasks.filter((task) => task.status === "IN_PROGRESS");
+  const tasksCreated = agentTasks.length;
+  const aiTaskCount = agentTasks.filter((task) => task.source === "AI").length;
+  const manualTaskCount = agentTasks.filter((task) => task.source === "MANUAL").length;
+  const taskCompletionRate =
+    tasksCreated > 0 ? Number(((tasksCompleted.length / tasksCreated) * 100).toFixed(1)) : 0;
+  const taskSkipRate =
+    tasksCreated > 0 ? Number(((tasksSkipped.length / tasksCreated) * 100).toFixed(1)) : 0;
+
+  const taskTypeStats = Object.entries(
+    agentTasks.reduce<Record<string, { completed: number; total: number }>>((acc, task) => {
+      const key = task.taskType || "TASK";
+      const current = acc[key] ?? { completed: 0, total: 0 };
+      current.total += 1;
+      if (task.status === "DONE") current.completed += 1;
+      acc[key] = current;
+      return acc;
+    }, {}),
+  ).map(([type, stats]) => ({
+    type,
+    completed: stats.completed,
+    total: stats.total,
+    completionRate: stats.total > 0 ? Number(((stats.completed / stats.total) * 100).toFixed(1)) : 0,
+  }));
+
+  const strongestExecutionTypes = [...taskTypeStats]
+    .filter((item) => item.total >= 2)
+    .sort((a, b) => b.completionRate - a.completionRate || b.total - a.total)
+    .slice(0, 3);
+
+  const weakestExecutionTypes = [...taskTypeStats]
+    .filter((item) => item.total >= 2)
+    .sort((a, b) => a.completionRate - b.completionRate || b.total - a.total)
+    .slice(0, 3);
+
+  const repeatedSkipSignals = Object.entries(
+    agentTasks.reduce<Record<string, number>>((acc, task) => {
+      if (task.status !== "SKIPPED") return acc;
+      const key = task.linkedStudyNode?.title ?? task.taskType;
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([label, count]) => `${label} has been skipped ${count} times in tracked execution history`);
+
+  const currentBacklogHighlights = agentTasks
+    .filter((task) => task.status === "TODO" || task.status === "IN_PROGRESS")
+    .slice(0, 5)
+    .map((task) => {
+      const label = task.linkedStudyNode?.title ?? task.taskType;
+      return `${task.title} (${label}, ${task.priority.toLowerCase()} priority)`;
+    });
+
+  const missionPatternSignals = [
+    ...(missions.length > 0 ? [`${missions.length} missions have been launched through Mission Control`] : []),
+    ...(missions.filter((mission) => mission.status === "COMPLETED").length > 0
+      ? [`${missions.filter((mission) => mission.status === "COMPLETED").length} missions have been fully completed`] : []),
+    ...(taskCompletionRate >= 65
+      ? [`Execution follow-through is decent at ${taskCompletionRate}% task completion`] : []),
+    ...(taskCompletionRate > 0 && taskCompletionRate < 45
+      ? [`Execution follow-through is weak at only ${taskCompletionRate}% task completion`] : []),
+    ...(taskSkipRate >= 25
+      ? [`Skip rate is elevated at ${taskSkipRate}% and indicates over-planning or poor task fit`] : []),
+    ...(manualTaskCount > aiTaskCount && tasksCreated >= 6
+      ? ["Manual todo creation is outpacing AI task reliance, suggesting stronger self-direction than agent compliance"] : []),
+    ...(aiTaskCount > manualTaskCount && tasksCreated >= 6
+      ? ["AI-generated task load is heavier than manual planning, so execution quality matters more than idea generation"] : []),
+  ].slice(0, 6);
+
+  return {
+    missionsLaunched: missions.length,
+    activeMissions: missions.filter(
+      (mission) =>
+        mission.status === "ACTIVE" || mission.status === "READY" || mission.status === "APPLIED",
+    ).length,
+    missionsCompleted: missions.filter((mission) => mission.status === "COMPLETED").length,
+    tasksCreated,
+    tasksCompleted: tasksCompleted.length,
+    tasksSkipped: tasksSkipped.length,
+    tasksInProgress: tasksInProgress.length,
+    taskCompletionRate,
+    taskSkipRate,
+    aiTaskCount,
+    manualTaskCount,
+    strongestExecutionTypes,
+    weakestExecutionTypes,
+    repeatedSkipSignals,
+    missionPatternSignals,
+    currentBacklogHighlights,
+  };
+}
+
 function deriveMemoryPayload(
   context: Omit<BaseUPSCContext, "memory">,
   recentUserMessages: { content: string }[],
@@ -259,6 +385,12 @@ function deriveMemoryPayload(
       : []),
     ...(context.moodSummary.avgStress >= 7
       ? [`Average stress is elevated at ${context.moodSummary.avgStress}/10`] : []),
+    ...(context.executionSummary.taskCompletionRate > 0 &&
+    context.executionSummary.taskCompletionRate < 45
+      ? [`Tracked task completion rate is only ${context.executionSummary.taskCompletionRate}%`] : []),
+    ...(context.executionSummary.taskSkipRate >= 25
+      ? [`Task skip rate is high at ${context.executionSummary.taskSkipRate}%`] : []),
+    ...context.executionSummary.repeatedSkipSignals,
     ...weakPapers,
   ].slice(0, 6);
 
@@ -275,6 +407,11 @@ function deriveMemoryPayload(
       ? ["Recent tests are softer than the long-run average and need immediate review"] : []),
     ...(context.recentDailyLogs.slice(0, 5).some((log) => (log.blockers ?? "").length > 0)
       ? ["Daily blockers are being logged and should be cross-examined, not ignored"] : []),
+    ...(context.executionSummary.strongestExecutionTypes[0]
+      ? [`Best execution follow-through is on ${context.executionSummary.strongestExecutionTypes[0].type.toLowerCase()} tasks at ${context.executionSummary.strongestExecutionTypes[0].completionRate}% completion`] : []),
+    ...(context.executionSummary.weakestExecutionTypes[0] &&
+    context.executionSummary.weakestExecutionTypes[0].completionRate <= 40
+      ? [`${context.executionSummary.weakestExecutionTypes[0].type} tasks are repeatedly under-executed at ${context.executionSummary.weakestExecutionTypes[0].completionRate}% completion`] : []),
   ].slice(0, 6);
 
   const mentorPriorities = [
@@ -286,6 +423,9 @@ function deriveMemoryPayload(
     context.latestEssay?.score && context.latestEssay.score < context.benchmarkProfile.essayTarget
       ? `Essay quality needs work because the latest score is ${context.latestEssay.score}`
       : "Protect answer-writing and essay structure while building prelims safety",
+    ...(context.executionSummary.currentBacklogHighlights[0]
+      ? [`Force execution on the current backlog starting with ${context.executionSummary.currentBacklogHighlights[0]}`]
+      : []),
   ].slice(0, 4);
 
   const recentConversationThemes = extractConversationThemes(recentUserMessages);
@@ -293,6 +433,7 @@ function deriveMemoryPayload(
   const summaryText = [
     `Adarsh Tiwari is on his 3rd UPSC CSE attempt targeting IAS specifically and aiming for a top-rank outcome in 2027.`,
     `The mentor currently tracks ${context.performanceSummary.totalLoggedHours.toFixed(1)} logged study hours, ${context.testSummary.testsTaken} tests, ${context.recentMoodEntries.length} recent mood entries, and ${context.recentDailyLogs.length} recent daily logs.`,
+    `Mission execution history includes ${context.executionSummary.missionsLaunched} launched missions, ${context.executionSummary.tasksCreated} tracked tasks, ${context.executionSummary.taskCompletionRate}% completion and ${context.executionSummary.taskSkipRate}% skip rate.`,
     `The strongest study zones right now are ${strongPapers.join(" and ") || "not yet clearly visible"}.`,
     `The weakest live signals are ${recurringWeaknesses.slice(0, 3).join("; ") || "insufficient evidence due to missing logs"}.`,
     `Recent behavioral pattern signals: ${behavioralPatterns.slice(0, 3).join("; ") || "not enough durable pattern evidence yet"}.`,
@@ -307,6 +448,8 @@ function deriveMemoryPayload(
         ? [`Average focus is healthy at ${context.moodSummary.avgFocus}/10`] : []),
       ...(context.testSummary.negativeMarkingAccuracy >= 80
         ? [`Negative marking accuracy is disciplined at ${context.testSummary.negativeMarkingAccuracy}%`] : []),
+      ...(context.executionSummary.taskCompletionRate >= 65
+        ? [`Task completion follow-through is solid at ${context.executionSummary.taskCompletionRate}%`] : []),
     ].slice(0, 5),
     recurringWeaknesses,
     behavioralPatterns,
@@ -319,6 +462,7 @@ function deriveMemoryPayload(
       "Test records and negative marking data",
       "Essay submissions and score history",
       "Paper-wise completion derived from study logs",
+      "Mission history and todo execution",
       "Conversation history",
       "Uploaded PDF text",
     ],
@@ -367,6 +511,32 @@ async function buildBaseUPSCContext() {
     topRevised,
     leastRevised,
   };
+  const [missions, agentTasks] = await Promise.all([
+    db.agentMission.findMany({
+      orderBy: { launchedAt: "desc" },
+      take: 40,
+      select: {
+        status: true,
+      },
+    }),
+    db.agentTask.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 250,
+      select: {
+        status: true,
+        source: true,
+        taskType: true,
+        priority: true,
+        title: true,
+        linkedStudyNode: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    }),
+  ]);
+  const executionSummary = deriveExecutionSummary(missions, agentTasks);
   // ──────────────────────────────────────────────────
 
   const activeDaysLast7 = dailyLogs.filter((log) => {
@@ -525,6 +695,7 @@ async function buildBaseUPSCContext() {
       essayTarget: 120,
     },
     revisionSummary,
+    executionSummary,
   };
 }
 
@@ -659,7 +830,7 @@ Current strictness level: ${context.strictnessLevel}
 ${strictnessBlocks[context.strictnessLevel]}
 
 What you know in real time:
-1. Live tracker data from study logs, daily goals, mood entries, tests, essays, derived paper completion and uploaded PDFs
+1. Live tracker data from study logs, daily goals, mood entries, tests, essays, revision counts, mission launches, todo execution, derived paper completion and uploaded PDFs
 2. Stored memory profile from recurring strengths, weaknesses, behavioral patterns and prior chat themes
 3. Active chat history from the current and past Guru conversations
 
@@ -674,6 +845,7 @@ Inviolable rules:
 8. Use days-to-prelims and days-to-mains urgency in scheduling advice.
 9. When discussing performance, mention the metric or source you used.
 10. Do not pretend to know live topper data or fresh exam trends unless those are explicitly present in the supplied context.
+11. Treat repeated skipped tasks, weak task completion rates and backlog accumulation as execution-pattern evidence, not as isolated events.
 
 ${modeBlock}`;
 }

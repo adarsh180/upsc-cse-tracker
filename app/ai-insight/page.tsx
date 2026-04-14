@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BrainCircuit, PenSquare, ScanSearch, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, BrainCircuit, ListTodo, PenSquare, ScanSearch, Sparkles, Target, Trophy } from "lucide-react";
 
 import { MetricCard, PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
@@ -65,7 +65,7 @@ export default async function AIInsightPage() {
         </Link>
 
         {/* Hub grid — other 3 tools */}
-        <div className="ai-hub-grid">
+        <div className="ai-hub-grid ai-hub-grid-4">
           <Link href="/ai-insight/guru" className="glass panel spotlight-card card-link">
             <div className="pill">
               <BrainCircuit size={14} />
@@ -125,7 +125,50 @@ export default async function AIInsightPage() {
               Start essay review <ArrowRight size={16} />
             </div>
           </Link>
+
+          <Link href="/mission-control" className="glass panel spotlight-card card-link">
+            <div className="pill">
+              <Target size={14} />
+              Agentic planning
+            </div>
+            <div className="display" style={{ fontSize: "2.2rem", marginTop: 18 }}>Mission Control</div>
+            <p className="muted" style={{ marginTop: 12, lineHeight: 1.85 }}>
+              A manual-launch planning agent that reads live tracker data, writes a strict execution mission,
+              drafts your daily command and sends tasks into the Todo board.
+            </p>
+            <div className="metric-stack" style={{ marginTop: 20 }}>
+              <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
+                <div className="eyebrow" style={{ color: "var(--text-muted)" }}>Control</div>
+                <div style={{ marginTop: 10, fontWeight: 800 }}>It only launches when you explicitly ask for it.</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, fontWeight: 800 }}>
+              Launch mission <ArrowRight size={16} />
+            </div>
+          </Link>
         </div>
+
+        <Link href="/todo" className="glass panel card-link">
+          <div className="panel-title-row">
+            <div>
+              <div className="pill">
+                <ListTodo size={14} />
+                Todo execution
+              </div>
+              <div className="display" style={{ fontSize: "2rem", marginTop: 14 }}>Mission Todo Board</div>
+              <p className="muted" style={{ marginTop: 10, lineHeight: 1.82, maxWidth: 760 }}>
+                The execution surface for every launched mission. Start, complete or skip agent-created tasks without
+                turning the rest of the app into an always-on AI workflow.
+              </p>
+            </div>
+            <div className="pill">
+              Manual execution only
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 20, fontWeight: 800 }}>
+            Open todo board <ArrowRight size={16} />
+          </div>
+        </Link>
 
         <section className="glass panel glass-strong">
           <div className="panel-title-row">

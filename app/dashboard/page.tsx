@@ -318,6 +318,30 @@ export default async function DashboardPage() {
             </div>
           </article>
 
+          <article className="glass panel span-12 spotlight-card" style={{ background: "linear-gradient(145deg, hsla(218,84%,62%,0.1), hsla(38,72%,58%,0.08))" }}>
+            <div className="panel-title-row">
+              <div>
+                <div className="pill">
+                  <BrainCircuit size={14} />
+                  Opt-in agentic layer
+                </div>
+                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>Mission Control and Todo Board</div>
+                <p className="muted" style={{ lineHeight: 1.82, marginTop: 10, maxWidth: 780 }}>
+                  Launch a planning agent only when you want a serious intervention. It reads your live data,
+                  builds a strict mission, drafts your daily command, and turns the plan into database-backed todos.
+                </p>
+              </div>
+              <div className="metric-stack" style={{ minWidth: 240 }}>
+                <Link href="/mission-control" className="button" style={{ justifyContent: "space-between" }}>
+                  Open Mission Control <ArrowRight size={16} />
+                </Link>
+                <Link href="/todo" className="button-secondary" style={{ justifyContent: "space-between" }}>
+                  Open Todo Board <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+          </article>
+
           <article className="glass panel spotlight-card" style={{ gridColumn: "span 12", background: "linear-gradient(145deg, hsla(38, 72%, 58%, 0.12), hsla(352, 52%, 54%, 0.05))" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
               <div>

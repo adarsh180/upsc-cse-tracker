@@ -5,6 +5,7 @@ import {
   BrainCircuit,
   ClipboardList,
   Compass,
+  ListTodo,
   FileText,
   Goal,
   HeartPulse,
@@ -27,6 +28,8 @@ export const navGroups = [
       { href: "/tests", label: "Test Tracker", icon: ClipboardList, accent: "var(--physics)" },
       { href: "/performance", label: "Performance", icon: Activity, accent: "var(--lotus-bright)" },
       { href: "/mood", label: "Mood Tracker", icon: HeartPulse, accent: "var(--saffron)" },
+      { href: "/mission-control", label: "Mission Control", icon: BrainCircuit, accent: "var(--gold-bright)" },
+      { href: "/todo", label: "Todo Board", icon: ListTodo, accent: "var(--botany)" },
     ],
   },
   {

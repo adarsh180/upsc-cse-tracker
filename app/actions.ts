@@ -6,10 +6,17 @@ import { redirect } from "next/navigation";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, requireSession } from "@/lib/auth";
 import { refreshGuruMemoryProfile } from "@/lib/ai-context-builder";
 import { db } from "@/lib/db";
 import { getDashboardSummary } from "@/lib/dashboard";
+import {
+  activateMission,
+  applyMissionDailyLog,
+  createManualTodoTask,
+  createAgentMission,
+  updateAgentTaskStatus,
+} from "@/lib/mission-control";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
 import { slugify } from "@/lib/utils";
 
@@ -37,6 +44,8 @@ function refreshCorePages(pathname?: string) {
   revalidatePath("/performance");
   revalidatePath("/mood");
   revalidatePath("/ai-insight");
+  revalidatePath("/mission-control");
+  revalidatePath("/todo");
   revalidatePath("/");
 
   if (pathname) {
@@ -492,4 +501,66 @@ ${content}`);
   });
 
   refreshCorePages("/ai-insight");
+}
+
+export async function launchMissionControlAction(formData: FormData) {
+  await requireSession();
+  const goal = String(formData.get("goal") ?? "").trim();
+
+  await createAgentMission(goal);
+  refreshCorePages("/mission-control");
+}
+
+export async function activateMissionAction(formData: FormData) {
+  await requireSession();
+  const missionId = String(formData.get("missionId") ?? "").trim();
+  if (!missionId) return;
+
+  await activateMission(missionId);
+  refreshCorePages("/mission-control");
+}
+
+export async function applyMissionDailyLogAction(formData: FormData) {
+  await requireSession();
+  const missionId = String(formData.get("missionId") ?? "").trim();
+  if (!missionId) return;
+
+  await applyMissionDailyLog(missionId);
+  refreshCorePages("/goals");
+}
+
+export async function updateMissionTaskStatusAction(formData: FormData) {
+  await requireSession();
+  const taskId = String(formData.get("taskId") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+
+  if (!taskId || !["TODO", "IN_PROGRESS", "DONE", "SKIPPED"].includes(status)) {
+    return;
+  }
+
+  await updateAgentTaskStatus(
+    taskId,
+    status as "TODO" | "IN_PROGRESS" | "DONE" | "SKIPPED",
+  );
+  refreshCorePages("/todo");
+}
+
+export async function createManualTodoTaskAction(formData: FormData) {
+  await requireSession();
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+
+  await createManualTodoTask({
+    title,
+    detail: String(formData.get("detail") ?? "").trim(),
+    taskType: String(formData.get("taskType") ?? "PLANNING").trim() || "PLANNING",
+    priority: String(formData.get("priority") ?? "MEDIUM").trim() || "MEDIUM",
+    energyBand: String(formData.get("energyBand") ?? "MEDIUM").trim() || "MEDIUM",
+    estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 0) || null,
+    dueLabel: String(formData.get("dueLabel") ?? "").trim() || "This week",
+    linkedStudyNodeId: String(formData.get("linkedStudyNodeId") ?? "").trim() || null,
+  });
+
+  refreshCorePages("/todo");
 }

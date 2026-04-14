@@ -684,10 +684,611 @@ h3 {
   gap: 18px;
 }
 
+.ai-hub-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .ai-split {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   gap: 18px;
+}
+
+.mission-launch-card {
+  background:
+    radial-gradient(circle at 14% 18%, hsla(42 90% 70% / 0.14), transparent 28%),
+    radial-gradient(circle at 82% 10%, hsla(218 84% 62% / 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+}
+
+.mission-hero-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.mission-hero-title {
+  font-size: clamp(2.2rem, 4.4vw, 3.4rem);
+  margin-top: 18px;
+  line-height: 1.02;
+}
+
+.mission-hero-copy {
+  margin-top: 12px;
+  max-width: 760px;
+  line-height: 1.85;
+}
+
+.mission-value-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.mission-value-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mission-value-card strong {
+  font-size: 14px;
+}
+
+.mission-value-card span {
+  color: var(--text-muted);
+  line-height: 1.65;
+  font-size: 12px;
+}
+
+.mission-launch-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.mission-launch-form-hero {
+  margin-top: 0;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.02);
+}
+
+.mission-launch-form-head {
+  display: grid;
+  gap: 6px;
+}
+
+.mission-launch-textarea {
+  min-height: 160px;
+}
+
+.mission-launch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mission-ops-card {
+  align-content: start;
+}
+
+.mission-ops-note {
+  margin-top: 14px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.mission-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mission-stat-cell {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mission-stat-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gold-bright);
+}
+
+.mission-stat-value {
+  font-size: 2rem;
+  margin-top: 14px;
+}
+
+.mission-stat-label {
+  margin-top: 6px;
+  line-height: 1.6;
+}
+
+.mission-active-card {
+  background:
+    radial-gradient(circle at 90% 18%, hsla(142 60% 48% / 0.08), transparent 26%),
+    radial-gradient(circle at 18% 80%, hsla(218 84% 62% / 0.07), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.035));
+}
+
+.mission-summary-copy {
+  max-width: 840px;
+  margin-top: 12px;
+  line-height: 1.85;
+}
+
+.mission-badge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.mission-active-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.mission-active-column {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.mission-section-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+}
+
+.mission-chip-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.mission-chip-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  line-height: 1.7;
+}
+
+.mission-daily-command,
+.mission-task-preview {
+  margin-top: 4px;
+}
+
+.mission-command-shell {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mission-command-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.mission-command-row span {
+  color: var(--text-muted);
+}
+
+.mission-command-row strong {
+  text-align: right;
+}
+
+.mission-command-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  line-height: 1.7;
+}
+
+.mission-command-note-soft {
+  color: var(--text-secondary);
+}
+
+.mission-action-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.mission-full-btn {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.mission-callout {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mission-callout.danger {
+  border-color: rgba(255, 80, 80, 0.22);
+  background: rgba(255, 80, 80, 0.05);
+}
+
+.mission-list {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.mission-task-grid,
+.mission-history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mission-task-card,
+.mission-history-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mission-task-top,
+.mission-history-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mission-task-title,
+.mission-history-title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.mission-task-detail,
+.mission-history-copy {
+  line-height: 1.75;
+}
+
+.mission-task-meta,
+.mission-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mission-empty-card {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.mission-empty-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: radial-gradient(circle, hsla(38 72% 58% / 0.14), transparent 72%);
+  filter: blur(2px);
+}
+
+.todo-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.todo-composer-card {
+  background:
+    radial-gradient(circle at 18% 12%, hsla(38 72% 58% / 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.03));
+}
+
+.todo-composer-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.todo-composer-textarea {
+  min-height: 130px;
+}
+
+.todo-composer-submit {
+  width: 100%;
+}
+
+.todo-summary-card {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.todo-summary-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.todo-summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.todo-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.todo-stat-block {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.todo-stat-block span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.todo-stat-block strong {
+  font-size: 1.9rem;
+  font-family: var(--font-display), serif;
+}
+
+.todo-column-card {
+  align-content: start;
+  min-height: 420px;
+}
+
+.todo-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.todo-column-count {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.todo-column-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.todo-task-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.02);
+  transition:
+    transform 180ms var(--ease-smooth),
+    opacity 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    background 180ms var(--ease-out);
+  will-change: transform, opacity;
+}
+
+.todo-task-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+}
+
+.todo-task-card.is-pending {
+  opacity: 0.78;
+  transform: scale(0.985);
+  border-color: hsla(38 72% 58% / 0.28);
+  box-shadow: 0 0 0 1px hsla(38 72% 58% / 0.12);
+}
+
+.todo-task-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.todo-task-title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.todo-task-copy {
+  line-height: 1.75;
+}
+
+.todo-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-meta-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.todo-link-cell {
+  color: var(--gold-bright);
+}
+
+.todo-mission-tag {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.todo-rationale {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  line-height: 1.7;
+}
+
+.todo-rationale strong {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+}
+
+.todo-checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.todo-checkline {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.todo-check-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.todo-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.todo-action-grid form,
+.todo-action-grid button {
+  width: 100%;
+}
+
+.todo-action-grid button:disabled,
+.todo-composer-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
+.todo-empty-copy {
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+.todo-error-banner {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 107, 107, 0.24);
+  background: rgba(255, 107, 107, 0.08);
+  color: #ffb3b3;
+  line-height: 1.7;
+}
+
+.todo-sync-chip {
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  animation: todo-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes todo-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .chat-shell {
@@ -2141,6 +2742,20 @@ td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ai-hub-grid-4,
+  .mission-task-grid,
+  .mission-history-grid,
+  .todo-columns,
+  .mission-active-grid,
+  .mission-hero-shell,
+  .todo-stat-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mission-value-strip {
+    grid-template-columns: 1fr;
+  }
+
   .span-8,
   .span-6,
   .span-4 {
@@ -2237,6 +2852,18 @@ td {
     grid-template-columns: 1fr;
   }
 
+  .ai-hub-grid-4,
+  .mission-task-grid,
+  .mission-history-grid,
+  .todo-columns,
+  .mission-active-grid,
+  .mission-stat-grid,
+  .todo-action-grid,
+  .mission-hero-shell,
+  .todo-stat-strip {
+    grid-template-columns: 1fr;
+  }
+
   .chat-bubble {
     max-width: 100%;
   }
@@ -2283,6 +2910,15 @@ td {
   .live-timer-orb {
     width: 180px;
     height: 180px;
+  }
+
+  .mission-launch-actions,
+  .mission-badge-stack,
+  .todo-mission-tag,
+  .mission-command-row,
+  .todo-summary-top {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
