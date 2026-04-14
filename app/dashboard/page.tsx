@@ -35,14 +35,19 @@ export default async function DashboardPage() {
 
   // Compute subject-level completion % for each paper card
   const paperPctMap: Record<string, number> = {};
-  for (const paper of summary.papers) {
-    const ids = paper.children.map((c) => c.id);
-    if (ids.length === 0) continue;
-    const progress = await db.topicProgress.findMany({
-      where: { studyNodeId: { in: ids } },
-    });
-    paperPctMap[paper.id] = ids.length > 0 ? Math.round((progress.filter((p) => p.checked).length / ids.length) * 100) : 0;
-  }
+  await Promise.all(
+    summary.papers.map(async (paper) => {
+      const ids = paper.children.map((c) => c.id);
+      if (ids.length === 0) {
+        paperPctMap[paper.id] = 0;
+        return;
+      }
+      const progress = await db.topicProgress.findMany({
+        where: { studyNodeId: { in: ids } },
+      });
+      paperPctMap[paper.id] = Math.round((progress.filter((p) => p.checked).length / ids.length) * 100);
+    })
+  );
 
   return (
     <main className="page-shell">

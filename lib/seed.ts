@@ -39,9 +39,10 @@ async function upsertNode(
 let seedPromise: Promise<void> | null = null;
 
 export async function ensureSeeded() {
-  if (seedPromise) return seedPromise;
+  const globalAny = global as any;
+  if (globalAny.__seedPromise__) return globalAny.__seedPromise__;
 
-  seedPromise = (async () => {
+  globalAny.__seedPromise__ = (async () => {
     await db.userProfile.upsert({
       where: { email: process.env.AUTH_EMAIL ?? "tiwariadarsh0704@gmail.com" },
       update: {},
@@ -51,12 +52,17 @@ export async function ensureSeeded() {
       },
     });
 
+    const rootCount = await db.studyNode.count({ where: { parentId: null } });
+    if (rootCount > 0) {
+      return;
+    }
+
     for (const [index, node] of syllabusTree.entries()) {
       await upsertNode(node, null, index);
     }
   })();
 
-  return seedPromise;
+  return globalAny.__seedPromise__;
 }
 
 export function percent(value: number, total: number) {
