@@ -1,9 +1,13 @@
-import pdfParse from "pdf-parse";
 import { streamText, tool } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import {
+  buildAttachmentContextText,
+  buildAttachmentDisplayLabel,
+  processIncomingAttachments,
+} from "@/lib/ai-attachments";
 import {
   buildUPSCContext,
   buildUPSCSystemPrompt,
@@ -77,29 +81,30 @@ function revalidateStudyNodeChain(node: {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
-    conversationId?: string;
-    message?: string;
-    file?: { base64: string; mimeType: string; name: string } | null;
-    mode?: "guru" | "deep-analytics" | "essay-checker";
-  };
+  const formData = await request.formData();
+  const modeValue = formData.get("mode");
+  const conversationIdValue = formData.get("conversationId");
+  const messageValue = formData.get("message");
+  const incomingFiles = formData
+    .getAll("attachments")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
-  const mode = body.mode ?? "guru";
-  const userMessage = String(body.message ?? "").trim();
-  const file = body.file;
+  const mode =
+    modeValue === "deep-analytics" || modeValue === "essay-checker" || modeValue === "guru"
+      ? modeValue
+      : "guru";
+  const conversationId = typeof conversationIdValue === "string" ? conversationIdValue : undefined;
+  const userMessage = typeof messageValue === "string" ? messageValue.trim() : "";
 
-  if (!userMessage && !file) {
+  if (!userMessage && incomingFiles.length === 0) {
     return new Response("Message or file is required.", { status: 400 });
   }
 
   await refreshGuruMemoryProfile();
 
-  let attachmentText = "";
-  if (file?.base64 && file.mimeType === "application/pdf") {
-    const buffer = Buffer.from(file.base64, "base64");
-    const parsed = await pdfParse(buffer);
-    attachmentText = parsed.text.slice(0, 20000);
-  }
+  const attachments = await processIncomingAttachments(incomingFiles);
+  const attachmentText = buildAttachmentContextText(attachments);
+  const attachmentLabel = buildAttachmentDisplayLabel(attachments);
 
   const context = await buildUPSCContext();
   const system = `${buildUPSCSystemPrompt(context, mode)}
@@ -111,31 +116,40 @@ Tooling rules for syllabus operations:
 - If a target reference is ambiguous, ask a short clarifying question in the final answer.`;
 
   const conversation =
-    (body.conversationId
+    (conversationId
       ? await db.aiConversation.findUnique({
-          where: { id: body.conversationId },
-          include: { messages: { orderBy: { createdAt: "asc" } } },
+          where: { id: conversationId },
+          include: {
+            messages: {
+              orderBy: { createdAt: "asc" },
+              include: { attachments: true },
+            },
+          },
         })
       : null) ??
     (await db.aiConversation.create({
       data: {
-        title: userMessage.slice(0, 72) || file?.name || "UPSC Guru",
+        title: userMessage.slice(0, 72) || attachmentLabel || "UPSC Guru",
         persona: "guru",
       },
-      include: { messages: true },
+      include: { messages: { include: { attachments: true } } },
     }));
-
-  const history = conversation.messages
-    .slice(-12)
-    .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
-    .join("\n\n");
 
   const savedUserMessage = await db.aiMessage.create({
     data: {
       conversationId: conversation.id,
       role: "user",
-      content: userMessage || `Uploaded file: ${file?.name ?? "attachment"}`,
+      content: userMessage || `Attached files: ${attachmentLabel || "attachments"}`,
       attachmentText: attachmentText || null,
+      attachments: {
+        create: attachments.map((attachment) => ({
+          kind: attachment.kind.toUpperCase(),
+          name: attachment.name,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          extractedText: attachment.extractedText,
+        })),
+      },
     },
   });
 
@@ -143,17 +157,41 @@ Tooling rules for syllabus operations:
   const result = streamText({
     model: google(modelId),
     system,
-    prompt: `Live UPSC context JSON:
+    messages: [
+      ...conversation.messages.slice(-12).map((message) => ({
+        role: message.role as "user" | "assistant",
+        content: [
+          {
+            type: "text" as const,
+            text: message.attachmentText
+              ? `${message.content}\n\nAttachment context:\n${message.attachmentText}`
+              : message.content,
+          },
+        ],
+      })),
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: `Live UPSC context JSON:
 ${JSON.stringify(context, null, 2)}
 
-Conversation history:
-${history || "No prior messages."}
-
-PDF context:
-${attachmentText || "No PDF attached."}
+Current attachment context:
+${attachmentText || "No attachment text extracted."}
 
 Student message:
-    ${userMessage || `Please analyze the attached file: ${file?.name ?? "attachment"}`}`,
+${userMessage || "Analyze all attached files carefully and answer accurately."}
+
+Instructions for this turn:
+- If multiple images or PDFs are attached, examine all of them before concluding.
+- For academic and study questions, keep the tone moderate to strict, never harsh for the sake of harshness.
+- If the files and the question conflict, state that explicitly and explain why.`,
+          },
+          ...attachments.map((attachment) => attachment.contentPart),
+        ],
+      },
+    ],
     temperature: resolveTemperature(mode),
     maxOutputTokens: 4096,
     tools: {
@@ -307,7 +345,7 @@ Student message:
           conversationId: conversation.id,
           role: "assistant",
           content: event.text,
-          attachmentText: modelId,
+          attachmentText: null,
         },
       });
 
@@ -318,7 +356,7 @@ Student message:
         data: {
           title:
             conversation.title === "UPSC Guru" || conversation.title === "New chat"
-              ? (userMessage || file?.name || "UPSC Guru").slice(0, 72)
+              ? (userMessage || attachmentLabel || "UPSC Guru").slice(0, 72)
               : conversation.title,
         },
       });

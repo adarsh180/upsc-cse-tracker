@@ -1,27 +1,40 @@
 import { UpscGuruShell } from "@/components/ai/upsc-guru-shell";
 import { buildUPSCContext, listGuruConversations } from "@/lib/ai-context-builder";
 import { requireSession } from "@/lib/auth";
-import { getDashboardSummary } from "@/lib/dashboard";
 import { db } from "@/lib/db";
+import { withDbRetry } from "@/lib/db-retry";
 
 export default async function GuruPage() {
   await requireSession();
 
-  const [summary, context, conversation, conversations] = await Promise.all([
-    getDashboardSummary(),
-    buildUPSCContext(),
-    db.aiConversation.findFirst({
-      where: { persona: "guru" },
-      orderBy: { updatedAt: "desc" },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-          take: 40,
-        },
-      },
-    }),
-    listGuruConversations(),
-  ]);
+  const context = await withDbRetry(() => buildUPSCContext());
+  const conversations = await withDbRetry(() => listGuruConversations());
+  const latestConversationId = conversations[0]?.id;
+  const conversation = latestConversationId
+    ? await withDbRetry(() =>
+        db.aiConversation.findUnique({
+          where: { id: latestConversationId },
+          include: {
+            messages: {
+              orderBy: { createdAt: "asc" },
+              take: 40,
+              include: {
+                attachments: {
+                  orderBy: { createdAt: "asc" },
+                },
+              },
+            },
+          },
+        }),
+      )
+    : null;
+
+  const avgDiscipline = context.recentDailyLogs.length
+    ? (
+        context.recentDailyLogs.reduce((sum, log) => sum + log.disciplineScore, 0) /
+        context.recentDailyLogs.length
+      ).toFixed(1)
+    : "0.0";
 
   const serializedConversation = conversation
     ? {
@@ -32,6 +45,13 @@ export default async function GuruPage() {
           id: message.id,
           role: message.role as "user" | "assistant",
           content: message.content,
+          attachments: message.attachments.map((attachment) => ({
+            id: attachment.id,
+            kind: attachment.kind.toLowerCase() as "image" | "pdf",
+            name: attachment.name,
+            mimeType: attachment.mimeType,
+            sizeBytes: attachment.sizeBytes,
+          })),
           createdAt: message.createdAt.toISOString(),
         })),
       }
@@ -42,9 +62,9 @@ export default async function GuruPage() {
       <UpscGuruShell
         conversations={conversations}
         conversation={serializedConversation}
-        discipline={summary.metrics?.[2]?.value ?? "0/100"}
-        avgScore={summary.metrics?.[1]?.value ?? "0%"}
-        focusTrend={summary.metrics?.[3]?.value ?? "0/10"}
+        discipline={`${avgDiscipline}/100`}
+        avgScore={`${context.testSummary.avgOverallPct}%`}
+        focusTrend={`${context.moodSummary.avgFocus}/10`}
         memory={context.memory}
       />
     </main>

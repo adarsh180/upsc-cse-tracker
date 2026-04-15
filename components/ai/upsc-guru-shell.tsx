@@ -26,10 +26,19 @@ import {
 } from "lucide-react";
 import "katex/dist/katex.min.css";
 
+type GuruAttachment = {
+  id: string;
+  kind: "image" | "pdf";
+  name: string;
+  mimeType: string;
+  sizeBytes: number | null;
+};
+
 type GuruMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments: GuruAttachment[];
   createdAt: string;
 };
 
@@ -58,10 +67,12 @@ type GuruMemory = {
   lastUpdated: string | null;
 };
 
-type UploadFile = {
+type PendingAttachment = {
+  id: string;
   name: string;
   mimeType: string;
-  base64: string;
+  sizeBytes: number;
+  file: File;
 };
 
 function GuruSigil() {
@@ -78,6 +89,20 @@ const suggestions = [
   "Interrogate my answer-writing quality like a strict evaluator",
   "Audit whether my test trend is actually improving",
 ];
+
+function describeAttachmentType(mimeType: string) {
+  return mimeType === "application/pdf" ? "PDF" : "Image";
+}
+
+function toGuruAttachment(attachment: PendingAttachment): GuruAttachment {
+  return {
+    id: attachment.id,
+    kind: attachment.mimeType === "application/pdf" ? "pdf" : "image",
+    name: attachment.name,
+    mimeType: attachment.mimeType,
+    sizeBytes: attachment.sizeBytes,
+  };
+}
 
 export function UpscGuruShell({
   conversations: initialConversations,
@@ -96,7 +121,7 @@ export function UpscGuruShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [draft, setDraft] = useState("");
-  const [file, setFile] = useState<UploadFile | null>(null);
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [conversations, setConversations] = useState(initialConversations);
   const [activeConversation, setActiveConversation] = useState<GuruConversation | null>(initialConversation);
   const [messages, setMessages] = useState<GuruMessage[]>(initialConversation?.messages ?? []);
@@ -152,16 +177,37 @@ export function UpscGuruShell({
     </ReactMarkdown>
   );
 
-  async function readFileAsBase64(selectedFile: File) {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result ?? "");
-        resolve(result.split(",")[1] ?? "");
-      };
-      reader.onerror = () => reject(new Error("Failed to read file."));
-      reader.readAsDataURL(selectedFile);
+  function createPendingAttachment(file: File): PendingAttachment {
+    return {
+      id: `${file.name}-${file.lastModified}-${file.size}`,
+      name: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      file,
+    };
+  }
+
+  function appendFiles(fileList: FileList | File[]) {
+    const files = Array.from(fileList);
+    if (!files.length) return;
+
+    const unsupported = files.find((file) => file.type !== "application/pdf" && !file.type.startsWith("image/"));
+    if (unsupported) {
+      setError(`Unsupported file: ${unsupported.name}. Use images or PDFs only.`);
+      return;
+    }
+
+    setAttachments((current) => {
+      const next = [...current];
+      for (const file of files) {
+        const pending = createPendingAttachment(file);
+        if (!next.some((item) => item.id === pending.id)) {
+          next.push(pending);
+        }
+      }
+      return next.slice(0, 6);
     });
+    setError("");
   }
 
   async function refreshConversations(targetConversationId?: string) {
@@ -199,7 +245,7 @@ export function UpscGuruShell({
     setMessages([]);
     setDraft("");
     setStreamingText("");
-    setFile(null);
+    setAttachments([]);
     setError("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -232,22 +278,23 @@ export function UpscGuruShell({
   async function sendMessage(prefilled?: string) {
     const message = (prefilled ?? draft).trim();
 
-    if ((!message && !file) || streaming) {
+    if ((!message && attachments.length === 0) || streaming) {
       return;
     }
 
     const tempUserMessage: GuruMessage = {
       id: `temp-${Date.now()}`,
       role: "user",
-      content: message || `[Attached: ${file?.name ?? "PDF"}]`,
+      content: message || `[Attached: ${attachments.map((attachment) => attachment.name).join(", ")}]`,
+      attachments: attachments.map(toGuruAttachment),
       createdAt: new Date().toISOString(),
     };
 
-    const sendingFile = file;
+    const sendingAttachments = attachments;
 
     setMessages((current) => [...current, tempUserMessage]);
     setDraft("");
-    setFile(null);
+    setAttachments([]);
     setStreaming(true);
     setStreamingText("");
     setError("");
@@ -259,15 +306,19 @@ export function UpscGuruShell({
     abortRef.current = new AbortController();
 
     try {
+      const body = new FormData();
+      if (activeConversation?.id) {
+        body.set("conversationId", activeConversation.id);
+      }
+      body.set("message", message);
+      body.set("mode", "guru");
+      for (const attachment of sendingAttachments) {
+        body.append("attachments", attachment.file);
+      }
+
       const response = await fetch("/api/ai/guru", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId: activeConversation?.id,
-          message: message,
-          file: sendingFile,
-          mode: "guru",
-        }),
+        body,
         signal: abortRef.current.signal,
       });
 
@@ -292,6 +343,7 @@ export function UpscGuruShell({
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: finalText,
+        attachments: [],
         createdAt: new Date().toISOString(),
       };
 
@@ -320,6 +372,7 @@ export function UpscGuruShell({
           id: `assistant-${Date.now()}`,
           role: "assistant",
           content: streamingText,
+          attachments: [],
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -526,6 +579,21 @@ export function UpscGuruShell({
                         <div className={`ug-message-text ${message.role === "assistant" ? "markdown-body" : ""}`}>
                           {message.role === "assistant" ? renderMarkdown(message.content) : <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>}
                         </div>
+                        {message.attachments.length ? (
+                          <div className="ug-file-preview-strip" style={{ marginTop: 12 }}>
+                            {message.attachments.map((attachment) => (
+                              <div key={attachment.id} className="ug-file-chip">
+                                <div className="ug-file-icon-wrap">
+                                  <FileStack size={16} />
+                                </div>
+                                <div className="ug-file-chip-info">
+                                  <div className="ug-file-chip-name">{attachment.name}</div>
+                                  <div className="ug-file-chip-type">{describeAttachmentType(attachment.mimeType)}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -590,28 +658,32 @@ export function UpscGuruShell({
               void sendMessage();
             }}
           >
-            {file ? (
+            {attachments.length ? (
               <div className="ug-file-preview-strip">
-                <div className="ug-file-chip">
-                  <div className="ug-file-icon-wrap">
-                    <FileStack size={16} />
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="ug-file-chip">
+                    <div className="ug-file-icon-wrap">
+                      <FileStack size={16} />
+                    </div>
+                    <div className="ug-file-chip-info">
+                      <div className="ug-file-chip-name">{attachment.name}</div>
+                      <div className="ug-file-chip-type">{describeAttachmentType(attachment.mimeType)} attached for Guru review</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="ug-file-chip-remove"
+                      onClick={() => {
+                        setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+                        if (fileInputRef.current && attachments.length === 1) {
+                          fileInputRef.current.value = "";
+                        }
+                      }}
+                      aria-label={`Remove ${attachment.name}`}
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                  <div className="ug-file-chip-info">
-                    <div className="ug-file-chip-name">{file.name}</div>
-                    <div className="ug-file-chip-type">PDF attached for Guru review</div>
-                  </div>
-                  <button
-                    type="button"
-                    className="ug-file-chip-remove"
-                    onClick={() => {
-                      setFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    aria-label="Remove file"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+                ))}
               </div>
             ) : null}
 
@@ -620,9 +692,9 @@ export function UpscGuruShell({
 
               <button
                 type="button"
-                className={`ug-attach-btn ${file ? "has-file" : ""}`}
+                className={`ug-attach-btn ${attachments.length ? "has-file" : ""}`}
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach PDF"
+                aria-label="Attach images or PDFs"
               >
                 <FileStack size={16} />
               </button>
@@ -630,21 +702,12 @@ export function UpscGuruShell({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf"
+                accept="application/pdf,image/*"
+                multiple
                 style={{ display: "none" }}
-                onChange={async (event) => {
-                  const selected = event.target.files?.[0];
-                  if (!selected) return;
-                  if (selected.type !== "application/pdf") {
-                    setError("Only PDF files are supported in UPSC Guru.");
-                    return;
-                  }
-                  const base64 = await readFileAsBase64(selected);
-                  setFile({
-                    name: selected.name,
-                    mimeType: selected.type,
-                    base64,
-                  });
+                onChange={(event) => {
+                  if (!event.target.files?.length) return;
+                  appendFiles(event.target.files);
                 }}
               />
 
@@ -656,6 +719,13 @@ export function UpscGuruShell({
                 onChange={(event) => {
                   setDraft(event.target.value);
                   resizeTextarea();
+                }}
+                onPaste={(event) => {
+                  const pastedFiles = Array.from(event.clipboardData.files);
+                  if (pastedFiles.length) {
+                    event.preventDefault();
+                    appendFiles(pastedFiles);
+                  }
                 }}
                 onInput={resizeTextarea}
                 onKeyDown={(event) => {
@@ -672,7 +742,7 @@ export function UpscGuruShell({
                     <X size={16} />
                   </button>
                 ) : (
-                  <button type="submit" className={`ug-action-btn send ${draft.trim() || file ? "active" : ""}`}>
+                  <button type="submit" className={`ug-action-btn send ${draft.trim() || attachments.length ? "active" : ""}`}>
                     <PenSquare size={16} />
                   </button>
                 )}
@@ -681,7 +751,7 @@ export function UpscGuruShell({
           </form>
 
           <div className="ug-input-footer">
-            Chat history is saved in TiDB in real time. Delete single conversations or clear the entire Guru history whenever you want.
+            Paste screenshots directly, attach multiple images or PDFs, and Guru will inspect all of them together. Only compact metadata and extracted text are saved in TiDB.
           </div>
         </div>
       </main>

@@ -14,6 +14,11 @@ export async function GET(
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
+        include: {
+          attachments: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
       },
     },
   });
@@ -30,6 +35,13 @@ export async function GET(
       id: message.id,
       role: message.role,
       content: message.content,
+      attachments: message.attachments.map((attachment) => ({
+        id: attachment.id,
+        kind: attachment.kind.toLowerCase(),
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+      })),
       createdAt: message.createdAt.toISOString(),
     })),
   });

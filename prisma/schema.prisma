@@ -141,6 +141,21 @@ model AiMessage {
   attachmentText String?        @db.LongText
   createdAt      DateTime       @default(now())
   conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments    AiAttachment[]
+}
+
+model AiAttachment {
+  id            String    @id @default(cuid())
+  messageId     String
+  kind          String
+  name          String
+  mimeType      String
+  sizeBytes     Int?
+  extractedText String?   @db.LongText
+  createdAt     DateTime  @default(now())
+  message       AiMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
 
 model AiMemoryProfile {

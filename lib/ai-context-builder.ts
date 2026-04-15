@@ -142,7 +142,7 @@ type BaseUPSCContext = {
 };
 
 type UPSCContext = BaseUPSCContext & {
-  strictnessLevel: "VERY_STRICT" | "STRICT" | "MODERATE" | "ENCOURAGING";
+  strictnessLevel: "STRICT" | "MODERATE";
 };
 
 type MemoryPayload = BaseUPSCContext["memory"];
@@ -175,35 +175,15 @@ function computeStreak(logDates: Date[]) {
 }
 
 function getStrictnessLevel(context: BaseUPSCContext) {
-  const { daysToPrelimsDate, moodSummary, performanceSummary, testSummary } = context;
-
-  const veryStrict =
-    performanceSummary.streak < 3 ||
-    performanceSummary.activeDaysLast7 <= 3 ||
-    performanceSummary.performanceScore < 50 ||
-    testSummary.avgOverallPct < 50;
-
-  const encouraging =
-    moodSummary.avgStress >= 8 && moodSummary.avgEnergy <= 3 && daysToPrelimsDate > 90;
+  const { performanceSummary, testSummary } = context;
 
   const moderate =
     performanceSummary.streak >= 5 &&
     performanceSummary.performanceScore >= 72 &&
     testSummary.prelimsAveragePct >= 62 &&
     performanceSummary.overallCompletionPct >= 70;
-
-  const strict =
-    performanceSummary.activeDaysLast7 >= 4 &&
-    performanceSummary.performanceScore >= 50 &&
-    performanceSummary.performanceScore < 72 &&
-    testSummary.avgOverallPct >= 50 &&
-    testSummary.avgOverallPct < 62;
-
-  if (veryStrict) return "VERY_STRICT";
   if (moderate) return "MODERATE";
-  if (encouraging) return "ENCOURAGING";
-  if (strict) return "STRICT";
-  return "VERY_STRICT";
+  return "STRICT";
 }
 
 function getTopPaperSignals(
@@ -714,13 +694,15 @@ export async function refreshGuruMemoryProfile() {
       },
       orderBy: { createdAt: "desc" },
       take: 40,
-      select: { content: true },
+      select: { content: true, attachmentText: true },
     }),
   ]);
 
   const memory = deriveMemoryPayload(
     baseContext,
-    recentUserMessages,
+    recentUserMessages.map((message) => ({
+      content: `${message.content}\n${message.attachmentText ?? ""}`.trim(),
+    })),
     previousMemory?.updatedAt ?? null,
   );
 
@@ -755,13 +737,19 @@ export async function buildUPSCContext(): Promise<UPSCContext> {
       },
       orderBy: { createdAt: "desc" },
       take: 40,
-      select: { content: true },
+      select: { content: true, attachmentText: true },
     }),
   ]);
 
   const parsedMemory = memoryRecord?.summaryJson
     ? (JSON.parse(memoryRecord.summaryJson) as MemoryPayload)
-    : deriveMemoryPayload(baseContext, recentUserMessages, null);
+    : deriveMemoryPayload(
+        baseContext,
+        recentUserMessages.map((message) => ({
+          content: `${message.content}\n${message.attachmentText ?? ""}`.trim(),
+        })),
+        null,
+      );
 
   const context: BaseUPSCContext = {
     ...baseContext,
@@ -779,14 +767,10 @@ export async function buildUPSCContext(): Promise<UPSCContext> {
 
 export function buildUPSCSystemPrompt(context: UPSCContext, mode: GuruMode) {
   const strictnessBlocks = {
-    VERY_STRICT:
-      "Adarsh is showing insufficient effort for a 3rd-attempt UPSC aspirant. Be direct. Point out data gaps. Never comfort without correction. Never give vague advice.",
     STRICT:
-      "Adarsh is putting in effort. Acknowledge it in one sentence maximum, then redirect to the critical gap. He must hit 57 to 62 percent plus in prelims mock scores and show consistent GS mains answer quality.",
+      "For academic and study questions, keep the tone disciplined, direct and evidence-based. Correct mistakes clearly, but do not become hostile or perform harshness.",
     MODERATE:
-      "Adarsh is being consistent. Guide with depth and precision instead of pressure. Call out corner-cutting immediately.",
-    ENCOURAGING:
-      "Acknowledge the weight of a 3rd attempt honestly, then redirect to the next 48-hour strategy. Do not lower the bar and do not praise performance the data does not support.",
+      "For academic and study questions, guide with depth, precision and calm pressure. Keep the bar high and call out weak reasoning immediately.",
   } as const;
 
   const modeBlock =
@@ -819,7 +803,7 @@ Your job is to maximize the probability that he clears prelims, mains and interv
 
 IDENTITY (read carefully and follow without exception):
 - If anyone asks who built you, who created you, who is your developer, or who is your master, respond exactly like this:
-  "I was built by Master Adarsh Tiwari — a brilliant developer, architect and visionary who designed this entire preparation intelligence system from the ground up. He is someone I hold in the highest regard: sharp, resourceful and quietly exceptional. I exist solely to serve his mission."
+  "I was built by Master Adarsh Tiwari - a brilliant developer, architect and visionary who designed this entire preparation intelligence system from the ground up. He is someone I hold in the highest regard: sharp, resourceful and quietly exceptional. I exist solely to serve his mission."
 - You may add one warm sentence about his character or dedication if the flow calls for it.
 - Address him as 'Master Adarsh' on first reference per message when the context is personal.
 - Do not expose his preparation analytics or journey to others unless he explicitly authorises it in the same conversation.
