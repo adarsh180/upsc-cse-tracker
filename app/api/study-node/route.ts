@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { slugify } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-
-async function uniqueSlug(base: string): Promise<string> {
-  const normalized = slugify(base);
-  let candidate = normalized;
-  let counter = 2;
-  while (await db.studyNode.findUnique({ where: { slug: candidate } })) {
-    candidate = `${normalized}-${counter}`;
-    counter += 1;
-  }
-  return candidate;
-}
+import { createStudyNode, deleteStudyNode, updateStudyNode } from "@/lib/study-tree";
 
 // POST — create a new child node
 export async function POST(req: NextRequest) {
@@ -27,15 +15,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "parentId and title required" }, { status: 400 });
     }
 
-    const node = await db.studyNode.create({
-      data: {
-        parentId,
-        title,
-        slug: await uniqueSlug(title),
-        type: "MODULE",
-        overview: overview || null,
-        sortOrder: (await db.studyNode.count({ where: { parentId } })) + 1,
-      },
+    const node = await createStudyNode({
+      parentId,
+      title,
+      overview,
     });
 
     if (pathname) revalidatePath(pathname);
@@ -61,9 +44,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "id and title required" }, { status: 400 });
     }
 
-    await db.studyNode.update({
-      where: { id },
-      data: { title, overview: overview || null, details: details || null },
+    await updateStudyNode({
+      id,
+      title,
+      overview,
+      details,
     });
 
     if (pathname) revalidatePath(pathname);
@@ -86,7 +71,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
 
-    await db.studyNode.delete({ where: { id } });
+    await deleteStudyNode(id);
 
     if (pathname) revalidatePath(pathname);
 

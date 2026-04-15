@@ -43,13 +43,26 @@ export function MissionTodoBoard({
     <div className="todo-columns">
       {columns.map((column) => {
         const items = tasks.filter((task) => task.status === column.key);
+        const toneClass =
+          column.key === "TODO"
+            ? "ready"
+            : column.key === "IN_PROGRESS"
+              ? "active"
+              : column.key === "DONE"
+                ? "done"
+                : "skipped";
 
         return (
-          <article key={column.key} className="glass panel todo-column-card">
+          <article key={column.key} className={`glass panel todo-column-card ${toneClass}`}>
             <div className="todo-column-head">
-              <div className="pill">
-                <column.icon size={13} />
-                {column.label}
+              <div className="todo-column-heading">
+                <div className="todo-column-icon">
+                  <column.icon size={15} />
+                </div>
+                <div>
+                  <div className="todo-column-label">{column.label}</div>
+                  <div className="todo-column-subtitle">Execution lane</div>
+                </div>
               </div>
               <div className="todo-column-count">{items.length}</div>
             </div>

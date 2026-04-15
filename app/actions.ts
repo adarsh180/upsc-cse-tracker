@@ -18,6 +18,7 @@ import {
   updateAgentTaskStatus,
 } from "@/lib/mission-control";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
+import { createStudyNode, deleteStudyNode, updateStudyNode } from "@/lib/study-tree";
 import { slugify } from "@/lib/utils";
 
 const google = createGoogleGenerativeAI({
@@ -83,15 +84,10 @@ export async function createStudyNodeAction(formData: FormData) {
     return;
   }
 
-  await db.studyNode.create({
-    data: {
-      parentId,
-      title,
-      slug: await uniqueSlug(title),
-      type: "MODULE",
-      overview,
-      sortOrder: (await db.studyNode.count({ where: { parentId } })) + 1,
-    },
+  await createStudyNode({
+    parentId,
+    title,
+    overview,
   });
 
   refreshCorePages(pathname);
@@ -105,9 +101,7 @@ export async function deleteStudyNodeAction(formData: FormData) {
     return;
   }
 
-  await db.studyNode.delete({
-    where: { id },
-  });
+  await deleteStudyNode(id);
 
   refreshCorePages(pathname);
 }
@@ -301,9 +295,11 @@ export async function updateStudyNodeAction(formData: FormData) {
   const details = String(formData.get("details") ?? "").trim();
   const pathname = String(formData.get("pathname") ?? "");
   if (!id || !title) return;
-  await db.studyNode.update({
-    where: { id },
-    data: { title, overview: overview || null, details: details || null },
+  await updateStudyNode({
+    id,
+    title,
+    overview,
+    details,
   });
   refreshCorePages(pathname);
 }

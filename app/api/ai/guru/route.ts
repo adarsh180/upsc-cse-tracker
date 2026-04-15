@@ -1,6 +1,8 @@
 import pdfParse from "pdf-parse";
-import { streamText } from "ai";
+import { streamText, tool } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import {
   buildUPSCContext,
@@ -9,6 +11,14 @@ import {
 } from "@/lib/ai-context-builder";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
 import { db } from "@/lib/db";
+import {
+  createStudyNode,
+  deleteStudyNode,
+  resolveNodeForCreate,
+  resolveStudyNode,
+  setStudyNodeCompletion,
+  updateStudyNode,
+} from "@/lib/study-tree";
 
 export const runtime = "nodejs";
 
@@ -40,6 +50,32 @@ function resolveTemperature(mode: "guru" | "deep-analytics" | "essay-checker") {
   return 0.7;
 }
 
+function refreshStudyViews() {
+  revalidatePath("/", "layout");
+  revalidatePath("/dashboard");
+  revalidatePath("/ai-insight");
+}
+
+function revalidateStudyNodeChain(node: {
+  slug: string;
+  parent?: {
+    slug: string;
+    parent?: {
+      slug: string;
+    } | null;
+  } | null;
+}) {
+  revalidatePath(`/study/${node.slug}`);
+
+  if (node.parent?.slug) {
+    revalidatePath(`/study/${node.parent.slug}`);
+  }
+
+  if (node.parent?.parent?.slug) {
+    revalidatePath(`/study/${node.parent.parent.slug}`);
+  }
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as {
     conversationId?: string;
@@ -66,7 +102,13 @@ export async function POST(request: Request) {
   }
 
   const context = await buildUPSCContext();
-  const system = buildUPSCSystemPrompt(context, mode);
+  const system = `${buildUPSCSystemPrompt(context, mode)}
+
+Tooling rules for syllabus operations:
+- If the user asks to add, edit, delete, or mark complete/incomplete any subject, chapter, or topic, use the syllabus management tool instead of only describing the steps.
+- Treat "status" as completion progress.
+- For subject and chapter completion changes, update the full subtree unless the user explicitly asks for only one item.
+- If a target reference is ambiguous, ask a short clarifying question in the final answer.`;
 
   const conversation =
     (body.conversationId
@@ -111,9 +153,154 @@ PDF context:
 ${attachmentText || "No PDF attached."}
 
 Student message:
-${userMessage || `Please analyze the attached file: ${file?.name ?? "attachment"}`}`,
+    ${userMessage || `Please analyze the attached file: ${file?.name ?? "attachment"}`}`,
     temperature: resolveTemperature(mode),
     maxOutputTokens: 4096,
+    tools: {
+      manage_syllabus: tool({
+        description:
+          "Add, edit, delete, or change completion progress for a subject, chapter, or topic in the UPSC study tree.",
+        inputSchema: z.object({
+          action: z.enum(["create", "update", "delete", "set_progress"]),
+          targetType: z.enum(["subject", "chapter", "topic"]),
+          paperTitle: z.string().optional(),
+          subjectTitle: z.string().optional(),
+          chapterTitle: z.string().optional(),
+          topicTitle: z.string().optional(),
+          title: z.string().optional(),
+          newTitle: z.string().optional(),
+          overview: z.string().optional(),
+          details: z.string().optional(),
+          completed: z.boolean().optional(),
+        }),
+        execute: async (input) => {
+          if (input.action === "create") {
+            const parentNode = await resolveNodeForCreate({
+              paperTitle: input.paperTitle,
+              subjectTitle: input.subjectTitle,
+              chapterTitle: input.chapterTitle,
+            });
+
+            const title = String(
+              input.title ??
+                (input.targetType === "subject"
+                  ? input.subjectTitle
+                  : input.targetType === "chapter"
+                    ? input.chapterTitle
+                    : input.topicTitle) ??
+                "",
+            ).trim();
+            if (!title) {
+              throw new Error("A title is required to create a study node.");
+            }
+
+            const created = await createStudyNode({
+              parentId: parentNode.id,
+              title,
+              overview: input.overview ?? null,
+            });
+            refreshStudyViews();
+            revalidatePath(`/study/${parentNode.slug}`);
+
+            return {
+              ok: true,
+              action: input.action,
+              targetType: input.targetType,
+              node: {
+                id: created.id,
+                title: created.title,
+                slug: created.slug,
+                type: created.type,
+              },
+              parent: {
+                id: parentNode.id,
+                title: parentNode.title,
+                type: parentNode.type,
+              },
+            };
+          }
+
+          const resolved = await resolveStudyNode({
+            paperTitle: input.paperTitle,
+            subjectTitle: input.targetType === "subject" ? input.subjectTitle ?? input.title : input.subjectTitle,
+            chapterTitle: input.targetType === "chapter" ? input.chapterTitle ?? input.title : input.chapterTitle,
+            topicTitle: input.targetType === "topic" ? input.topicTitle ?? input.title : input.topicTitle,
+            nodeTitle:
+              input.targetType === "subject"
+                ? input.subjectTitle ?? input.title
+                : input.targetType === "chapter"
+                  ? input.chapterTitle ?? input.title
+                  : input.topicTitle ?? input.title,
+          });
+
+          if (input.action === "update") {
+            const updated = await updateStudyNode({
+              id: resolved.id,
+              title: input.newTitle,
+              overview: input.overview,
+              details: input.details,
+            });
+            refreshStudyViews();
+            revalidateStudyNodeChain(resolved);
+            revalidatePath(`/study/${updated.slug}`);
+
+            return {
+              ok: true,
+              action: input.action,
+              targetType: input.targetType,
+              node: {
+                id: updated.id,
+                title: updated.title,
+                slug: updated.slug,
+                type: updated.type,
+              },
+            };
+          }
+
+          if (input.action === "delete") {
+            await deleteStudyNode(resolved.id);
+            refreshStudyViews();
+            revalidateStudyNodeChain(resolved);
+            return {
+              ok: true,
+              action: input.action,
+              targetType: input.targetType,
+              deleted: {
+                id: resolved.id,
+                title: resolved.title,
+                slug: resolved.slug,
+              },
+            };
+          }
+
+          if (input.completed === undefined) {
+            throw new Error("A completion value is required for progress changes.");
+          }
+
+          const progressResult = await setStudyNodeCompletion({
+            nodeId: resolved.id,
+            completed: input.completed,
+            cascade: input.targetType !== "topic",
+          });
+          refreshStudyViews();
+          revalidateStudyNodeChain(resolved);
+
+          return {
+            ok: true,
+            action: input.action,
+            targetType: input.targetType,
+            node: {
+              id: resolved.id,
+              title: resolved.title,
+              slug: resolved.slug,
+              type: resolved.type,
+            },
+            completion: input.completed,
+            affectedNodes: progressResult.affectedNodes,
+          };
+        },
+      }),
+    },
     onFinish: async (event) => {
       await db.aiMessage.create({
         data: {

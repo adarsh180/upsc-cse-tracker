@@ -49,10 +49,11 @@ export function MissionControlPanel({
 }) {
   return (
     <section className="section-stack">
-      <div className="command-grid">
+      <div className="mission-hero-grid">
         <article className="glass panel span-8 mission-launch-card">
+          <div className="mission-launch-backdrop" />
           <div className="mission-hero-shell">
-            <div>
+            <div className="mission-hero-copy-wrap">
               <div className="pill">
                 <Bot size={14} />
                 Agent is manual only
@@ -61,8 +62,7 @@ export function MissionControlPanel({
                 Launch a mission only when you want intervention.
               </div>
               <p className="muted mission-hero-copy">
-                This is your on-demand planning layer. It stays dormant until you launch it,
-                then reads the tracker, drafts a hard execution brief, and turns it into actionable todos.
+                It stays dormant until you launch it, then reads the tracker, drafts a hard execution brief, and turns it into actionable todos.
               </p>
               <div className="mission-value-strip">
                 <div className="mission-value-card">
@@ -106,7 +106,13 @@ export function MissionControlPanel({
         </article>
 
         <article className="glass panel glass-strong span-4 mission-ops-card">
-          <div className="eyebrow">Execution Pulse</div>
+          <div className="mission-ops-head">
+            <div>
+              <div className="eyebrow">Execution Pulse</div>
+              <div className="display mission-ops-title">Quiet system. Hard outputs.</div>
+            </div>
+            <div className="mission-ops-ring" />
+          </div>
           <div className="mission-stat-grid">
             {[
               { label: "Mission launches", value: String(stats.totalMissions), icon: BrainCircuit },
@@ -131,10 +137,10 @@ export function MissionControlPanel({
 
       {activeMission ? (
         <article className="glass panel glass-strong mission-active-card">
-          <div className="panel-title-row">
+          <div className="mission-active-header">
             <div>
               <div className="eyebrow">Active Mission</div>
-              <div className="display" style={{ fontSize: "2.25rem", marginTop: 10 }}>
+              <div className="display mission-active-title">
                 {activeMission.title}
               </div>
               <p className="muted mission-summary-copy">{activeMission.summary}</p>
@@ -165,17 +171,19 @@ export function MissionControlPanel({
 
           <div className="mission-active-grid">
             <div className="mission-active-column">
-              <div className="mission-section-label">Why now</div>
-              <div className="mission-chip-grid">
-                {activeMission.whyNow.map((reason) => (
-                  <div key={reason} className="mission-chip-card">
-                    {reason}
-                  </div>
-                ))}
+              <div className="mission-framed-block">
+                <div className="mission-section-label">Why now</div>
+                <div className="mission-chip-grid">
+                  {activeMission.whyNow.map((reason) => (
+                    <div key={reason} className="mission-chip-card">
+                      {reason}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {activeMission.todayPlan ? (
-                <div className="mission-daily-command">
+                <div className="mission-daily-command mission-framed-block">
                   <div className="mission-section-label">Daily command</div>
                   <div className="mission-command-shell">
                     <div className="mission-command-row">
@@ -207,24 +215,26 @@ export function MissionControlPanel({
             </div>
 
             <div className="mission-active-column">
-              <div className="mission-section-label">Live actions</div>
-              <div className="mission-action-stack">
-                <form action={activateMissionAction} suppressHydrationWarning>
-                  <input type="hidden" name="missionId" value={activeMission.id} suppressHydrationWarning />
-                  <button className="button-secondary mission-full-btn" type="submit" suppressHydrationWarning>
-                    Mark This As My Current Mission
-                  </button>
-                </form>
-                <form action={applyMissionDailyLogAction} suppressHydrationWarning>
-                  <input type="hidden" name="missionId" value={activeMission.id} suppressHydrationWarning />
-                  <button className="button mission-full-btn" type="submit" suppressHydrationWarning>
-                    Apply Daily Command To Goals
-                  </button>
-                </form>
-                <Link href="/todo" className="button-secondary mission-full-btn">
-                  Open Todo Execution Board
-                  <ArrowRight size={16} />
-                </Link>
+              <div className="mission-action-panel">
+                <div className="mission-section-label">Live actions</div>
+                <div className="mission-action-stack">
+                  <form action={activateMissionAction} suppressHydrationWarning>
+                    <input type="hidden" name="missionId" value={activeMission.id} suppressHydrationWarning />
+                    <button className="button-secondary mission-full-btn" type="submit" suppressHydrationWarning>
+                      Mark This As My Current Mission
+                    </button>
+                  </form>
+                  <form action={applyMissionDailyLogAction} suppressHydrationWarning>
+                    <input type="hidden" name="missionId" value={activeMission.id} suppressHydrationWarning />
+                    <button className="button mission-full-btn" type="submit" suppressHydrationWarning>
+                      Apply Daily Command To Goals
+                    </button>
+                  </form>
+                  <Link href="/todo" className="button-secondary mission-full-btn">
+                    Open Todo Execution Board
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
               </div>
 
               {activeMission.risks.length ? (
@@ -252,7 +262,7 @@ export function MissionControlPanel({
           </div>
 
           <div className="mission-task-preview">
-            <div className="panel-title-row">
+            <div className="mission-preview-head">
               <div>
                 <div className="mission-section-label">Generated tasks</div>
                 <div className="muted" style={{ marginTop: 6 }}>
@@ -292,22 +302,25 @@ export function MissionControlPanel({
         </article>
       ) : (
         <article className="glass panel mission-empty-card">
-          <div className="mission-empty-orb" />
-          <div className="display" style={{ fontSize: "2rem" }}>
+          <div className="mission-empty-stage">
+            <div className="mission-empty-orb" />
+            <div className="mission-empty-gridlines" />
+          </div>
+          <div className="display mission-empty-title">
             No mission has been launched yet.
           </div>
-          <p className="muted" style={{ maxWidth: 760, lineHeight: 1.8 }}>
+          <p className="muted mission-empty-copy">
             Your Guru, analytics, and dashboard stay available as usual. Mission Control only comes alive when you
             explicitly ask it to create a structured intervention.
           </p>
         </article>
       )}
 
-      <article className="glass panel">
-        <div className="panel-title-row">
+      <article className="glass panel mission-history-shell">
+        <div className="mission-history-head">
           <div>
             <div className="eyebrow">Mission History</div>
-            <div className="display" style={{ fontSize: "2rem", marginTop: 8 }}>
+            <div className="display mission-history-display">
               Previous launches
             </div>
           </div>

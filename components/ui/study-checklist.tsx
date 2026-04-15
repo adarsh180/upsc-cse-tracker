@@ -188,6 +188,17 @@ function TopicRow({
   const isChecked = optimisticMap[topic.id] ?? false;
   const revCount = revisionMap[topic.id] ?? 0;
 
+  const handleDeleteClick = () => {
+    if (delCount === 0) {
+      setDelCount(1);
+      setTimeout(() => setDelCount(0), 3000);
+      return;
+    }
+
+    setDelCount(0);
+    onDelete(topic.id);
+  };
+
   return (
     <div className={`topic-item${isChecked ? " checked" : ""}`} style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 10 }}>
       {/* Checkbox */}
@@ -229,7 +240,7 @@ function TopicRow({
           {/* Delete */}
           <button
             type="button"
-            onClick={() => { setDelCount((c) => { if (c === 0) { setTimeout(() => setDelCount(0), 3000); return 1; } onDelete(topic.id); return 0; }); }}
+            onClick={handleDeleteClick}
             style={{ background: delCount > 0 ? "rgba(255,80,80,0.18)" : "rgba(255,80,80,0.07)", border: `1px solid rgba(255,80,80,${delCount > 0 ? "0.4" : "0.18"})`, borderRadius: 7, padding: "4px 7px", color: "var(--danger)", cursor: "pointer", fontSize: "9px", fontWeight: 800 }}
             title={delCount > 0 ? "Click to confirm delete" : "Delete"}
             suppressHydrationWarning
@@ -300,6 +311,19 @@ function ChapterAccordion({
     });
   };
 
+  const handleDeleteChapterClick = () => {
+    if (delCount === 0) {
+      setDelCount(1);
+      setTimeout(() => setDelCount(0), 3000);
+      return;
+    }
+
+    setDelCount(0);
+    startTrans(async () => {
+      await onDeleteChapter(chapter.id);
+    });
+  };
+
   return (
     <div className="chapter-accordion">
       <div className="chapter-accord-head" style={{ paddingRight: 8 }}>
@@ -345,7 +369,7 @@ function ChapterAccordion({
               </button>
               <button
                 type="button"
-                onClick={() => { setDelCount((c) => { if (c === 0) { setTimeout(() => setDelCount(0), 3000); return 1; } startTrans(async () => { await onDeleteChapter(chapter.id); }); return 0; }); }}
+                onClick={handleDeleteChapterClick}
                 style={{ background: delCount > 0 ? "rgba(255,80,80,0.18)" : "rgba(255,80,80,0.07)", border: `1px solid rgba(255,80,80,${delCount > 0 ? "0.4" : "0.18"})`, borderRadius: 7, padding: "4px 7px", color: "var(--danger)", cursor: "pointer", fontSize: "9px", fontWeight: 800 }}
                 title={delCount > 0 ? "Click again to confirm" : "Delete chapter"}
                 suppressHydrationWarning

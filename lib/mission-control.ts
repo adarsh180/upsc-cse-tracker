@@ -15,6 +15,8 @@ const google = createGoogleGenerativeAI({
 
 type MissionPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type MissionTaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "SKIPPED";
+const TASK_STALE_MS = 24 * 60 * 60 * 1000;
+const AUTO_SKIP_NOTE = "Auto-skipped after 24 hours without a task-status update.";
 
 type MissionPlannerResult = {
   title: string;
@@ -308,6 +310,8 @@ function serializeTodoTask(task: {
   dueLabel: string | null;
   estimatedMinutes: number | null;
   checklistJson: string | null;
+  completionNotes: string | null;
+  createdAt: Date;
   updatedAt: Date;
   mission: {
     id: string;
@@ -358,7 +362,90 @@ async function fetchMissionRecord(id: string) {
   return mission ? serializeMission(mission) : null;
 }
 
+async function syncMissionStatus(missionId: string) {
+  const missionTasks = await db.agentTask.findMany({
+    where: { missionId },
+    select: { status: true },
+  });
+
+  if (!missionTasks.length) {
+    return;
+  }
+
+  const allDone = missionTasks.every((item) => item.status === "DONE");
+  const hasInProgress = missionTasks.some((item) => item.status === "IN_PROGRESS");
+  const hasTodo = missionTasks.some((item) => item.status === "TODO");
+  const allTerminal = missionTasks.every((item) => item.status === "DONE" || item.status === "SKIPPED");
+
+  await db.agentMission.update({
+    where: { id: missionId },
+    data: {
+      status: allDone
+        ? "COMPLETED"
+        : hasInProgress
+          ? "ACTIVE"
+          : hasTodo
+            ? "READY"
+            : allTerminal
+              ? "APPLIED"
+              : "READY",
+      completedAt: allDone ? new Date() : null,
+      lastActivatedAt: new Date(),
+    },
+  });
+}
+
+async function reconcileStaleAgentTasks(now = new Date()) {
+  const staleBefore = new Date(now.getTime() - TASK_STALE_MS);
+  const staleTasks = await db.agentTask.findMany({
+    where: {
+      status: { in: ["TODO", "IN_PROGRESS"] },
+      updatedAt: { lt: staleBefore },
+    },
+    select: {
+      id: true,
+      missionId: true,
+    },
+  });
+
+  if (!staleTasks.length) {
+    return;
+  }
+
+  await db.$transaction(
+    staleTasks.map((task) =>
+      db.agentTask.update({
+        where: { id: task.id },
+        data: {
+          status: "SKIPPED",
+          completionNotes: AUTO_SKIP_NOTE,
+        },
+      }),
+    ),
+  );
+
+  await Promise.all(
+    [...new Set(staleTasks.map((task) => task.missionId))].map((missionId) =>
+      syncMissionStatus(missionId),
+    ),
+  );
+}
+
+function isBoardVisibleTask(task: {
+  status: string;
+  completionNotes: string | null;
+  updatedAt: Date;
+}) {
+  if (task.completionNotes === AUTO_SKIP_NOTE) {
+    return false;
+  }
+
+  return task.updatedAt.getTime() >= Date.now() - TASK_STALE_MS;
+}
+
 export async function getMissionControlSnapshot() {
+  await reconcileStaleAgentTasks();
+
   const [missions, openTasks, completedToday, studyNodes] = await Promise.all([
     db.agentMission.findMany({
       orderBy: { launchedAt: "desc" },
@@ -436,6 +523,8 @@ export async function getMissionControlSnapshot() {
 }
 
 export async function getTodoBoardSnapshot() {
+  await reconcileStaleAgentTasks();
+
   const [tasks, missions, studyAreas] = await Promise.all([
     db.agentTask.findMany({
       orderBy: [{ status: "asc" }, { priority: "desc" }, { orderIndex: "asc" }, { createdAt: "asc" }],
@@ -477,17 +566,17 @@ export async function getTodoBoardSnapshot() {
   ]);
 
   return {
-    tasks: tasks.map(serializeTodoTask),
+    tasks: tasks.filter(isBoardVisibleTask).map(serializeTodoTask),
     missions: missions.map((mission) => ({
       ...mission,
       launchedAt: mission.launchedAt.toISOString(),
     })),
     studyAreas,
     stats: {
-      total: tasks.length,
-      todo: tasks.filter((task) => task.status === "TODO").length,
-      inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
-      done: tasks.filter((task) => task.status === "DONE").length,
+      total: tasks.filter(isBoardVisibleTask).length,
+      todo: tasks.filter((task) => isBoardVisibleTask(task) && task.status === "TODO").length,
+      inProgress: tasks.filter((task) => isBoardVisibleTask(task) && task.status === "IN_PROGRESS").length,
+      done: tasks.filter((task) => isBoardVisibleTask(task) && task.status === "DONE").length,
     },
   };
 }
@@ -573,6 +662,8 @@ export async function createManualTodoTask(input: {
 }
 
 export async function createAgentMission(goal: string) {
+  await reconcileStaleAgentTasks();
+
   const [context, existingTasks, studyNodes] = await Promise.all([
     buildUPSCContext(),
     db.agentTask.findMany({
@@ -779,6 +870,8 @@ Task rules:
 }
 
 export async function updateAgentTaskStatus(taskId: string, status: MissionTaskStatus) {
+  await reconcileStaleAgentTasks();
+
   const task = await db.agentTask.update({
     where: { id: taskId },
     data: {
@@ -810,21 +903,7 @@ export async function updateAgentTaskStatus(taskId: string, status: MissionTaskS
     },
   });
 
-  const missionTasks = await db.agentTask.findMany({
-    where: { missionId: task.missionId },
-    select: { status: true },
-  });
-
-  const allDone = missionTasks.length > 0 && missionTasks.every((item) => item.status === "DONE");
-
-  await db.agentMission.update({
-    where: { id: task.missionId },
-    data: {
-      status: allDone ? "COMPLETED" : status === "IN_PROGRESS" ? "ACTIVE" : task.mission.status,
-      completedAt: allDone ? new Date() : null,
-      lastActivatedAt: new Date(),
-    },
-  });
+  await syncMissionStatus(task.missionId);
 
   return serializeTodoTask(task);
 }

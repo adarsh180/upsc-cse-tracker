@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState, useTransition } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Plus, Sparkles, Target } from "lucide-react";
 
 import { MissionTodoBoard } from "@/components/ai/mission-todo-board";
@@ -29,10 +29,49 @@ export function TodoWorkspace({
   const [pendingTaskIds, setPendingTaskIds] = useState<string[]>([]);
   const [composerPending, startComposerTransition] = useTransition();
   const [boardPending, startBoardTransition] = useTransition();
+  const [refreshing, startRefreshTransition] = useTransition();
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const stats = useMemo(() => computeStats(tasks), [tasks]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshBoard() {
+      try {
+        const response = await fetch("/api/agent/tasks", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const snapshot = (await response.json()) as {
+          tasks: TodoTaskItem[];
+        };
+
+        if (!cancelled) {
+          setTasks(snapshot.tasks);
+        }
+      } catch {
+        // Keep the existing board state if the background refresh fails.
+      }
+    }
+
+    refreshBoard();
+    const interval = window.setInterval(() => {
+      startRefreshTransition(async () => {
+        await refreshBoard();
+      });
+    }, 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [startRefreshTransition]);
 
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,83 +180,20 @@ export function TodoWorkspace({
 
   return (
     <section className="section-stack">
-      <div className="command-grid">
-        <article className="glass panel span-4 todo-composer-card">
-          <div className="pill">
-            <Plus size={14} />
-            Manual task entry
-          </div>
-          <div className="display" style={{ fontSize: "2rem", marginTop: 16 }}>
-            Add a task yourself.
-          </div>
-          <p className="muted" style={{ marginTop: 10, lineHeight: 1.8 }}>
-            Use this even when Mission Control is idle. Manual tasks go into the same board and stay connected to your tracker.
-          </p>
-
-          <form
-            ref={formRef}
-            className="todo-composer-form"
-            onSubmit={handleCreateTask}
-            suppressHydrationWarning
-          >
-            <input className="field" name="title" placeholder="Task title" required suppressHydrationWarning />
-            <textarea
-              className="textarea todo-composer-textarea"
-              name="detail"
-              placeholder="Optional notes, target chapter, or exact execution instruction"
-              suppressHydrationWarning
-            />
-            <div className="grid grid-2" style={{ gap: 10 }}>
-              <select className="select" name="taskType" defaultValue="PLANNING" suppressHydrationWarning>
-                <option value="PLANNING">Planning</option>
-                <option value="REVISION">Revision</option>
-                <option value="PRACTICE">Practice</option>
-                <option value="TEST">Test</option>
-                <option value="ESSAY">Essay</option>
-                <option value="RECOVERY">Recovery</option>
-                <option value="ANALYSIS">Analysis</option>
-              </select>
-              <select className="select" name="priority" defaultValue="MEDIUM" suppressHydrationWarning>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="CRITICAL">Critical</option>
-                <option value="LOW">Low</option>
-              </select>
-            </div>
-            <div className="grid grid-2" style={{ gap: 10 }}>
-              <select className="select" name="energyBand" defaultValue="MEDIUM" suppressHydrationWarning>
-                <option value="MEDIUM">Medium Energy</option>
-                <option value="DEEP">Deep Work</option>
-                <option value="LIGHT">Light Work</option>
-              </select>
-              <input className="field" type="number" min="10" max="240" step="5" name="estimatedMinutes" placeholder="Minutes" suppressHydrationWarning />
-            </div>
-            <div className="grid grid-2" style={{ gap: 10 }}>
-              <input className="field" name="dueLabel" placeholder="Today / Tomorrow / This week" defaultValue="This week" suppressHydrationWarning />
-              <select className="select" name="linkedStudyNodeId" defaultValue="" suppressHydrationWarning>
-                <option value="">No linked study area</option>
-                {studyAreas.map((area) => (
-                  <option key={area.id} value={area.id}>{area.title}</option>
-                ))}
-              </select>
-            </div>
-            <button className="button todo-composer-submit" type="submit" disabled={composerPending} suppressHydrationWarning>
-              <Plus size={16} />
-              {composerPending ? "Adding..." : "Add Todo"}
-            </button>
-          </form>
-        </article>
-
-        <article className="glass panel glass-strong span-8 todo-summary-card">
+      <div className="todo-hero-layout">
+        <article className="glass panel glass-strong todo-summary-card todo-summary-card-hero">
+          <div className="todo-summary-backdrop" />
           <div className="todo-summary-top">
-            <div>
-              <div className="eyebrow">Execution Board</div>
-              <div className="display" style={{ fontSize: "2.2rem", marginTop: 10 }}>
-                One place for agent tasks and manual tasks.
+            <div className="todo-summary-copy">
+              <div className="pill">
+                <Sparkles size={13} />
+                Execution board
               </div>
-              <p className="muted" style={{ marginTop: 10, maxWidth: 760, lineHeight: 1.82 }}>
-                The board should help you move, not impress you. Add your own todos, run a mission when needed,
-                and track both in the same workspace.
+              <div className="display todo-summary-title">
+                One board. Four states. No clutter.
+              </div>
+              <p className="muted todo-summary-text">
+                Add your own todos, run a mission when needed, and track both in the same workspace.
               </p>
             </div>
             <div className="todo-summary-pills">
@@ -233,26 +209,91 @@ export function TodoWorkspace({
           </div>
 
           <div className="todo-stat-strip">
-            <div className="todo-stat-block">
+            <div className="todo-stat-block total">
               <span>Total</span>
               <strong>{stats.total}</strong>
             </div>
-            <div className="todo-stat-block">
+            <div className="todo-stat-block ready">
               <span>Ready</span>
               <strong>{stats.todo}</strong>
             </div>
-            <div className="todo-stat-block">
+            <div className="todo-stat-block active">
               <span>In Progress</span>
               <strong>{stats.inProgress}</strong>
             </div>
-            <div className="todo-stat-block">
+            <div className="todo-stat-block done">
               <span>Done</span>
               <strong>{stats.done}</strong>
             </div>
           </div>
 
-          {error ? <div className="todo-error-banner">{error}</div> : null}
-          {boardPending ? <div className="todo-sync-chip">Syncing changes...</div> : null}
+          <div className="todo-status-row">
+            {error ? <div className="todo-error-banner">{error}</div> : <div className="todo-status-note">Manual and agent tasks flow into the same system.</div>}
+            {boardPending || refreshing ? <div className="todo-sync-chip">Syncing changes...</div> : null}
+          </div>
+        </article>
+
+        <article className="glass panel todo-composer-card">
+          <div className="todo-composer-head">
+            <div>
+              <div className="eyebrow">Manual task entry</div>
+              <div className="display todo-composer-title">Drop in a sharp next move.</div>
+            </div>
+            <div className="todo-composer-orb" />
+          </div>
+
+          <form
+            ref={formRef}
+            className="todo-composer-form"
+            onSubmit={handleCreateTask}
+            suppressHydrationWarning
+          >
+            <input className="field" name="title" placeholder="Task title" required suppressHydrationWarning />
+            <textarea
+              className="textarea todo-composer-textarea"
+              name="detail"
+              placeholder="Optional notes, target chapter, or exact execution instruction"
+              suppressHydrationWarning
+            />
+            <div className="grid grid-2" style={{ gap: 10 }}>
+              <select className="select todo-glass-select" name="taskType" defaultValue="PLANNING" suppressHydrationWarning>
+                <option value="PLANNING">Planning</option>
+                <option value="REVISION">Revision</option>
+                <option value="PRACTICE">Practice</option>
+                <option value="TEST">Test</option>
+                <option value="ESSAY">Essay</option>
+                <option value="RECOVERY">Recovery</option>
+                <option value="ANALYSIS">Analysis</option>
+              </select>
+              <select className="select todo-glass-select" name="priority" defaultValue="MEDIUM" suppressHydrationWarning>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+            <div className="grid grid-2" style={{ gap: 10 }}>
+              <select className="select todo-glass-select" name="energyBand" defaultValue="MEDIUM" suppressHydrationWarning>
+                <option value="MEDIUM">Medium Energy</option>
+                <option value="DEEP">Deep Work</option>
+                <option value="LIGHT">Light Work</option>
+              </select>
+              <input className="field" type="number" min="10" max="240" step="5" name="estimatedMinutes" placeholder="Minutes" suppressHydrationWarning />
+            </div>
+            <div className="grid grid-2" style={{ gap: 10 }}>
+              <input className="field" name="dueLabel" placeholder="Today / Tomorrow / This week" defaultValue="This week" suppressHydrationWarning />
+              <select className="select todo-glass-select" name="linkedStudyNodeId" defaultValue="" suppressHydrationWarning>
+                <option value="">No linked study area</option>
+                {studyAreas.map((area) => (
+                  <option key={area.id} value={area.id}>{area.title}</option>
+                ))}
+              </select>
+            </div>
+            <button className="button todo-composer-submit" type="submit" disabled={composerPending} suppressHydrationWarning>
+              <Plus size={16} />
+              {composerPending ? "Adding..." : "Add Todo"}
+            </button>
+          </form>
         </article>
       </div>
 
