@@ -1422,8 +1422,16 @@ body::-webkit-scrollbar-thumb,
   margin: 0 auto;
   width: min(1400px, 100%); /* Expanded from 1160px */
 }
-.gurux-message-body {
-  width: min(100%, 1160px) !important; /* Expanded heavily from 760px constraint */
+.gurux-message-row.assistant .gurux-message-body {
+  width: min(100%, 1160px) !important; /* Keep assistant replies spacious */
+}
+.gurux-message-row.user .gurux-message-body {
+  width: fit-content !important;
+  max-width: min(100%, 760px);
+}
+.gurux-message-row.user .gurux-message-shell.user {
+  display: inline-block;
+  max-width: 100%;
 }
 .gurux-composer-shell {
   width: min(1400px, 100%) !important;

@@ -255,6 +255,8 @@ export function UpscGuruShell({
     }).filter((value) => value.trim().toLowerCase() !== draft.trim().toLowerCase());
   }, [attachments.length, avgScore, discipline, draft, focusTrend, memory, recentUserMessages]);
 
+  const hasStartedChat = messages.length > 0 || streaming;
+
   const resizeTextarea = () => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
@@ -850,7 +852,7 @@ export function UpscGuruShell({
               </div>
             </form>
 
-            {predictivePrompts.length ? (
+            {!hasStartedChat && predictivePrompts.length ? (
               <div className={`gurux-predictive-strip${draft.trim() ? " is-active" : ""}`}>
                 <div className="gurux-predictive-label">Predicted asks</div>
                 <div className="gurux-predictive-grid">
