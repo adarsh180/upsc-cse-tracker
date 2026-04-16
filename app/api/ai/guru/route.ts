@@ -55,6 +55,50 @@ function resolveTemperature(mode: "guru" | "deep-analytics" | "essay-checker") {
   return 0.7;
 }
 
+function shouldForceVisualForMessage(message: string, mode: "guru" | "deep-analytics" | "essay-checker") {
+  if (mode !== "guru") return false;
+
+  const normalized = message.toLowerCase();
+  if (!normalized) return false;
+
+  const visualIntentPatterns = [
+    /\bexplain\b/,
+    /\bhow\b/,
+    /\bwhy\b/,
+    /\bprocess\b/,
+    /\bflow\b/,
+    /\bworking\b/,
+    /\bmechanism\b/,
+    /\bcycle\b/,
+    /\bstages?\b/,
+    /\bsteps?\b/,
+    /\bjourney\b/,
+    /\bcompare\b/,
+    /\bdifference\b/,
+    /\bvs\b/,
+    /\bdiagram\b/,
+    /\bvisuali[sz]e\b/,
+  ];
+
+  const nonVisualPatterns = [
+    /\btodo\b/,
+    /\btask\b/,
+    /\badd\b.+\b(topic|chapter|subject)\b/,
+    /\bdelete\b.+\b(topic|chapter|subject)\b/,
+    /\bupdate\b.+\b(topic|chapter|subject)\b/,
+    /\bmark\b.+\bcomplete\b/,
+    /\bscore\b/,
+    /\brank\b/,
+    /\banalytics\b/,
+  ];
+
+  if (nonVisualPatterns.some((pattern) => pattern.test(normalized))) {
+    return false;
+  }
+
+  return visualIntentPatterns.some((pattern) => pattern.test(normalized));
+}
+
 function refreshStudyViews() {
   revalidatePath("/", "layout");
   revalidatePath("/dashboard");
@@ -323,6 +367,7 @@ export async function POST(request: Request) {
   const attachments = await processIncomingAttachments(incomingFiles);
   const attachmentText = buildAttachmentContextText(attachments);
   const attachmentLabel = buildAttachmentDisplayLabel(attachments);
+  const shouldForceVisual = shouldForceVisualForMessage(userMessage, mode);
 
   const context = await buildUPSCContext();
   const system = `${buildUPSCSystemPrompt(context, mode)}
@@ -408,7 +453,41 @@ ${userMessage || "Analyze all attached files carefully and answer accurately."}
 Instructions for this turn:
 - If multiple images or PDFs are attached, examine all of them before concluding.
 - For academic and study questions, keep the tone moderate to strict, never harsh for the sake of harshness.
-- If the files and the question conflict, state that explicitly and explain why.`,
+- If the files and the question conflict, state that explicitly and explain why.
+- For concept explanation, process explanation, or mechanism-style questions, first answer normally in clean markdown.
+- ${shouldForceVisual ? "This student message clearly benefits from a visual explanation, so append one visual schema block after the prose answer." : "After the normal answer, optionally append one visual schema block if it would genuinely help understanding."}
+- The visual schema must use this exact format with valid JSON and no code fence:
+<guru_visual>
+{"title":"short topic title","summary":"one-line recap","theme":"economy","view":"chain","focus":"one-line main mechanism","highlights":["key idea one","key idea two"],"nodes":[{"id":"n1","label":"Repo Rate","detail":"RBI raises benchmark rate","kind":"institution","accent":"gold","zone":"RBI"},{"id":"n2","label":"Cost of Credit","detail":"Borrowing becomes costlier","kind":"pressure","accent":"sage","zone":"Banks"}],"edges":[{"from":"n1","to":"n2","label":"tightens"}],"steps":[{"title":"step title","detail":"one short explanation","accent":"gold","cue":"short cue"},{"title":"step title","detail":"one short explanation","accent":"blue","cue":"short cue"}]}
+</guru_visual>
+- Allowed view values are "chain", "compare", "cycle", or "layers".
+- Allowed theme values are "generic", "geopolitics", "geography", "polity", "economy", "science", "history", "society", "environment", or "ethics".
+- Allowed node kind values are "actor", "institution", "region", "pressure", "input", "output", "process", and "outcome".
+- Use "chain" for sequential mechanisms, "compare" for contrast questions, "cycle" for recurring loops, and "layers" for stacked institutional or conceptual explanations.
+- For climate, geography, economy, polity, biology, or science mechanism topics, prefer "chain" and write each step detail as "what changes; main outcome".
+- Do not use "compare" unless the user explicitly asks for differences, contrast, versus, or side-by-side comparison.
+- Rendering-depth decision rule:
+  1. Choose the visual structure that will help the student understand this topic most clearly.
+  2. Use step or card scenes when the idea is linear, compact, and best understood as a clean sequence.
+  3. Use semantic nodes and edges when the explanation depends on actors, regions, institutions, pressure transmission, branching, routing, or multiple interacting entities.
+  4. If node-edge structure would add clutter without adding clarity, do not use it.
+  5. If the topic is mechanism-heavy but still simple, use a compact scene rather than forcing graph output.
+  6. If the topic is system-heavy, map-heavy, governance-heavy, or transmission-heavy, prefer nodes and edges when that improves comprehension.
+  7. Do not follow any fixed hierarchy between cards and graphs. Select purely on explanatory fit for this exact topic.
+- Keep "focus" short and high-signal. Keep "highlights" to 2 to 4 short phrases.
+- Keep each "cue" under 18 characters.
+- For economy, geography, and polity topics, prefer adding semantic "nodes" and "edges" as well, not only "steps".
+- For economy, use node kinds like institution, pressure, input, output, and outcome.
+- For geography, use node kinds like process, region, input, and outcome.
+- For polity, use node kinds like actor, institution, process, and output.
+- For history, prefer chronology-oriented nodes and outcome nodes.
+- For society, prefer actor, pressure, institution, and outcome nodes.
+- For environment, prefer process, region, input, pressure, and outcome nodes.
+- For ethics, prefer actor, process, input, and outcome nodes.
+- Keep "nodes" between 2 and 8 and "edges" between 1 and 12.
+- Keep the visual schema lightweight: 3 to 5 steps, each detail under 140 characters.
+- If both steps and nodes are present, make them consistent views of the same explanation, not two separate stories.
+- Never mention the JSON block in the prose. Never output more than one <guru_visual> block.`,
           },
           ...attachments.map((attachment) => attachment.contentPart),
         ],

@@ -10,6 +10,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import {
   ArrowUp,
+  Check,
   ChevronRight,
   FileStack,
   GaugeCircle,
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 import "katex/dist/katex.min.css";
 
+import { GuruVisualExplainer, parseGuruMessage } from "@/components/ai/guru-visual-explainer";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 
 type GuruAttachment = {
@@ -80,6 +82,19 @@ type PendingAttachment = {
 
 function GuruSigil() {
   return <SacredLogoMark size="sm" className="gurux-sigil-mark" />;
+}
+
+function GuruTrashIcon() {
+  return (
+    <span className="gurux-trash-icon" aria-hidden="true">
+      <span className="gurux-trash-lid" />
+      <span className="gurux-trash-handle" />
+      <span className="gurux-trash-body">
+        <span className="gurux-trash-line" />
+        <span className="gurux-trash-line" />
+      </span>
+    </span>
+  );
 }
 
 function toPhraseList(items: string[], fallback: string[]) {
@@ -182,6 +197,12 @@ export function UpscGuruShell({
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [newConversationId, setNewConversationId] = useState<string | null>(null);
+  const [newChatPulse, setNewChatPulse] = useState(false);
+  const [renamedConversationId, setRenamedConversationId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -282,6 +303,17 @@ export function UpscGuruShell({
     </ReactMarkdown>
   );
 
+  const renderAssistantContent = (content: string) => {
+    const parsed = parseGuruMessage(content);
+
+    return (
+      <>
+        {parsed.markdown ? <div className="gurux-message-text markdown-body">{renderMarkdown(parsed.markdown)}</div> : null}
+        {parsed.visual ? <GuruVisualExplainer visual={parsed.visual} /> : null}
+      </>
+    );
+  };
+
   function createPendingAttachment(file: File): PendingAttachment {
     return {
       id: `${file.name}-${file.lastModified}-${file.size}`,
@@ -319,8 +351,19 @@ export function UpscGuruShell({
     const response = await fetch("/api/ai/conversations", { cache: "no-store" });
     if (!response.ok) return;
 
+    const previousIds = new Set(conversations.map((conversation) => conversation.id));
     const nextConversations = (await response.json()) as GuruConversationListItem[];
     setConversations(nextConversations);
+
+    const introducedConversation =
+      targetConversationId && !previousIds.has(targetConversationId) ? nextConversations.find((item) => item.id === targetConversationId) : null;
+
+    if (introducedConversation) {
+      setNewConversationId(introducedConversation.id);
+      setNewChatPulse(true);
+      window.setTimeout(() => setNewConversationId((current) => (current === introducedConversation.id ? null : current)), 2200);
+      window.setTimeout(() => setNewChatPulse(false), 900);
+    }
 
     const idToLoad = targetConversationId ?? nextConversations[0]?.id;
     if (!idToLoad) {
@@ -358,6 +401,10 @@ export function UpscGuruShell({
     setStreamingText("");
     setAttachments([]);
     setError("");
+    setEditingConversationId(null);
+    setEditingTitle("");
+    setNewChatPulse(true);
+    window.setTimeout(() => setNewChatPulse(false), 820);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -368,9 +415,53 @@ export function UpscGuruShell({
     }
   }
 
-  async function deleteConversation(id: string) {
-    const response = await fetch(`/api/ai/conversations/${id}`, { method: "DELETE" });
+  function beginRename(conversation: GuruConversationListItem) {
+    setEditingConversationId(conversation.id);
+    setEditingTitle(conversation.title || "UPSC Guru");
+  }
+
+  function cancelRename() {
+    setEditingConversationId(null);
+    setEditingTitle("");
+  }
+
+  async function saveRename(id: string) {
+    const title = editingTitle.trim();
+    if (!title) {
+      cancelRename();
+      return;
+    }
+
+    const response = await fetch(`/api/ai/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+
     if (!response.ok) return;
+
+    setConversations((current) =>
+      current.map((conversation) => (conversation.id === id ? { ...conversation, title } : conversation)),
+    );
+    if (activeConversation?.id === id) {
+      setActiveConversation((current) => (current ? { ...current, title } : current));
+    }
+    setRenamedConversationId(id);
+    window.setTimeout(() => setRenamedConversationId((current) => (current === id ? null : current)), 1400);
+    cancelRename();
+  }
+
+  async function deleteConversation(id: string) {
+    if (deletingConversationId) return;
+    setDeletingConversationId(id);
+
+    await new Promise((resolve) => setTimeout(resolve, 420));
+
+    const response = await fetch(`/api/ai/conversations/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      setDeletingConversationId(null);
+      return;
+    }
 
     if (activeConversation?.id === id) {
       startNew();
@@ -382,6 +473,8 @@ export function UpscGuruShell({
     if (next.length && activeConversation?.id === id) {
       await loadConversation(next[0].id);
     }
+
+    setDeletingConversationId(null);
   }
 
   async function clearAllHistory() {
@@ -539,7 +632,7 @@ export function UpscGuruShell({
             </div>
 
             <div className="gurux-sidebar-actions">
-              <button type="button" className="gurux-primary-button gurux-new-chat-button sidebar-action-btn" onClick={startNew}>
+              <button type="button" className={`gurux-primary-button gurux-new-chat-button sidebar-action-btn${newChatPulse ? " is-pulsing" : ""}`} onClick={startNew}>
                 <PenSquare size={16} />
                 New chat
               </button>
@@ -560,31 +653,95 @@ export function UpscGuruShell({
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    className={`gurux-history-item ${activeConversation?.id === conversation.id ? "active" : ""}`}
+                    className={`gurux-history-item ${activeConversation?.id === conversation.id ? "active" : ""} ${
+                      deletingConversationId === conversation.id ? "is-deleting" : ""
+                    } ${newConversationId === conversation.id ? "is-new" : ""} ${
+                      renamedConversationId === conversation.id ? "is-renamed" : ""
+                    }`}
                   >
                     <button
                       type="button"
                       className="gurux-history-main"
-                      onClick={() => void loadConversation(conversation.id)}
+                      onClick={() => {
+                        if (deletingConversationId === conversation.id || editingConversationId === conversation.id) return;
+                        void loadConversation(conversation.id);
+                      }}
+                      disabled={deletingConversationId === conversation.id || editingConversationId === conversation.id}
                     >
                       <span className="gurux-history-icon">
                         <MessageSquare size={14} />
                       </span>
                       <span className="gurux-history-copy">
-                        <span className="gurux-history-title">{conversation.title || "UPSC Guru"}</span>
+                        {editingConversationId === conversation.id ? (
+                          <span className="gurux-history-rename-shell">
+                            <input
+                              className="gurux-history-rename-input"
+                              value={editingTitle}
+                              onChange={(event) => setEditingTitle(event.target.value)}
+                              onClick={(event) => event.stopPropagation()}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  void saveRename(conversation.id);
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  cancelRename();
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </span>
+                        ) : (
+                          <span className="gurux-history-title">{conversation.title || "UPSC Guru"}</span>
+                        )}
                         <span className="gurux-history-subtitle">
                           {format(new Date(conversation.updatedAt), "dd MMM")} | {conversation.messageCount} msgs
                         </span>
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      className="gurux-history-delete"
-                      onClick={() => void deleteConversation(conversation.id)}
-                      aria-label="Delete conversation"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="gurux-history-actions">
+                      {editingConversationId === conversation.id ? (
+                        <div className="gurux-history-inline-actions">
+                          <button
+                            type="button"
+                            className="gurux-history-edit gurux-history-edit-save"
+                            onClick={() => void saveRename(conversation.id)}
+                            aria-label="Save title"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="gurux-history-edit"
+                            onClick={cancelRename}
+                            aria-label="Cancel rename"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="gurux-history-edit"
+                          onClick={() => beginRename(conversation)}
+                          aria-label="Rename conversation"
+                        >
+                          <span className="gurux-pencil-icon" aria-hidden="true">
+                            <PenSquare size={13} />
+                          </span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="gurux-history-delete"
+                        onClick={() => void deleteConversation(conversation.id)}
+                        aria-label="Delete conversation"
+                        disabled={Boolean(deletingConversationId) || editingConversationId === conversation.id}
+                      >
+                        <GuruTrashIcon />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -667,13 +824,13 @@ export function UpscGuruShell({
                       </div>
 
                       <div className={`gurux-message-shell ${message.role}`}>
-                        <div className={`gurux-message-text ${message.role === "assistant" ? "markdown-body" : ""}`}>
-                          {message.role === "assistant" ? (
-                            renderMarkdown(message.content)
-                          ) : (
+                        {message.role === "assistant" ? (
+                          renderAssistantContent(message.content)
+                        ) : (
+                          <div className="gurux-message-text">
                             <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {message.attachments.length ? (
                           <div className="gurux-attachment-strip">
@@ -708,17 +865,17 @@ export function UpscGuruShell({
                       </div>
 
                       <div className="gurux-message-shell assistant">
-                        <div className="gurux-message-text markdown-body">
-                          {streamingText ? (
-                            renderMarkdown(streamingText)
-                          ) : (
+                        {streamingText ? (
+                          renderAssistantContent(streamingText)
+                        ) : (
+                          <div className="gurux-message-text markdown-body">
                             <div className="gurux-thinking">
                               <span />
                               <span />
                               <span />
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

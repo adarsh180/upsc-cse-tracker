@@ -59,3 +59,28 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const body = (await request.json()) as { title?: unknown };
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+
+  if (!title) {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  const updated = await db.aiConversation.update({
+    where: { id },
+    data: { title: title.slice(0, 72) },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    id: updated.id,
+    title: updated.title,
+    updatedAt: updated.updatedAt.toISOString(),
+  });
+}
