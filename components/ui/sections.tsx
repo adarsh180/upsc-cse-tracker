@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Sparkles } from "lucide-react";
 
+import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { cn } from "@/lib/utils";
 
 export function PageIntro({
@@ -15,40 +16,28 @@ export function PageIntro({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="glass panel hero-grid landing-hero">
-      <div style={{ alignSelf: "center" }}>
+    <section className="glass panel hero-grid landing-hero page-intro-shell">
+      <div className="page-intro-copy">
         <div className="eyebrow">{eyebrow}</div>
-        <h1 className="display" style={{ fontSize: "clamp(3rem, 6vw, 5.4rem)", margin: "14px 0 12px", lineHeight: 1.02 }}>
-          {title}
-        </h1>
-        <p className="muted" style={{ maxWidth: 760, fontSize: "1.05rem", lineHeight: 1.82 }}>
-          {description}
-        </p>
+        <h1 className="display page-intro-title">{title}</h1>
+        <p className="muted page-intro-description">{description}</p>
       </div>
-      <div
-        className="glass panel glass-strong"
-        style={{
-          display: "grid",
-          alignContent: "space-between",
-          gap: 16,
-          minHeight: 240,
-          background:
-            "radial-gradient(circle at top right, hsla(38 72% 58% / 0.12), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-        }}
-      >
+      <div className="glass panel glass-strong page-intro-aside">
+        <div className="page-intro-mark">
+          <SacredLogoMark size="sm" />
+          <div className="page-intro-mark-glow" />
+        </div>
         <div>
           <div className="pill">
             <Sparkles size={14} />
             Sacred tracker system
           </div>
-          <div className="display" style={{ fontSize: "1.8rem", marginTop: 16 }}>
-            Built for a hard third attempt.
-          </div>
-          <p className="muted" style={{ marginTop: 10, lineHeight: 1.8 }}>
+          <div className="display page-intro-aside-title">Built for a hard third attempt.</div>
+          <p className="muted page-intro-aside-copy">
             Timers, test evidence, discipline signals, AI interrogation and database-backed study control in one premium workspace.
           </p>
         </div>
-        <div style={{ display: "grid", gap: 12, justifyItems: "stretch" }}>{actions}</div>
+        <div className="page-intro-actions">{actions}</div>
       </div>
     </section>
   );
@@ -76,29 +65,27 @@ export function CountdownCard({
         {label}
       </div>
       <div className="countdown-number">
-        <div className="display" style={{ fontSize: "clamp(3.4rem, 9vw, 6rem)", lineHeight: 0.9 }}>
-          {days}
-        </div>
-        <div style={{ paddingBottom: 10 }}>
-          <div style={{ fontWeight: 800, color: "var(--text)" }}>days left</div>
+        <div className="display countdown-number-value">{days}</div>
+        <div className="countdown-number-copy">
+          <div className="countdown-number-label">days left</div>
           <div className="muted">{dateLabel}</div>
         </div>
       </div>
       <div className="countdown-progress">
         <span style={{ width: `${progress}%` }} />
       </div>
-      <div className="grid grid-3" style={{ marginTop: 18, gap: 12 }}>
-        <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
-          <div className="muted" style={{ fontSize: "0.78rem" }}>Months</div>
-          <div className="display" style={{ fontSize: "1.35rem", marginTop: 8, color: "var(--text)" }}>{months}</div>
+      <div className="grid grid-3 countdown-mini-grid">
+        <div className="glass countdown-mini-card">
+          <div className="muted countdown-mini-label">Months</div>
+          <div className="display countdown-mini-value">{months}</div>
         </div>
-        <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
-          <div className="muted" style={{ fontSize: "0.78rem" }}>Weeks</div>
-          <div className="display" style={{ fontSize: "1.35rem", marginTop: 8, color: "var(--text)" }}>{weeks}</div>
+        <div className="glass countdown-mini-card">
+          <div className="muted countdown-mini-label">Weeks</div>
+          <div className="display countdown-mini-value">{weeks}</div>
         </div>
-        <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
-          <div className="muted" style={{ fontSize: "0.78rem" }}>Urgency</div>
-          <div className="display" style={{ fontSize: "1.35rem", marginTop: 8, color: "var(--text)" }}>
+        <div className="glass countdown-mini-card">
+          <div className="muted countdown-mini-label">Urgency</div>
+          <div className="display countdown-mini-value">
             {days < 200 ? "High" : days < 400 ? "Build" : "Foundation"}
           </div>
         </div>
@@ -118,9 +105,9 @@ export function MetricCard({
 }) {
   return (
     <article className="glass panel metric-card">
-      <div className="eyebrow" style={{ color: "var(--text-muted)" }}>{label}</div>
+      <div className="eyebrow metric-card-label">{label}</div>
       <div className="display metric-value">{value}</div>
-      <div className="muted" style={{ lineHeight: 1.7 }}>{hint}</div>
+      <div className="muted metric-card-hint">{hint}</div>
     </article>
   );
 }
@@ -191,29 +178,20 @@ export function StudyCard({
                 : "var(--text)";
 
   return (
-    <Link href={href} className="glass panel card-link">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-        <div className="tag" style={{ marginBottom: 0 }}>
+    <Link href={href} className="glass panel card-link study-card-shell">
+      <div className="study-card-head">
+        <div className="tag study-card-tag">
           {badge ?? "Open workspace"}
         </div>
         {completionPct !== undefined && (
           <CircularProgress pct={completionPct} size={52} stroke={5} color={accentColor} />
         )}
       </div>
-      <div
-        className="display"
-        style={{
-          fontSize: "1.7rem",
-          marginBottom: 12,
-          color: accentColor,
-        }}
-      >
+      <div className="display study-card-title" style={{ color: accentColor }}>
         {title}
       </div>
-      <p className="muted" style={{ lineHeight: 1.78, minHeight: 84 }}>
-        {overview}
-      </p>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800 }}>
+      <p className="muted study-card-overview">{overview}</p>
+      <div className="study-card-cta">
         Enter page <ArrowRight size={16} />
       </div>
     </Link>

@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import {
   ArrowUp,
-  BrainCircuit,
   ChevronRight,
   FileStack,
   GaugeCircle,
@@ -26,6 +26,8 @@ import {
   X,
 } from "lucide-react";
 import "katex/dist/katex.min.css";
+
+import { SacredLogoMark } from "@/components/shell/sacred-brand";
 
 type GuruAttachment = {
   id: string;
@@ -77,37 +79,64 @@ type PendingAttachment = {
 };
 
 function GuruSigil() {
-  return (
-    <div className="gurux-sigil" aria-hidden="true">
-      <BrainCircuit size={18} />
-    </div>
-  );
+  return <SacredLogoMark size="sm" className="gurux-sigil-mark" />;
 }
 
-const suggestions = [
-  "Analyse my preparation brutally honestly",
-  "Build this week's UPSC plan from my real data",
-  "Interrogate my answer-writing quality like a strict evaluator",
-  "Audit whether my test trend is actually improving",
-];
+function toPhraseList(items: string[], fallback: string[]) {
+  const cleaned = items.map((item) => item.replace(/^[\-\d.\s]+/, "").trim()).filter(Boolean);
+  return cleaned.length ? cleaned : fallback;
+}
 
-const cueCards = [
-  "Turn my current test trend into a realistic 7-day correction plan",
-  "Read these screenshots and tell me where I am bluffing myself",
-  "Review my revision system like a strict mentor, not a cheerleader",
-];
+function extractFocusFromDraft(input: string) {
+  const cleaned = input.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "";
 
-function scoreSuggestionMatch(input: string, suggestion: string) {
-  const query = input.trim().toLowerCase();
-  if (!query) return 0;
+  const focused = cleaned.match(/(?:on|for|about|in)\s+(.+)$/i)?.[1]?.trim();
+  return focused || cleaned;
+}
 
-  const words = query.split(/\s+/).filter(Boolean);
-  return words.reduce((score, word) => {
-    if (suggestion.toLowerCase().includes(word)) {
-      return score + 2;
+function buildContextDrivenPrompts(params: {
+  draft: string;
+  memory: GuruMemory;
+  recentUserMessages: string[];
+  discipline: string;
+  avgScore: string;
+  focusTrend: string;
+  attachmentsCount: number;
+}) {
+  const weaknesses = toPhraseList(params.memory.recurringWeaknesses, ["my weakest UPSC area"]);
+  const strengths = toPhraseList(params.memory.recurringStrengths, ["my strongest subject"]);
+  const priorities = toPhraseList(params.memory.mentorPriorities, ["my next highest-leverage move"]);
+  const themes = toPhraseList(params.memory.recentConversationThemes, ["revision quality", "test trend"]);
+  const focus = extractFocusFromDraft(params.draft) || weaknesses[0];
+  const recent = params.recentUserMessages.slice(-3);
+
+  if (!params.draft.trim()) {
+    return [
+      `Audit ${weaknesses[0]} using my live data and tell me the real bottleneck`,
+      `Build a strict 7-day plan around ${priorities[0]}`,
+      `Compare ${strengths[0]} against ${weaknesses[0]} and tell me where I am losing marks`,
+      recent[0] || `Evaluate my ${themes[0]} using discipline ${params.discipline}, score ${params.avgScore}, and focus ${params.focusTrend}`,
+    ].slice(0, 4);
+  }
+
+  const prompts = new Set<string>();
+  prompts.add(`${params.draft.trim()} based on my live tracker data`);
+  prompts.add(`Audit ${focus} brutally and tell me the exact correction plan`);
+  prompts.add(`Turn ${focus} into a strict 7-day action plan with priorities first`);
+  prompts.add(`Use my discipline ${params.discipline}, score ${params.avgScore}, and focus ${params.focusTrend} to judge ${focus}`);
+
+  if (params.attachmentsCount > 0) {
+    prompts.add(`Read my attached files and evaluate ${focus} with evidence, not generic advice`);
+  }
+
+  for (const message of recent) {
+    if (message.toLowerCase().includes(focus.toLowerCase()) || focus.toLowerCase().includes(message.toLowerCase().slice(0, 10))) {
+      prompts.add(`${params.draft.trim()} and connect it with: ${message}`);
     }
-    return score;
-  }, 0);
+  }
+
+  return Array.from(prompts).slice(0, 4);
 }
 
 function describeAttachmentType(mimeType: string) {
@@ -134,7 +163,7 @@ export function UpscGuruShell({
   discipline,
   avgScore,
   focusTrend,
-  memory: _memory,
+  memory,
 }: {
   conversations: GuruConversationListItem[];
   conversation: GuruConversation | null;
@@ -143,6 +172,7 @@ export function UpscGuruShell({
   focusTrend: string;
   memory: GuruMemory;
 }) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -190,22 +220,40 @@ export function UpscGuruShell({
     { label: "Focus", value: focusTrend, icon: Target },
   ];
 
-  const compactSuggestions = useMemo(() => {
-    const trimmedDraft = draft.trim();
+  const recentUserMessages = useMemo(
+    () =>
+      messages
+        .filter((message) => message.role === "user")
+        .map((message) => message.content.trim())
+        .filter(Boolean),
+    [messages],
+  );
 
-    if (!trimmedDraft) {
-      return suggestions.slice(0, 2);
-    }
+  const cueCards = useMemo(
+    () =>
+      buildContextDrivenPrompts({
+        draft: "",
+        memory,
+        recentUserMessages,
+        discipline,
+        avgScore,
+        focusTrend,
+        attachmentsCount: 0,
+      }).slice(0, 2),
+    [avgScore, discipline, focusTrend, memory, recentUserMessages],
+  );
 
-    return [...suggestions]
-      .map((suggestion) => ({
-        suggestion,
-        score: scoreSuggestionMatch(trimmedDraft, suggestion),
-      }))
-      .sort((left, right) => right.score - left.score)
-      .map((item) => item.suggestion)
-      .slice(0, 3);
-  }, [draft]);
+  const predictivePrompts = useMemo(() => {
+    return buildContextDrivenPrompts({
+      draft,
+      memory,
+      recentUserMessages,
+      discipline,
+      avgScore,
+      focusTrend,
+      attachmentsCount: attachments.length,
+    }).filter((value) => value.trim().toLowerCase() !== draft.trim().toLowerCase());
+  }, [attachments.length, avgScore, discipline, draft, focusTrend, memory, recentUserMessages]);
 
   const resizeTextarea = () => {
     if (!textareaRef.current) return;
@@ -421,6 +469,7 @@ export function UpscGuruShell({
       setStreamingText("");
 
       await refreshConversations(conversationId ?? undefined);
+      router.refresh();
     } catch (caughtError) {
       if ((caughtError as Error).name !== "AbortError") {
         setError((caughtError as Error).message);
@@ -474,15 +523,12 @@ export function UpscGuruShell({
             <div className="gurux-brand-row">
               <div className="gurux-brand">
                 <GuruSigil />
-                <div>
-                  <div className="gurux-brand-title">UPSC-GURU</div>
-                  <div className="gurux-brand-copy">Premium mentor console</div>
-                </div>
+                <div className="gurux-brand-title">History</div>
               </div>
 
               <button
                 type="button"
-                className="gurux-icon-button gurux-mobile-only"
+                className="gurux-icon-button"
                 onClick={() => setSidebarOpen(false)}
                 aria-label="Collapse sidebar"
               >
@@ -490,22 +536,15 @@ export function UpscGuruShell({
               </button>
             </div>
 
-            <button type="button" className="gurux-primary-button" onClick={startNew}>
-              <Plus size={16} />
-              New chat
-            </button>
-          </div>
-
-          <div className="gurux-sidebar-stats">
-            {statCards.map((card) => (
-              <div key={card.label} className="gurux-stat-card">
-                <div className="gurux-stat-icon">
-                  <card.icon size={14} />
-                </div>
-                <div className="gurux-stat-label">{card.label}</div>
-                <div className="gurux-stat-value">{card.value}</div>
-              </div>
-            ))}
+            <div className="gurux-sidebar-actions">
+              <button type="button" className="gurux-primary-button gurux-new-chat-button sidebar-action-btn" onClick={startNew}>
+                <PenSquare size={16} />
+                New chat
+              </button>
+              <Link href="/ai-insight/deep-analytics" className="gurux-secondary-link sidebar-action-btn">
+                Analytics
+              </Link>
+            </div>
           </div>
 
           <div className="gurux-history-panel">
@@ -532,7 +571,7 @@ export function UpscGuruShell({
                       <span className="gurux-history-copy">
                         <span className="gurux-history-title">{conversation.title || "UPSC Guru"}</span>
                         <span className="gurux-history-subtitle">
-                          {format(new Date(conversation.updatedAt), "dd MMM")} · {conversation.messageCount} msgs
+                          {format(new Date(conversation.updatedAt), "dd MMM")} | {conversation.messageCount} msgs
                         </span>
                       </span>
                     </button>
@@ -556,87 +595,43 @@ export function UpscGuruShell({
           </div>
 
           <div className="gurux-sidebar-footer">
-            <div className="gurux-footer-chip">
-              <ShieldCheck size={13} />
-              No fluff
-            </div>
-            <div className="gurux-footer-chip">
-              <Target size={13} />
-              Weakness first
-            </div>
             <button type="button" className="gurux-clear-button" onClick={() => void clearAllHistory()}>
               <Trash2 size={13} />
-              Clear all history
+              Clear history
             </button>
           </div>
         </div>
       </aside>
 
       <main className="gurux-main">
-        <header className="gurux-topbar">
-          <div className="gurux-topbar-left">
-            <button
-              type="button"
-              className="gurux-icon-button"
-              onClick={() => setSidebarOpen((current) => !current)}
-              aria-label={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
-            >
-              {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            </button>
-
-            <div className="gurux-topbar-copy">
-              <div className="gurux-topbar-title">{activeConversation?.title || "New mentor session"}</div>
-              <div className="gurux-topbar-subtitle">{conversationLabel}</div>
-            </div>
-          </div>
-
-          <div className="gurux-topbar-actions">
-            <Link href="/ai-insight/deep-analytics" className="gurux-secondary-link">
-              Deep analytics
-            </Link>
-            <button type="button" className="gurux-icon-button" onClick={startNew} aria-label="New chat">
-              <PenSquare size={16} />
-            </button>
-          </div>
-        </header>
+        <button
+          type="button"
+          className="gurux-sidebar-toggle-floating"
+          onClick={() => setSidebarOpen((current) => !current)}
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+        >
+          {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+        </button>
 
         <section className="gurux-content">
           <div className="gurux-scroll-area">
-            {messages.length === 0 ? (
-              <div className="gurux-empty-canvas">
-                <div className="gurux-hero-badge">
-                  <Sparkles size={13} />
-                  Third-attempt mentor system
-                </div>
+            <div className={`gurux-main-hero-placeholder ${messages.length > 0 ? "shrunk" : ""}`} />
 
-                <div className="gurux-empty-head">
-                  <div className="gurux-hero-mark">
+            {messages.length === 0 ? (
+              <div className="gurux-empty-canvas-minimal">
+                <div className="gurux-empty-head-minimal">
+                  <div className="gurux-hero-mark-minimal">
                     <GuruSigil />
                   </div>
-                  <h1 className="gurux-empty-title">Where should we start?</h1>
+                  <h1 className="gurux-empty-title-premium display">How can I help you today?</h1>
                 </div>
 
-                <div className="gurux-empty-meta">
-                  <div className="gurux-meta-panel">
-                    <span className="gurux-meta-panel-label">Discipline</span>
-                    <strong>{discipline}</strong>
-                  </div>
-                  <div className="gurux-meta-panel">
-                    <span className="gurux-meta-panel-label">Average</span>
-                    <strong>{avgScore}</strong>
-                  </div>
-                  <div className="gurux-meta-panel">
-                    <span className="gurux-meta-panel-label">Focus</span>
-                    <strong>{focusTrend}</strong>
-                  </div>
-                </div>
-
-                <div className="gurux-cue-grid">
-                  {cueCards.slice(0, draft.trim() ? 2 : 3).map((cue) => (
+                <div className="gurux-cue-grid-minimal">
+                  {cueCards.slice(0, 2).map((cue) => (
                     <button
                       key={cue}
                       type="button"
-                      className="gurux-cue-card"
+                      className="gurux-cue-card-minimal"
                       onClick={() => {
                         setDraft(cue);
                         requestAnimationFrame(() => {
@@ -646,32 +641,6 @@ export function UpscGuruShell({
                       }}
                     >
                       <span>{cue}</span>
-                      <ChevronRight size={15} />
-                    </button>
-                  ))}
-                </div>
-
-                <div className={`gurux-suggestion-grid ${draft.trim() ? "is-typing" : ""}`}>
-                  {compactSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className="gurux-suggestion-card"
-                      onClick={() => {
-                        setDraft(suggestion);
-                        requestAnimationFrame(() => {
-                          resizeTextarea();
-                          textareaRef.current?.focus();
-                        });
-                      }}
-                    >
-                      <div className="gurux-suggestion-icon">
-                        <Wand2 size={15} />
-                      </div>
-                      <div className="gurux-suggestion-copy">
-                        <div className="gurux-suggestion-label">Suggested prompt</div>
-                        <div className="gurux-suggestion-text">{suggestion}</div>
-                      </div>
                     </button>
                   ))}
                 </div>
@@ -691,7 +660,7 @@ export function UpscGuruShell({
 
                     <div className="gurux-message-body">
                       <div className="gurux-message-meta">
-                        <span>{message.role === "user" ? "You" : "UPSC-GURU"}</span>
+                        <span>{message.role === "user" ? "You" : "UPSC Guru"}</span>
                         <span>{format(new Date(message.createdAt), "hh:mm a")}</span>
                       </div>
 
@@ -732,7 +701,7 @@ export function UpscGuruShell({
 
                     <div className="gurux-message-body">
                       <div className="gurux-message-meta">
-                        <span>UPSC-GURU</span>
+                        <span>UPSC Guru</span>
                         <span>live</span>
                       </div>
 
@@ -861,9 +830,7 @@ export function UpscGuruShell({
                   />
 
                   <div className="gurux-composer-footer">
-                    <span>Images and PDFs supported</span>
-                    <span>Strict mentor mode</span>
-                    <span>Data-backed guidance</span>
+                    <span>UPSC Guru</span>
                   </div>
                 </div>
 
@@ -882,6 +849,30 @@ export function UpscGuruShell({
                 )}
               </div>
             </form>
+
+            {predictivePrompts.length ? (
+              <div className={`gurux-predictive-strip${draft.trim() ? " is-active" : ""}`}>
+                <div className="gurux-predictive-label">Predicted asks</div>
+                <div className="gurux-predictive-grid">
+                  {predictivePrompts.map((prediction) => (
+                    <button
+                      key={prediction}
+                      type="button"
+                      className="gurux-predictive-chip"
+                      onClick={() => {
+                        setDraft(prediction);
+                        requestAnimationFrame(() => {
+                          resizeTextarea();
+                          textareaRef.current?.focus();
+                        });
+                      }}
+                    >
+                      {prediction}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {error ? <div className="gurux-error-banner">{error}</div> : null}
           </div>

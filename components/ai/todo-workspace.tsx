@@ -178,32 +178,38 @@ export function TodoWorkspace({
     });
   }
 
+  function handleDeleteTask(taskId: string) {
+    const previous = tasks;
+    setError("");
+    setPendingTaskIds((current) => [...current, taskId]);
+    setTasks((current) => current.filter((task) => task.id !== taskId));
+
+    startBoardTransition(async () => {
+      try {
+        const response = await fetch(`/api/agent/tasks/${taskId}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error("Could not delete the task.");
+        }
+      } catch (caughtError) {
+        setTasks(previous);
+        setError((caughtError as Error).message);
+      } finally {
+        setPendingTaskIds((current) => current.filter((id) => id !== taskId));
+      }
+    });
+  }
+
   return (
     <section className="section-stack">
       <div className="todo-hero-layout">
-        <article className="glass panel glass-strong todo-summary-card todo-summary-card-hero">
-          <div className="todo-summary-backdrop" />
+        <article className="glass panel glass-strong">
           <div className="todo-summary-top">
             <div className="todo-summary-copy">
-              <div className="pill">
-                <Sparkles size={13} />
-                Execution board
-              </div>
               <div className="display todo-summary-title">
                 One board. Four states. No clutter.
-              </div>
-              <p className="muted todo-summary-text">
-                Add your own todos, run a mission when needed, and track both in the same workspace.
-              </p>
-            </div>
-            <div className="todo-summary-pills">
-              <div className="pill">
-                <Sparkles size={13} />
-                Agent tasks when launched
-              </div>
-              <div className="pill">
-                <Target size={13} />
-                Manual tasks anytime
               </div>
             </div>
           </div>
@@ -301,6 +307,7 @@ export function TodoWorkspace({
         tasks={tasks}
         pendingTaskIds={pendingTaskIds}
         onStatusChange={handleStatusChange}
+        onDeleteTask={handleDeleteTask}
       />
     </section>
   );

@@ -58,7 +58,7 @@ export default async function GuruPage() {
     : null;
 
   return (
-    <main className="page-shell guru-page-shell">
+    <div className="guru-page-shell">
       <UpscGuruShell
         conversations={conversations}
         conversation={serializedConversation}
@@ -67,6 +67,6 @@ export default async function GuruPage() {
         focusTrend={`${context.moodSummary.avgFocus}/10`}
         memory={context.memory}
       />
-    </main>
+    </div>
   );
 }

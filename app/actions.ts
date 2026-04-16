@@ -560,3 +560,16 @@ export async function createManualTodoTaskAction(formData: FormData) {
 
   refreshCorePages("/todo");
 }
+
+export async function deleteMissionHistoryAction(formData: FormData) {
+  await requireSession();
+  const missionId = String(formData.get("missionId") ?? "").trim();
+  if (!missionId) return;
+
+  await db.agentMission.update({
+    where: { id: missionId },
+    data: { status: "HIDDEN" },
+  });
+
+  refreshCorePages("/mission-control");
+}

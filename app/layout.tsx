@@ -4,6 +4,7 @@ import { Inter, Noto_Serif_Devanagari, Playfair_Display } from "next/font/google
 import { AppChrome } from "@/components/shell/app-chrome";
 
 import "./globals.css";
+import "./redesign.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],

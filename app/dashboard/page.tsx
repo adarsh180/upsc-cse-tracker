@@ -8,6 +8,9 @@ import {
   Sparkles,
   Target,
   Trophy,
+  Clock,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions";
@@ -33,7 +36,6 @@ export default async function DashboardPage() {
   const trackedHours = summary.metrics[0]?.value ?? "0h";
   const focusTrend = summary.metrics[3]?.value ?? "0/10";
 
-  // Compute subject-level completion % for each paper card
   const paperPctMap: Record<string, number> = {};
   await Promise.all(
     summary.papers.map(async (paper) => {
@@ -51,317 +53,387 @@ export default async function DashboardPage() {
 
   return (
     <main className="page-shell">
-      <section className="glass panel dashboard-hero">
-        <div className="hero-grid">
-          <div style={{ display: "grid", gap: 22 }}>
+
+      {/* ══════════════════════════════════════
+          HERO SECTION
+          ══════════════════════════════════════ */}
+      <section
+        className="glass panel dashboard-hero"
+        style={{ padding: 0, overflow: "hidden", borderRadius: 46, marginBottom: 28 }}
+      >
+        {/* Inner layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(300px, 0.6fr)" }}>
+
+          {/* LEFT: Main hero copy */}
+          <div style={{ padding: "44px 44px 44px 48px", display: "grid", gap: 28, alignContent: "start" }}>
+            {/* Header row */}
             <div>
-              <div className="eyebrow">Command Center</div>
-              <h1 className="display" style={{ fontSize: "clamp(3.5rem, 7vw, 6.2rem)", margin: "12px 0 14px", lineHeight: 0.96 }}>
-                Sacred dashboard
-                <br />
-                for a hard attempt.
+              <div className="eyebrow" style={{ marginBottom: 14 }}>Command Center — Active</div>
+              <h1
+                className="display"
+                style={{
+                  fontSize: "clamp(3.2rem, 6vw, 5.6rem)",
+                  margin: "0 0 16px",
+                  lineHeight: 0.95,
+                  letterSpacing: "-0.04em",
+                  maxWidth: "12ch",
+                }}
+              >
+                Sacred dashboard for a hard attempt.
               </h1>
-              <p className="muted" style={{ maxWidth: 760, fontSize: "1.05rem", lineHeight: 1.85 }}>
-                This is no longer a generic card wall. It now behaves like the premium command
-                room from your NEET project, but tuned for UPSC pressure, test honesty,
-                subject control, and AI-backed discipline tracking.
+              <p className="muted" style={{ maxWidth: 660, fontSize: "1.02rem", lineHeight: 1.88, margin: 0 }}>
+                {recentLog
+                  ? `Latest session: ${recentLog.primaryFocus} — ${recentLog.totalHours.toFixed(1)}h logged, ${recentLog.disciplineScore}/100 discipline.`
+                  : "Your dashboard sharpens the moment you start logging honest sessions. Everything here is real — no wishful memory."}
               </p>
             </div>
 
-            <div className="grid grid-3">
-              <div className="glass panel" style={{ minHeight: 138, padding: 18 }}>
-                <div className="pill">
-                  <Target size={14} />
-                  Discipline
+            {/* Metrics Row */}
+            <div className="grid grid-3" style={{ gap: 14 }}>
+              {[
+                { icon: Target, label: "Discipline", value: discipline, color: "var(--gold-bright)" },
+                { icon: Trophy, label: "Avg Score", value: avgScore, color: "var(--physics)" },
+                { icon: Zap, label: "Focus Trend", value: focusTrend, color: "var(--lotus-bright)" },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="glass"
+                  style={{
+                    borderRadius: 24,
+                    padding: "20px 18px",
+                    display: "grid",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        display: "grid",
+                        placeItems: "center",
+                        background: `color-mix(in srgb, ${m.color} 14%, rgba(255,255,255,0.04))`,
+                        color: m.color,
+                      }}
+                    >
+                      <m.icon size={14} />
+                    </div>
+                    <div className="eyebrow" style={{ color: "var(--text-muted)" }}>{m.label}</div>
+                  </div>
+                  <div
+                    className="display"
+                    style={{ fontSize: "2.1rem", color: m.color, lineHeight: 1 }}
+                  >
+                    {m.value}
+                  </div>
                 </div>
-                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>{discipline}</div>
-                <div className="muted" style={{ marginTop: 8 }}>Live from daily goal completion quality.</div>
-              </div>
-
-              <div className="glass panel" style={{ minHeight: 138, padding: 18 }}>
-                <div className="pill">
-                  <Trophy size={14} />
-                  Avg score
-                </div>
-                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>{avgScore}</div>
-                <div className="muted" style={{ marginTop: 8 }}>Latest recorded test evidence, not intention.</div>
-              </div>
-
-              <div className="glass panel" style={{ minHeight: 138, padding: 18 }}>
-                <div className="pill">
-                  <Sparkles size={14} />
-                  Focus trend
-                </div>
-                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>{focusTrend}</div>
-                <div className="muted" style={{ marginTop: 8 }}>Pulled from mood tracking and recent energy signals.</div>
-              </div>
+              ))}
             </div>
 
-            <div className="countdown-grid">
-              <CountdownCard
-                label="UPSC Prelims 2027"
-                days={prelims.days}
-                dateLabel={prelims.dateLabel}
-                tone="var(--gold)"
-              />
-              <CountdownCard
-                label="UPSC Mains 2027"
-                days={mains.days}
-                dateLabel={mains.dateLabel}
-                tone="var(--physics)"
-              />
+            {/* Hours + Countdown mini strip */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+              <div
+                className="glass"
+                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
+              >
+                <Clock size={16} style={{ color: "var(--botany)", flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
+                    Hours
+                  </div>
+                  <div className="display" style={{ fontSize: "1.5rem", color: "var(--botany)", lineHeight: 1.2 }}>
+                    {trackedHours}
+                  </div>
+                </div>
+              </div>
+              <div
+                className="glass"
+                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
+              >
+                <Flame size={16} style={{ color: "var(--saffron)", flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
+                    Mood
+                  </div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, marginTop: 2, color: "var(--text)" }}>
+                    {latestMood ? latestMood.label : "—"}
+                  </div>
+                </div>
+              </div>
+              <div
+                className="glass"
+                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
+              >
+                <TrendingUp size={16} style={{ color: "var(--rose-bright)", flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
+                    Tests
+                  </div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, marginTop: 2, color: "var(--text)" }}>
+                    {recentTest ? `${recentTest.score}/${recentTest.totalMarks}` : "None yet"}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="hero-actions">
-            <article className="glass panel glass-strong" style={{ minHeight: 260 }}>
-              <div className="panel-title-row">
-                <div>
-                  <div className="eyebrow">Execution Pulse</div>
-                  <div className="display" style={{ fontSize: "2rem", marginTop: 8 }}>
-                    {recentTest ? recentTest.title : "No test pressure logged"}
-                  </div>
-                </div>
-                <form action={signOutAction}>
-                  <button className="button-secondary" type="submit">
-                    Sign out
-                  </button>
-                </form>
+          {/* RIGHT: Actions sidebar */}
+          <div
+            className="glass-strong"
+            style={{
+              padding: "36px 32px",
+              display: "grid",
+              gap: 18,
+              alignContent: "start",
+              background:
+                "radial-gradient(circle at 80% 16%, hsla(38,92%,62%,0.20), transparent 28%), radial-gradient(circle at 20% 88%, hsla(216,88%,68%,0.14), transparent 32%), linear-gradient(155deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))",
+            }}
+          >
+            {/* Execution Pulse */}
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>Execution Pulse</div>
+              <div className="display" style={{ fontSize: "1.7rem", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+                {recentTest ? recentTest.title : "No test pressure logged yet"}
               </div>
-
-              <p className="muted" style={{ marginTop: 16, lineHeight: 1.82 }}>
+              <p className="muted" style={{ marginTop: 10, lineHeight: 1.82, fontSize: 13.5 }}>
                 {recentTest
-                  ? `Latest score ${recentTest.score}/${recentTest.totalMarks}. Use the analytics and Guru pages to interrogate this trend before it quietly becomes your new baseline.`
-                  : "Start logging tests so this page stops being decorative and starts becoming brutally useful."}
+                  ? `Score: ${recentTest.score}/${recentTest.totalMarks}. Open analytics to interrogate this trend before it becomes your baseline.`
+                  : "Start logging tests so this page stops being decorative and starts being brutally useful."}
               </p>
+            </div>
 
-              <div className="metric-stack" style={{ marginTop: 18 }}>
-                <Link href="/ai-insight" className="button">
-                  Open AI Insight
-                </Link>
-                <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                  Log a fresh test <ArrowRight size={16} />
-                </Link>
-                <Link href="/goals" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                  Update daily goals <ArrowRight size={16} />
-                </Link>
-              </div>
-            </article>
+            {/* CTA Buttons */}
+            <div style={{ display: "grid", gap: 10 }}>
+              <Link href="/ai-insight" className="button" style={{ justifyContent: "center" }}>
+                <Sparkles size={15} />
+                Open AI Insight
+              </Link>
+              <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
+                Log a fresh test <ArrowRight size={15} />
+              </Link>
+              <Link href="/goals" className="button-secondary" style={{ justifyContent: "space-between" }}>
+                Update daily goals <ArrowRight size={15} />
+              </Link>
+              <Link href="/mood" className="button-secondary" style={{ justifyContent: "space-between" }}>
+                Track mood <ArrowRight size={15} />
+              </Link>
+            </div>
 
-            <article className="glass panel spotlight-card">
-              <div className="pill">
-                <ShieldAlert size={14} />
-                Honesty check
+            {/* Divider */}
+            <div className="divider" />
+
+            {/* Honesty check */}
+            <div
+              className="glass"
+              style={{ borderRadius: 22, padding: 18 }}
+            >
+              <div className="pill" style={{ marginBottom: 12 }}>
+                <ShieldAlert size={13} />
+                Latest session
               </div>
-              <div className="display" style={{ fontSize: "1.85rem", marginTop: 16 }}>
-                {recentLog ? recentLog.primaryFocus : "No primary focus recorded"}
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, lineHeight: 1.4 }}>
+                {recentLog ? recentLog.primaryFocus : "No session data yet"}
               </div>
-              <p className="muted" style={{ lineHeight: 1.8, marginTop: 10 }}>
+              <p className="muted" style={{ marginTop: 8, fontSize: 13, lineHeight: 1.78 }}>
                 {recentLog
-                  ? `${recentLog.totalHours.toFixed(1)}h tracked with ${recentLog.completion}% completion and ${recentLog.disciplineScore}/100 discipline.`
-                  : "Your dashboard gets sharper only when your logging gets more honest."}
+                  ? `${recentLog.completion}% completion · ${recentLog.disciplineScore}/100 discipline`
+                  : "Log what you actually did so the system can tell effort from bluffing."}
               </p>
+            </div>
 
-              <div className="grid grid-2" style={{ marginTop: 18 }}>
-                <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
-                  <div className="eyebrow" style={{ color: "var(--text-muted)" }}>Mood</div>
-                  <div style={{ fontWeight: 800, marginTop: 10 }}>
-                    {latestMood ? latestMood.label : "No entry"}
-                  </div>
-                </div>
-                <div className="glass" style={{ borderRadius: 18, padding: 14 }}>
-                  <div className="eyebrow" style={{ color: "var(--text-muted)" }}>Hours</div>
-                  <div style={{ fontWeight: 800, marginTop: 10 }}>{trackedHours}</div>
-                </div>
-              </div>
-            </article>
+            {/* Sign out */}
+            <form action={signOutAction}>
+              <button
+                className="button-secondary"
+                type="submit"
+                style={{ width: "100%", justifyContent: "center", fontSize: 13 }}
+              >
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
-      <section className="section-stack">
-        <div className="command-grid">
-          <div className="span-8">
-            <div className="grid grid-4">
-              {summary.metrics.map((metric) => (
-                <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
-              ))}
-            </div>
-          </div>
-
-          <div className="span-4">
-            <article className="glass panel glass-strong" style={{ height: "100%" }}>
-              <div className="eyebrow">Pressure Summary</div>
-              <div className="metric-stack" style={{ marginTop: 18 }}>
-                <div className="glass" style={{ borderRadius: 20, padding: 16 }}>
-                  <div className="pill">
-                    <Goal size={14} />
-                    Daily goals
-                  </div>
-                  <div style={{ fontWeight: 800, marginTop: 12 }}>
-                    {recentLog ? recentLog.primaryFocus : "No daily goal submitted"}
-                  </div>
-                  <div className="muted" style={{ marginTop: 8, lineHeight: 1.75 }}>
-                    {recentLog
-                      ? `${recentLog.completion}% completion with ${recentLog.disciplineScore}/100 discipline.`
-                      : "Log what you actually did so the system can tell effort from bluffing."}
-                  </div>
-                </div>
-
-                <div className="glass" style={{ borderRadius: 20, padding: 16 }}>
-                  <div className="pill">
-                    <Flame size={14} />
-                    Mood signal
-                  </div>
-                  <div style={{ fontWeight: 800, marginTop: 12 }}>
-                    {latestMood ? `${latestMood.label} mood detected` : "No mood data yet"}
-                  </div>
-                  <div className="muted" style={{ marginTop: 8, lineHeight: 1.75 }}>
-                    {latestMood
-                      ? `Focus ${latestMood.focus}/10 and stress ${latestMood.stress}/10 should guide revision intensity and test timing.`
-                      : "Mood drift is one of the sharpest predictors of quiet performance decline."}
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
+      {/* ══════════════════════════════════════
+          METRICS ROW
+          ══════════════════════════════════════ */}
+      <section style={{ marginBottom: 28 }}>
+        <div className="grid grid-4" style={{ gap: 18 }}>
+          {summary.metrics.map((metric) => (
+            <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
+          ))}
         </div>
+      </section>
 
-        <section>
-          <LiveExamTimer
-            label="Live Countdown To UPSC Prelims"
-            targetDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
-          />
-        </section>
+      {/* ══════════════════════════════════════
+          COUNTDOWNS
+          ══════════════════════════════════════ */}
+      <section className="countdown-grid" style={{ marginBottom: 28 }}>
+        <CountdownCard label="UPSC Prelims 2027" days={prelims.days} dateLabel={prelims.dateLabel} tone="var(--gold)" />
+        <CountdownCard label="UPSC Mains 2027" days={mains.days} dateLabel={mains.dateLabel} tone="var(--physics)" />
+      </section>
 
-        <section>
-          <div className="panel-title-row" style={{ marginBottom: 18 }}>
-            <div>
-              <div className="eyebrow">Core Study Spaces</div>
-              <h2 className="display" style={{ fontSize: "2.4rem", margin: "10px 0 6px" }}>
-                GS, optional, essays, current affairs and control.
-              </h2>
-              <p className="muted" style={{ lineHeight: 1.8 }}>
-                Each card opens a dedicated workspace with editable children and real database updates.
+      {/* ══════════════════════════════════════
+          LIVE EXAM TIMER
+          ══════════════════════════════════════ */}
+      <section style={{ marginBottom: 28 }}>
+        <LiveExamTimer
+          label="Live Countdown To UPSC Prelims"
+          targetDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
+        />
+      </section>
+
+      {/* ══════════════════════════════════════
+          STUDY SPACES
+          ══════════════════════════════════════ */}
+      <section style={{ marginBottom: 28 }}>
+        <div style={{ marginBottom: 22 }}>
+          <div className="eyebrow">Core Study Spaces</div>
+          <h2 className="display" style={{ fontSize: "clamp(2rem, 4vw, 3rem)", margin: "10px 0 8px", letterSpacing: "-0.03em" }}>
+            GS, optional, essays, current affairs.
+          </h2>
+          <p className="muted" style={{ lineHeight: 1.82, maxWidth: 680 }}>
+            Each card opens a dedicated workspace with editable chapters and real database updates.
+          </p>
+        </div>
+        <div className="grid grid-4">
+          {summary.papers.map((paper) => (
+            <StudyCard
+              key={paper.id}
+              href={`/study/${paper.slug}`}
+              title={paper.title}
+              overview={paper.overview}
+              accent={paper.accent}
+              badge={`${paper.children.length} pages`}
+              completionPct={paperPctMap[paper.id] ?? 0}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════
+          MISSION + TODO + AI CARDS
+          ══════════════════════════════════════ */}
+      <section className="command-grid" style={{ marginBottom: 28 }}>
+        {/* Daily Goals */}
+        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
+          <div className="pill"><Goal size={13} />Active execution</div>
+          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Daily Goals</div>
+          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
+            Log subject-wise study output, hours, blockers and completion so your momentum is
+            measured with evidence instead of wishful memory.
+          </p>
+          <div style={{ marginTop: 18 }}>
+            <Link href="/goals" className="button-secondary" style={{ justifyContent: "space-between", width: "100%" }}>
+              Enter goals <ArrowRight size={15} />
+            </Link>
+          </div>
+        </article>
+
+        {/* Tests + Performance */}
+        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
+          <div className="pill"><Trophy size={13} />Competitive edge</div>
+          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Tests and performance</div>
+          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
+            Capture every prelims and mains test, then read the score curve, subject drift and
+            discipline movement together.
+          </p>
+          <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
+            <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
+              Open test tracker <ArrowRight size={15} />
+            </Link>
+            <Link href="/performance" className="button-secondary" style={{ justifyContent: "space-between" }}>
+              Open analytics <ArrowRight size={15} />
+            </Link>
+          </div>
+        </article>
+
+        {/* AI Hub */}
+        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
+          <div className="pill"><BrainCircuit size={13} />AI layer</div>
+          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Guru, essays, analytics</div>
+          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
+            The AI hub has separate pages for coaching, analytics and essay evaluation — each
+            reading from your live preparation data.
+          </p>
+          <div style={{ marginTop: 18 }}>
+            <Link href="/ai-insight" className="button" style={{ justifyContent: "space-between", width: "100%" }}>
+              Enter AI hub <ArrowRight size={15} />
+            </Link>
+          </div>
+        </article>
+
+        {/* Mission Control + Todo — full width */}
+        <article
+          className="glass panel spotlight-card span-12"
+          style={{
+            borderRadius: 36,
+            background:
+              "radial-gradient(circle at 14% 20%, hsla(216,88%,68%,0.14), transparent 26%), radial-gradient(circle at 84% 18%, hsla(38,92%,62%,0.12), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24 }}>
+            <div style={{ maxWidth: 760 }}>
+              <div className="pill" style={{ marginBottom: 18 }}>
+                <BrainCircuit size={13} />
+                Agentic layer
+              </div>
+              <div className="display" style={{ fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "-0.03em" }}>
+                Mission Control and Todo Board
+              </div>
+              <p className="muted" style={{ lineHeight: 1.84, marginTop: 12, fontSize: 14 }}>
+                Launch a planning agent when you need a serious intervention. It reads your live data,
+                builds a strict mission, drafts your daily command, and turns the plan into database-backed todos.
               </p>
             </div>
-            <div className="pill">{summary.papers.length} primary pages</div>
+            <div style={{ display: "grid", gap: 12, minWidth: 240 }}>
+              <Link href="/mission-control" className="button" style={{ justifyContent: "space-between" }}>
+                Mission Control <ArrowRight size={15} />
+              </Link>
+              <Link href="/todo" className="button-secondary" style={{ justifyContent: "space-between" }}>
+                Todo Board <ArrowRight size={15} />
+              </Link>
+            </div>
           </div>
+        </article>
 
-          <div className="grid grid-4">
-            {summary.papers.map((paper) => (
-              <StudyCard
-                key={paper.id}
-                href={`/study/${paper.slug}`}
-                title={paper.title}
-                overview={paper.overview}
-                accent={paper.accent}
-                badge={`${paper.children.length} pages`}
-                completionPct={paperPctMap[paper.id] ?? 0}
-              />
-            ))}
+        {/* NEET Tracker */}
+        <article
+          className="glass panel spotlight-card"
+          style={{
+            gridColumn: "span 12",
+            borderRadius: 36,
+            background:
+              "radial-gradient(circle at 18% 20%, hsla(38,92%,62%,0.14), transparent 26%), radial-gradient(circle at 82% 18%, hsla(352,52%,54%,0.08), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 22 }}>
+            <div style={{ maxWidth: 640 }}>
+              <div className="pill" style={{ marginBottom: 18 }}>
+                <Sparkles size={13} />
+                Connected Instance
+              </div>
+              <div className="display" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.02em" }}>
+                NEET Tracker Platform
+              </div>
+              <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
+                Switch to your medical preparation workspace. The NEET project shares the same premium
+                architecture and deep analytics layer as this UPSC command center.
+              </p>
+            </div>
+            <a
+              href="https://neet-tracker-misti.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              Open NEET Tracker <ArrowRight size={15} />
+            </a>
           </div>
-        </section>
-
-        <section className="command-grid">
-          <article className="glass panel span-4 spotlight-card">
-            <div className="pill">
-              <Goal size={14} />
-              Active execution
-            </div>
-            <div className="display" style={{ fontSize: "2rem", marginTop: 16 }}>Daily Goals</div>
-            <p className="muted" style={{ lineHeight: 1.82, marginTop: 10 }}>
-              Log subject-wise study output, hours, blockers and completion so your momentum is
-              measured with evidence instead of wishful memory.
-            </p>
-            <div style={{ marginTop: 18 }}>
-              <Link href="/goals" className="button-secondary">
-                Enter goals <ArrowRight size={16} />
-              </Link>
-            </div>
-          </article>
-
-          <article className="glass panel span-4 spotlight-card">
-            <div className="pill">
-              <Trophy size={14} />
-              Competitive edge
-            </div>
-            <div className="display" style={{ fontSize: "2rem", marginTop: 16 }}>Tests and performance</div>
-            <p className="muted" style={{ lineHeight: 1.82, marginTop: 10 }}>
-              Capture every prelims and mains test, then read the score curve, subject drift and
-              discipline movement together.
-            </p>
-            <div className="metric-stack" style={{ marginTop: 18 }}>
-              <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Open test tracker <ArrowRight size={16} />
-              </Link>
-              <Link href="/performance" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Open analytics <ArrowRight size={16} />
-              </Link>
-            </div>
-          </article>
-
-          <article className="glass panel span-4 spotlight-card">
-            <div className="pill">
-              <BrainCircuit size={14} />
-              AI layer
-            </div>
-            <div className="display" style={{ fontSize: "2rem", marginTop: 16 }}>Guru, essays, deep analytics</div>
-            <p className="muted" style={{ lineHeight: 1.82, marginTop: 10 }}>
-              The AI hub now behaves like a premium branch of the app with separate pages for
-              coaching, analytics and essay evaluation.
-            </p>
-            <div style={{ marginTop: 18 }}>
-              <Link href="/ai-insight" className="button">
-                Enter AI hub <ArrowRight size={16} />
-              </Link>
-            </div>
-          </article>
-
-          <article className="glass panel span-12 spotlight-card" style={{ background: "linear-gradient(145deg, hsla(218,84%,62%,0.1), hsla(38,72%,58%,0.08))" }}>
-            <div className="panel-title-row">
-              <div>
-                <div className="pill">
-                  <BrainCircuit size={14} />
-                  Opt-in agentic layer
-                </div>
-                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>Mission Control and Todo Board</div>
-                <p className="muted" style={{ lineHeight: 1.82, marginTop: 10, maxWidth: 780 }}>
-                  Launch a planning agent only when you want a serious intervention. It reads your live data,
-                  builds a strict mission, drafts your daily command, and turns the plan into database-backed todos.
-                </p>
-              </div>
-              <div className="metric-stack" style={{ minWidth: 240 }}>
-                <Link href="/mission-control" className="button" style={{ justifyContent: "space-between" }}>
-                  Open Mission Control <ArrowRight size={16} />
-                </Link>
-                <Link href="/todo" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                  Open Todo Board <ArrowRight size={16} />
-                </Link>
-              </div>
-            </div>
-          </article>
-
-          <article className="glass panel spotlight-card" style={{ gridColumn: "span 12", background: "linear-gradient(145deg, hsla(38, 72%, 58%, 0.12), hsla(352, 52%, 54%, 0.05))" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
-              <div>
-                <div className="pill">
-                  <Sparkles size={14} />
-                  Connected Instance
-                </div>
-                <div className="display" style={{ fontSize: "2.2rem", marginTop: 16 }}>NEET Tracker Platform</div>
-                <p className="muted" style={{ lineHeight: 1.82, marginTop: 10, maxWidth: 600 }}>
-                  Switch back to your medical preparation workspace. The NEET project shares the same premium architecture and deep analytics layer as this UPSC command center.
-                </p>
-              </div>
-              <div style={{ paddingRight: 20 }}>
-                <a href="https://neet-tracker-misti.vercel.app/" target="_blank" rel="noopener noreferrer" className="button">
-                  Open NEET Tracker <ArrowRight size={16} />
-                </a>
-              </div>
-            </div>
-          </article>
-        </section>
+        </article>
       </section>
     </main>
   );

@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { ChevronDown, Plus, Pencil, Trash2, Check, X, RefreshCw } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  GripVertical,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { CircularProgress } from "@/components/ui/sections";
 
-// ─── Types ───────────────────────────────────────────────
 type TopicNode = {
   id: string;
   title: string;
@@ -27,23 +35,41 @@ type StudyPageClientProps = {
   pathname: string;
 };
 
-// ─── Revision heat colour (0 cold → 20 peak) ─────────────
+type DragState =
+  | { type: "chapter"; id: string }
+  | { type: "topic"; id: string; chapterId: string }
+  | null;
+
 function revisionColor(n: number): string {
   if (n === 0) return "rgba(255,255,255,0.18)";
-  if (n <= 2) return "hsl(218 84% 62%)";   // blue
-  if (n <= 5) return "hsl(142 60% 48%)";   // green
-  if (n <= 10) return "hsl(38 88% 54%)";   // gold
-  if (n <= 15) return "hsl(270 68% 62%)";  // violet
-  return "hsl(352 60% 58%)";               // red — peak
+  if (n <= 2) return "hsl(218 84% 62%)";
+  if (n <= 5) return "hsl(142 60% 48%)";
+  if (n <= 10) return "hsl(38 88% 54%)";
+  if (n <= 15) return "hsl(270 68% 62%)";
+  return "hsl(352 60% 58%)";
 }
 
 function revisionLabel(n: number): string {
   if (n === 0) return "Not revised";
-  if (n === 1) return "1× revised";
-  return `${n}× revised`;
+  if (n === 1) return "1x revised";
+  return `${n}x revised`;
 }
 
-// ─── Revision badge (+/-) ─────────────────────────────────
+function moveItem<T>(items: T[], from: number, to: number) {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) {
+    return items;
+  }
+
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+function normalizeTitle(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function RevisionBadge({
   count,
   onIncrement,
@@ -54,76 +80,31 @@ function RevisionBadge({
   onDecrement: () => void;
 }) {
   const color = revisionColor(count);
+
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        type="button"
-        onClick={onDecrement}
-        disabled={count <= 0}
-        suppressHydrationWarning
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "7px 0 0 7px",
-          padding: "3px 7px",
-          color: count <= 0 ? "rgba(255,255,255,0.2)" : "var(--text-muted)",
-          cursor: count <= 0 ? "not-allowed" : "pointer",
-          fontSize: "12px",
-          lineHeight: 1,
-        }}
-        title="Remove one revision"
-      >
-        −
+    <div className="study-revision-badge">
+      <button type="button" onClick={onDecrement} disabled={count <= 0} className="study-stepper-btn" title="Remove one revision">
+        -
       </button>
       <div
+        className="study-revision-value"
         style={{
           background: `${color}22`,
-          border: `1px solid ${color}`,
-          padding: "3px 8px",
-          fontSize: "11px",
-          fontWeight: 800,
+          borderColor: `${color}55`,
           color,
-          minWidth: 44,
-          textAlign: "center",
-          lineHeight: 1.6,
-          cursor: "default",
         }}
         title={revisionLabel(count)}
       >
-        <RefreshCw size={9} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />
+        <RefreshCw size={10} />
         {count}
       </div>
-      <button
-        type="button"
-        onClick={onIncrement}
-        disabled={count >= 20}
-        suppressHydrationWarning
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "0 7px 7px 0",
-          padding: "3px 7px",
-          color: count >= 20 ? "rgba(255,255,255,0.2)" : "var(--text-muted)",
-          cursor: count >= 20 ? "not-allowed" : "pointer",
-          fontSize: "12px",
-          lineHeight: 1,
-        }}
-        title="Add one revision"
-      >
+      <button type="button" onClick={onIncrement} disabled={count >= 20} className="study-stepper-btn" title="Add one revision">
         +
       </button>
     </div>
   );
 }
 
-// ─── Inline edit ─────────────────────────────────────────
 function InlineEdit({
   label,
   onSave,
@@ -134,38 +115,29 @@ function InlineEdit({
   onCancel: () => void;
 }) {
   const [val, setVal] = useState(label);
+
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1 }}>
+    <div className="study-inline-edit">
       <input
         autoFocus
         value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onSave(val);
-          if (e.key === "Escape") onCancel();
+        onChange={(event) => setVal(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") onSave(normalizeTitle(val));
+          if (event.key === "Escape") onCancel();
         }}
-        style={{
-          flex: 1,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          borderRadius: 10,
-          padding: "6px 12px",
-          color: "var(--text)",
-          fontSize: "14px",
-          fontWeight: 700,
-        }}
+        className="study-inline-input"
       />
-      <button type="button" onClick={() => onSave(val)} style={{ background: "rgba(101,240,181,0.14)", border: "1px solid rgba(101,240,181,0.25)", borderRadius: 8, padding: "5px 9px", color: "var(--botany)", cursor: "pointer" }} suppressHydrationWarning>
+      <button type="button" onClick={() => onSave(normalizeTitle(val))} className="study-icon-btn success">
         <Check size={14} />
       </button>
-      <button type="button" onClick={onCancel} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "5px 9px", color: "var(--text-muted)", cursor: "pointer" }} suppressHydrationWarning>
+      <button type="button" onClick={onCancel} className="study-icon-btn">
         <X size={14} />
       </button>
     </div>
   );
 }
 
-// ─── Topic row ────────────────────────────────────────────
 function TopicRow({
   topic,
   optimisticMap,
@@ -174,6 +146,12 @@ function TopicRow({
   onRename,
   onDelete,
   onRevisionChange,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   topic: TopicNode;
   optimisticMap: Record<string, boolean>;
@@ -182,70 +160,83 @@ function TopicRow({
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
   onRevisionChange: (id: string, delta: number) => void;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [delCount, setDelCount] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isChecked = optimisticMap[topic.id] ?? false;
   const revCount = revisionMap[topic.id] ?? 0;
 
-  const handleDeleteClick = () => {
-    if (delCount === 0) {
-      setDelCount(1);
-      setTimeout(() => setDelCount(0), 3000);
-      return;
-    }
-
-    setDelCount(0);
-    onDelete(topic.id);
-  };
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const timeout = window.setTimeout(() => setConfirmDelete(false), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [confirmDelete]);
 
   return (
-    <div className={`topic-item${isChecked ? " checked" : ""}`} style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 10 }}>
-      {/* Checkbox */}
-      <button
-        type="button"
-        onClick={() => onToggle(topic.id, !isChecked)}
-        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}
-        suppressHydrationWarning
-      >
-        <div className="topic-checkbox" style={{ flexShrink: 0 }} />
-        {!editing && (
-          <div className="topic-label" style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-            <span className={isChecked ? "done" : ""}>{topic.title}</span>
-            {topic.overview && <div className="topic-sub">{topic.overview}</div>}
-          </div>
-        )}
-      </button>
+    <div
+      className={`study-topic-row${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+      draggable={!editing}
+      onDragStart={() => onDragStart()}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+    >
+      <div className="study-row-leading">
+        <span className="study-drag-chip" aria-hidden="true" title="Drag to reorder">
+          <GripVertical size={12} />
+        </span>
+        <button type="button" onClick={() => onToggle(topic.id, !isChecked)} className="study-topic-main">
+          <div className="topic-checkbox" />
+          {!editing ? (
+            <div className="topic-label">
+              <span className={isChecked ? "done" : ""}>{topic.title}</span>
+              {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
+            </div>
+          ) : null}
+        </button>
+      </div>
 
-      {editing && (
+      {editing ? (
         <InlineEdit
           label={topic.title}
-          onSave={(title) => { onRename(topic.id, title); setEditing(false); }}
+          onSave={(title) => {
+            if (title) onRename(topic.id, title);
+            setEditing(false);
+          }}
           onCancel={() => setEditing(false)}
         />
-      )}
-
-      {!editing && (
-        <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
-          {/* Revision badge */}
-          <RevisionBadge
-            count={revCount}
-            onIncrement={() => onRevisionChange(topic.id, 1)}
-            onDecrement={() => onRevisionChange(topic.id, -1)}
-          />
-          {/* Edit */}
-          <button type="button" onClick={() => setEditing(true)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "4px 7px", color: "var(--text-muted)", cursor: "pointer" }} title="Rename" suppressHydrationWarning>
-            <Pencil size={11} />
+      ) : (
+        <div className="study-row-actions">
+          <RevisionBadge count={revCount} onIncrement={() => onRevisionChange(topic.id, 1)} onDecrement={() => onRevisionChange(topic.id, -1)} />
+          <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title="Rename topic">
+            <Pencil size={12} />
           </button>
-          {/* Delete */}
           <button
             type="button"
-            onClick={handleDeleteClick}
-            style={{ background: delCount > 0 ? "rgba(255,80,80,0.18)" : "rgba(255,80,80,0.07)", border: `1px solid rgba(255,80,80,${delCount > 0 ? "0.4" : "0.18"})`, borderRadius: 7, padding: "4px 7px", color: "var(--danger)", cursor: "pointer", fontSize: "9px", fontWeight: 800 }}
-            title={delCount > 0 ? "Click to confirm delete" : "Delete"}
-            suppressHydrationWarning
+            onClick={() => {
+              if (!confirmDelete) {
+                setConfirmDelete(true);
+                return;
+              }
+              onDelete(topic.id);
+              setConfirmDelete(false);
+            }}
+            className="study-icon-btn danger"
+            title={confirmDelete ? "Confirm delete" : "Delete topic"}
           >
-            {delCount > 0 ? "Sure?" : <Trash2 size={11} />}
+            {confirmDelete ? "Sure?" : <Trash2 size={12} />}
           </button>
         </div>
       )}
@@ -253,12 +244,12 @@ function TopicRow({
   );
 }
 
-// ─── Chapter accordion ────────────────────────────────────
 function ChapterAccordion({
   chapter,
   pathname,
   optimisticMap,
   revisionMap,
+  chapterIndex,
   onToggle,
   onRevisionChange,
   onAddTopic,
@@ -266,11 +257,23 @@ function ChapterAccordion({
   onDeleteChapter,
   onRenameTopic,
   onDeleteTopic,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  dragState,
+  dropState,
+  setDragState,
+  setDropState,
+  onMoveTopic,
 }: {
   chapter: ChapterNode;
   pathname: string;
   optimisticMap: Record<string, boolean>;
   revisionMap: Record<string, number>;
+  chapterIndex: number;
   onToggle: (id: string, checked: boolean) => void;
   onRevisionChange: (id: string, delta: number) => void;
   onAddTopic: (chapterId: string, title: string) => Promise<void>;
@@ -278,203 +281,287 @@ function ChapterAccordion({
   onDeleteChapter: (id: string) => Promise<void>;
   onRenameTopic: (id: string, title: string) => Promise<void>;
   onDeleteTopic: (id: string) => Promise<void>;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  dragState: DragState;
+  dropState: DragState;
+  setDragState: (state: DragState) => void;
+  setDropState: (state: DragState) => void;
+  onMoveTopic: (fromTopicId: string, toTopicId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(chapterIndex === 0);
   const [addOpen, setAddOpen] = useState(false);
   const [newTopic, setNewTopic] = useState("");
   const [editingChapter, setEditingChapter] = useState(false);
-  const [delCount, setDelCount] = useState(0);
-  const [isPending, startTrans] = useTransition();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const topics: TopicNode[] =
+  const topics =
     chapter.children.length > 0
       ? chapter.children
       : [{ id: chapter.id, title: chapter.title, overview: chapter.overview, topicProgress: chapter.topicProgress }];
 
-  const allIds = topics.map((t) => t.id);
+  const allIds = topics.map((topic) => topic.id);
   const doneCount = allIds.filter((id) => optimisticMap[id] ?? false).length;
   const pct = allIds.length ? Math.round((doneCount / allIds.length) * 100) : 0;
   const accentColor = pct === 100 ? "var(--gold)" : pct >= 50 ? "var(--botany)" : "var(--physics)";
+  const avgRevision = allIds.length
+    ? Math.round(allIds.reduce((sum, id) => sum + (revisionMap[id] ?? 0), 0) / allIds.length)
+    : 0;
 
-  // Chapter-level revision average
-  const revNums = allIds.map((id) => revisionMap[id] ?? 0);
-  const avgRevision = revNums.length ? Math.round(revNums.reduce((a, b) => a + b, 0) / revNums.length) : 0;
-  const maxRevision = revNums.length ? Math.max(...revNums) : 0;
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const timeout = window.setTimeout(() => setConfirmDelete(false), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [confirmDelete]);
 
   const handleAddTopic = () => {
-    const title = newTopic.trim();
+    const title = normalizeTitle(newTopic);
     if (!title) return;
-    startTrans(async () => {
+
+    startTransition(async () => {
       await onAddTopic(chapter.id, title);
       setNewTopic("");
       setAddOpen(false);
-    });
-  };
-
-  const handleDeleteChapterClick = () => {
-    if (delCount === 0) {
-      setDelCount(1);
-      setTimeout(() => setDelCount(0), 3000);
-      return;
-    }
-
-    setDelCount(0);
-    startTrans(async () => {
-      await onDeleteChapter(chapter.id);
+      setOpen(true);
     });
   };
 
   return (
-    <div className="chapter-accordion">
-      <div className="chapter-accord-head" style={{ paddingRight: 8 }}>
-        <button
-          type="button"
-          onClick={() => setOpen((s) => !s)}
-          style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, background: "none", border: "none", cursor: "pointer", minWidth: 0 }}
-          suppressHydrationWarning
-        >
-          <CircularProgress pct={pct} size={42} stroke={4} color={accentColor} />
-          {!editingChapter && (
-            <div className="chapter-accord-title" style={{ flex: 1, textAlign: "left" }}>
+    <div
+      className={`chapter-accordion study-chapter-card${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+      draggable={!editingChapter}
+      onDragStart={() => onDragStart()}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+    >
+      <div className="chapter-accord-head study-chapter-head">
+        <button type="button" onClick={() => setOpen((current) => !current)} className="study-chapter-main">
+          <span className="study-drag-chip study-chapter-drag-chip" aria-hidden="true" title="Drag to reorder">
+            <GripVertical size={13} />
+          </span>
+          <div className="study-chapter-progress">
+            <CircularProgress pct={pct} size={42} stroke={4} color={accentColor} />
+          </div>
+          {!editingChapter ? (
+            <div className="chapter-accord-title study-chapter-copy">
               <span>{chapter.title}</span>
-              {/* Chapter revision mini-badge */}
-              {avgRevision > 0 && (
-                <span style={{ marginLeft: 8, fontSize: "10px", fontWeight: 800, color: revisionColor(avgRevision), background: `${revisionColor(avgRevision)}1a`, border: `1px solid ${revisionColor(avgRevision)}44`, borderRadius: 6, padding: "1px 6px" }}>
-                  avg {avgRevision}× revised
-                </span>
-              )}
+              <div className="study-chapter-meta-line">
+                <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{allIds.length}</span>
+                {avgRevision > 0 ? (
+                  <span className="study-soft-pill" style={{ color: revisionColor(avgRevision), borderColor: `${revisionColor(avgRevision)}44` }}>
+                    avg {avgRevision}x
+                  </span>
+                ) : (
+                  <span className="study-soft-pill">fresh lane</span>
+                )}
+              </div>
             </div>
+          ) : (
+            <InlineEdit
+              label={chapter.title}
+              onSave={(title) => {
+                startTransition(async () => {
+                  if (title) await onRenameChapter(chapter.id, title);
+                  setEditingChapter(false);
+                });
+              }}
+              onCancel={() => setEditingChapter(false)}
+            />
           )}
         </button>
 
-        {editingChapter && (
-          <div style={{ flex: 1, paddingLeft: 8 }}>
-            <InlineEdit
-              label={chapter.title}
-              onSave={(title) => { startTrans(async () => { await onRenameChapter(chapter.id, title); setEditingChapter(false); }); }}
-              onCancel={() => setEditingChapter(false)}
-            />
+        {!editingChapter ? (
+          <div className="chapter-accord-meta study-chapter-actions">
+            <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add topic">
+              <Plus size={12} />
+            </button>
+            <button type="button" onClick={() => setEditingChapter(true)} className="study-icon-btn" title="Rename chapter">
+              <Pencil size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  return;
+                }
+                startTransition(async () => {
+                  await onDeleteChapter(chapter.id);
+                  setConfirmDelete(false);
+                });
+              }}
+              className="study-icon-btn danger"
+              title={confirmDelete ? "Confirm delete" : "Delete chapter"}
+            >
+              {confirmDelete ? "Sure?" : <Trash2 size={12} />}
+            </button>
+            <button type="button" className="study-chevron-btn" onClick={() => setOpen((current) => !current)} title="Toggle chapter">
+              <ChevronDown size={16} className={`chapter-accord-chevron${open ? " open" : ""}`} />
+            </button>
           </div>
-        )}
-
-        <div className="chapter-accord-meta" style={{ gap: 6 }}>
-          <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{allIds.length}</span>
-          {!editingChapter && (
-            <>
-              <button type="button" onClick={() => setAddOpen((o) => !o)} style={{ background: "rgba(94,161,255,0.1)", border: "1px solid rgba(94,161,255,0.22)", borderRadius: 7, padding: "4px 7px", color: "var(--physics)", cursor: "pointer" }} title="Add topic" suppressHydrationWarning>
-                <Plus size={12} />
-              </button>
-              <button type="button" onClick={() => setEditingChapter(true)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "4px 7px", color: "var(--text-muted)", cursor: "pointer" }} title="Rename" suppressHydrationWarning>
-                <Pencil size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteChapterClick}
-                style={{ background: delCount > 0 ? "rgba(255,80,80,0.18)" : "rgba(255,80,80,0.07)", border: `1px solid rgba(255,80,80,${delCount > 0 ? "0.4" : "0.18"})`, borderRadius: 7, padding: "4px 7px", color: "var(--danger)", cursor: "pointer", fontSize: "9px", fontWeight: 800 }}
-                title={delCount > 0 ? "Click again to confirm" : "Delete chapter"}
-                suppressHydrationWarning
-              >
-                {delCount > 0 ? "Sure?" : <Trash2 size={12} />}
-              </button>
-            </>
-          )}
-          <ChevronDown size={16} className={`chapter-accord-chevron${open ? " open" : ""}`} onClick={() => setOpen((s) => !s)} style={{ cursor: "pointer" }} />
-        </div>
+        ) : null}
       </div>
 
-      {/* Add topic inline */}
-      {addOpen && (
-        <div style={{ padding: "10px 18px 14px 68px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 8, alignItems: "center" }}>
+      {addOpen ? (
+        <div className="study-inline-creator">
           <input
             autoFocus
             value={newTopic}
-            onChange={(e) => setNewTopic(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAddTopic(); if (e.key === "Escape") setAddOpen(false); }}
-            placeholder="Topic name (press Enter)"
-            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 10, padding: "8px 14px", color: "var(--text)", fontSize: "13px" }}
+            onChange={(event) => setNewTopic(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleAddTopic();
+              if (event.key === "Escape") setAddOpen(false);
+            }}
+            placeholder="Add a topic to this chapter"
+            className="study-inline-input"
           />
-          <button type="button" onClick={handleAddTopic} disabled={isPending || !newTopic.trim()} style={{ background: "rgba(94,161,255,0.14)", border: "1px solid rgba(94,161,255,0.28)", borderRadius: 10, padding: "8px 14px", color: "var(--physics)", cursor: "pointer", fontWeight: 800, fontSize: "12px" }}>
-            {isPending ? "…" : "Add"}
-          </button>
-          <button type="button" onClick={() => setAddOpen(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-            <X size={16} />
+          <button type="button" onClick={handleAddTopic} disabled={isPending || !normalizeTitle(newTopic)} className="button-secondary">
+            {isPending ? "Adding..." : "Add"}
           </button>
         </div>
-      )}
+      ) : null}
 
-      {/* Topics */}
-      {open && (
-        <div className="chapter-accord-body">
-          {topics.length > 0 ? (
-            topics.map((topic) => (
-              <TopicRow
-                key={topic.id}
-                topic={topic}
-                optimisticMap={optimisticMap}
-                revisionMap={revisionMap}
-                onToggle={async (id, checked) => {
-                  onToggle(id, checked);
-                  await fetch("/api/topic-progress", {
-                    method: "POST",
-                    body: JSON.stringify({ studyNodeId: id, checked }),
-                    headers: { "Content-Type": "application/json" },
-                  });
-                }}
-                onRevisionChange={onRevisionChange}
-                onRename={async (id, title) => { await onRenameTopic(id, title); }}
-                onDelete={async (id) => { await onDeleteTopic(id); }}
-              />
-            ))
-          ) : (
-            <div style={{ padding: "12px 18px 12px 68px", color: "var(--text-muted)", fontSize: "12px" }}>
-              No topics yet — click <Plus size={11} style={{ display: "inline", verticalAlign: "middle" }} /> to add one.
-            </div>
-          )}
+      {open ? (
+        <div className="chapter-accord-body study-topic-stack">
+          {topics.map((topic) => (
+            <TopicRow
+              key={topic.id}
+              topic={topic}
+              optimisticMap={optimisticMap}
+              revisionMap={revisionMap}
+              onToggle={async (id, checked) => {
+                onToggle(id, checked);
+                await fetch("/api/topic-progress", {
+                  method: "POST",
+                  body: JSON.stringify({ studyNodeId: id, checked }),
+                  headers: { "Content-Type": "application/json" },
+                });
+              }}
+              onRevisionChange={onRevisionChange}
+              onRename={async (id, title) => {
+                await onRenameTopic(id, title);
+              }}
+              onDelete={async (id) => {
+                await onDeleteTopic(id);
+              }}
+              isDragging={dragState?.type === "topic" && dragState.id === topic.id}
+              isDropTarget={dropState?.type === "topic" && dropState.id === topic.id}
+              onDragStart={() => {
+                setDragState({ type: "topic", id: topic.id, chapterId: chapter.id });
+                setDropState({ type: "topic", id: topic.id, chapterId: chapter.id });
+              }}
+              onDragOver={() => {
+                if (dragState?.type === "topic" && dragState.chapterId === chapter.id && dragState.id !== topic.id) {
+                  setDropState({ type: "topic", id: topic.id, chapterId: chapter.id });
+                }
+              }}
+              onDrop={() => {
+                if (dragState?.type === "topic" && dragState.chapterId === chapter.id && dragState.id !== topic.id) {
+                  onMoveTopic(dragState.id, topic.id);
+                }
+                onDragEnd();
+              }}
+              onDragEnd={onDragEnd}
+            />
+          ))}
+
+          {!topics.length ? <div className="muted">No topics yet.</div> : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────
-export function StudyPageClient({ nodeId, nodeType, chapters: initialChapters, pathname }: StudyPageClientProps) {
+export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }: StudyPageClientProps) {
   const [chapters, setChapters] = useState<ChapterNode[]>(initialChapters);
+  const [dragState, setDragState] = useState<DragState>(null);
+  const [dropState, setDropState] = useState<DragState>(null);
   const [optimisticMap, setOptimisticMap] = useState<Record<string, boolean>>(() => {
-    const m: Record<string, boolean> = {};
-    for (const ch of initialChapters) {
-      if (ch.topicProgress) m[ch.id] = ch.topicProgress.checked;
-      for (const t of ch.children) if (t.topicProgress) m[t.id] = t.topicProgress.checked;
+    const next: Record<string, boolean> = {};
+    for (const chapter of initialChapters) {
+      if (chapter.topicProgress) next[chapter.id] = chapter.topicProgress.checked;
+      for (const topic of chapter.children) {
+        if (topic.topicProgress) next[topic.id] = topic.topicProgress.checked;
+      }
     }
-    return m;
+    return next;
   });
   const [revisionMap, setRevisionMap] = useState<Record<string, number>>(() => {
-    const m: Record<string, number> = {};
-    for (const ch of initialChapters) {
-      if (ch.topicProgress) m[ch.id] = ch.topicProgress.revisionCount;
-      for (const t of ch.children) if (t.topicProgress) m[t.id] = t.topicProgress.revisionCount;
+    const next: Record<string, number> = {};
+    for (const chapter of initialChapters) {
+      if (chapter.topicProgress) next[chapter.id] = chapter.topicProgress.revisionCount;
+      for (const topic of chapter.children) {
+        if (topic.topicProgress) next[topic.id] = topic.topicProgress.revisionCount;
+      }
     }
-    return m;
+    return next;
   });
 
-  // Rehydrate from API
+  useEffect(() => {
+    setChapters(initialChapters);
+
+    const nextProgress: Record<string, boolean> = {};
+    const nextRevisions: Record<string, number> = {};
+    for (const chapter of initialChapters) {
+      if (chapter.topicProgress) {
+        nextProgress[chapter.id] = chapter.topicProgress.checked;
+        nextRevisions[chapter.id] = chapter.topicProgress.revisionCount;
+      }
+      for (const topic of chapter.children) {
+        if (topic.topicProgress) {
+          nextProgress[topic.id] = topic.topicProgress.checked;
+          nextRevisions[topic.id] = topic.topicProgress.revisionCount;
+        }
+      }
+    }
+
+    setOptimisticMap((current) => ({ ...current, ...nextProgress }));
+    setRevisionMap((current) => ({ ...current, ...nextRevisions }));
+  }, [initialChapters]);
+
   useEffect(() => {
     fetch(`/api/topic-progress?parentId=${nodeId}`)
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then((data: { progress?: Record<string, boolean>; revisions?: Record<string, number> }) => {
-        if (data.progress) setOptimisticMap((p) => ({ ...p, ...data.progress }));
-        if (data.revisions) setRevisionMap((p) => ({ ...p, ...data.revisions }));
+        if (data.progress) setOptimisticMap((current) => ({ ...current, ...data.progress }));
+        if (data.revisions) setRevisionMap((current) => ({ ...current, ...data.revisions }));
       })
       .catch(() => {});
   }, [nodeId]);
 
-  const handleToggle = (id: string, checked: boolean) =>
-    setOptimisticMap((p) => ({ ...p, [id]: checked }));
+  const clearDragState = () => {
+    setDragState(null);
+    setDropState(null);
+  };
 
-  // Revision change — optimistic + server sync
+  const syncOrder = async (parentId: string, orderedIds: string[]) => {
+    await fetch("/api/study-node", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId, orderedIds, pathname }),
+    });
+  };
+
+  const handleToggle = (id: string, checked: boolean) => {
+    setOptimisticMap((current) => ({ ...current, [id]: checked }));
+  };
+
   const handleRevisionChange = async (id: string, delta: number) => {
     const current = revisionMap[id] ?? 0;
     const next = Math.max(0, Math.min(20, current + delta));
-    setRevisionMap((p) => ({ ...p, [id]: next }));
+    setRevisionMap((state) => ({ ...state, [id]: next }));
     await fetch("/api/topic-progress", {
       method: "POST",
       body: JSON.stringify({ studyNodeId: id, revisionDelta: delta }),
@@ -482,100 +569,189 @@ export function StudyPageClient({ nodeId, nodeType, chapters: initialChapters, p
     });
   };
 
+  const handleMoveChapter = async (fromChapterId: string, toChapterId: string) => {
+    const currentIndex = chapters.findIndex((chapter) => chapter.id === fromChapterId);
+    const nextIndex = chapters.findIndex((chapter) => chapter.id === toChapterId);
+    if (currentIndex === -1 || nextIndex === -1 || currentIndex === nextIndex) return;
+
+    const nextChapters = moveItem(chapters, currentIndex, nextIndex);
+    setChapters(nextChapters);
+    await syncOrder(nodeId, nextChapters.map((chapter) => chapter.id));
+  };
+
+  const handleMoveTopic = async (chapterId: string, fromTopicId: string, toTopicId: string) => {
+    const chapter = chapters.find((item) => item.id === chapterId);
+    if (!chapter || chapter.children.length < 2) return;
+
+    const currentIndex = chapter.children.findIndex((topic) => topic.id === fromTopicId);
+    const nextIndex = chapter.children.findIndex((topic) => topic.id === toTopicId);
+    if (currentIndex === -1 || nextIndex === -1 || currentIndex === nextIndex) return;
+
+    const reorderedTopics = moveItem(chapter.children, currentIndex, nextIndex);
+    const nextChapters = chapters.map((item) => (item.id === chapterId ? { ...item, children: reorderedTopics } : item));
+    setChapters(nextChapters);
+    await syncOrder(chapterId, reorderedTopics.map((topic) => topic.id));
+  };
+
   const handleAddTopic = async (chapterId: string, title: string) => {
+    const cleanTitle = normalizeTitle(title);
+    if (!cleanTitle) return;
+
     const tempId = `temp-${Date.now()}`;
-    setChapters((p) => p.map((ch) => ch.id === chapterId ? { ...ch, children: [...ch.children, { id: tempId, title, overview: null, topicProgress: null }] } : ch));
-    const fd = new FormData();
-    fd.set("parentId", chapterId); fd.set("title", title); fd.set("overview", ""); fd.set("pathname", pathname);
-    const res = await fetch("/api/study-node", { method: "POST", body: fd });
-    if (res.ok) {
-      const created: { id: string } = await res.json();
-      setChapters((p) => p.map((ch) => ch.id === chapterId ? { ...ch, children: ch.children.map((t) => t.id === tempId ? { ...t, id: created.id } : t) } : ch));
+    setChapters((current) =>
+      current.map((chapter) =>
+        chapter.id === chapterId
+          ? {
+              ...chapter,
+              children: [...chapter.children, { id: tempId, title: cleanTitle, overview: null, topicProgress: null }],
+            }
+          : chapter,
+      ),
+    );
+
+    const formData = new FormData();
+    formData.set("parentId", chapterId);
+    formData.set("title", cleanTitle);
+    formData.set("overview", "");
+    formData.set("pathname", pathname);
+
+    const response = await fetch("/api/study-node", { method: "POST", body: formData });
+    if (!response.ok) {
+      setChapters((current) =>
+        current.map((chapter) =>
+          chapter.id === chapterId ? { ...chapter, children: chapter.children.filter((topic) => topic.id !== tempId) } : chapter,
+        ),
+      );
+      return;
     }
+
+    const created: { id: string; title: string; created?: boolean } = await response.json();
+
+    setChapters((current) =>
+      current.map((chapter) => {
+        if (chapter.id !== chapterId) return chapter;
+
+        const withoutTemp = chapter.children.filter((topic) => topic.id !== tempId);
+        const alreadyPresent = withoutTemp.some((topic) => topic.id === created.id);
+
+        return {
+          ...chapter,
+          children: alreadyPresent ? withoutTemp : [...withoutTemp, { id: created.id, title: created.title, overview: null, topicProgress: null }],
+        };
+      }),
+    );
   };
 
   const handleRenameChapter = async (id: string, title: string) => {
-    setChapters((p) => p.map((ch) => ch.id === id ? { ...ch, title } : ch));
-    const fd = new FormData(); fd.set("id", id); fd.set("title", title); fd.set("overview", ""); fd.set("details", ""); fd.set("pathname", pathname);
-    await fetch("/api/study-node", { method: "PATCH", body: fd });
+    setChapters((current) => current.map((chapter) => (chapter.id === id ? { ...chapter, title } : chapter)));
+    const formData = new FormData();
+    formData.set("id", id);
+    formData.set("title", title);
+    formData.set("overview", "");
+    formData.set("details", "");
+    formData.set("pathname", pathname);
+    await fetch("/api/study-node", { method: "PATCH", body: formData });
   };
 
   const handleDeleteChapter = async (id: string) => {
-    setChapters((p) => p.filter((ch) => ch.id !== id));
-    await fetch(`/api/study-node?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    setChapters((current) => current.filter((chapter) => chapter.id !== id));
+    await fetch(`/api/study-node?id=${encodeURIComponent(id)}&pathname=${encodeURIComponent(pathname)}`, { method: "DELETE" });
   };
 
   const handleRenameTopic = async (id: string, title: string) => {
-    setChapters((p) => p.map((ch) => ({ ...ch, children: ch.children.map((t) => t.id === id ? { ...t, title } : t) })));
-    const fd = new FormData(); fd.set("id", id); fd.set("title", title); fd.set("overview", ""); fd.set("details", ""); fd.set("pathname", pathname);
-    await fetch("/api/study-node", { method: "PATCH", body: fd });
+    setChapters((current) =>
+      current.map((chapter) => ({
+        ...chapter,
+        children: chapter.children.map((topic) => (topic.id === id ? { ...topic, title } : topic)),
+      })),
+    );
+    const formData = new FormData();
+    formData.set("id", id);
+    formData.set("title", title);
+    formData.set("overview", "");
+    formData.set("details", "");
+    formData.set("pathname", pathname);
+    await fetch("/api/study-node", { method: "PATCH", body: formData });
   };
 
   const handleDeleteTopic = async (id: string) => {
-    setChapters((p) => p.map((ch) => ({ ...ch, children: ch.children.filter((t) => t.id !== id) })));
-    setOptimisticMap((p) => { const n = { ...p }; delete n[id]; return n; });
-    setRevisionMap((p) => { const n = { ...p }; delete n[id]; return n; });
-    await fetch(`/api/study-node?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    setChapters((current) =>
+      current.map((chapter) => ({
+        ...chapter,
+        children: chapter.children.filter((topic) => topic.id !== id),
+      })),
+    );
+    setOptimisticMap((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+    setRevisionMap((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+    await fetch(`/api/study-node?id=${encodeURIComponent(id)}&pathname=${encodeURIComponent(pathname)}`, { method: "DELETE" });
   };
 
   if (!chapters.length) return null;
 
-  // ── Overall stats ──
   const allTopicIds: string[] = [];
-  for (const ch of chapters) {
-    if (ch.children.length > 0) for (const t of ch.children) allTopicIds.push(t.id);
-    else allTopicIds.push(ch.id);
+  for (const chapter of chapters) {
+    if (chapter.children.length > 0) {
+      for (const topic of chapter.children) allTopicIds.push(topic.id);
+    } else {
+      allTopicIds.push(chapter.id);
+    }
   }
+
   const totalDone = allTopicIds.filter((id) => optimisticMap[id]).length;
   const overallPct = allTopicIds.length ? Math.round((totalDone / allTopicIds.length) * 100) : 0;
-
   const allRevisions = allTopicIds.map((id) => revisionMap[id] ?? 0);
-  const totalRevisions = allRevisions.reduce((a, b) => a + b, 0);
+  const totalRevisions = allRevisions.reduce((sum, value) => sum + value, 0);
   const avgRevision = allTopicIds.length ? (totalRevisions / allTopicIds.length).toFixed(1) : "0";
-  const maxRevision = allRevisions.length ? Math.max(...allRevisions) : 0;
-  const unrevisedCount = allRevisions.filter((r) => r === 0).length;
-  const wellRevisedCount = allRevisions.filter((r) => r >= 5).length;
+  const unrevisedCount = allRevisions.filter((value) => value === 0).length;
+  const wellRevisedCount = allRevisions.filter((value) => value >= 5).length;
 
   return (
-    <article className="glass panel" style={{ marginTop: 0 }}>
-      {/* ── Header with overall stats ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
-        <CircularProgress pct={overallPct} size={64} stroke={6} color="var(--gold)" />
-        <div style={{ flex: 1 }}>
-          <div className="eyebrow">Topic Progress</div>
-          <div className="display" style={{ fontSize: "1.4rem", marginTop: 6 }}>
-            {totalDone} / {allTopicIds.length} topics completed
-          </div>
-          <div className="muted" style={{ fontSize: "12px", marginTop: 4 }}>
-            Tap + / − on any topic to log revisions · Click the row to mark done
+    <article className="glass panel study-control-shell">
+      <div className="study-control-header">
+        <div className="study-control-progress">
+          <CircularProgress pct={overallPct} size={68} stroke={6} color="var(--gold)" />
+          <div>
+            <div className="eyebrow">Study Flow</div>
+            <div className="display study-control-title">{totalDone} / {allTopicIds.length} topics completed</div>
+            <div className="muted study-control-copy">Smooth order control, duplicate-safe additions, and instant progress sync.</div>
           </div>
         </div>
+        <div className="study-head-note">Drag chapters and topics directly to reorder them. Minor title differences will map to the existing node instead of creating clutter.</div>
       </div>
 
-      {/* ── Revision summary row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+      <div className="study-summary-grid">
         {[
           { label: "Total revisions", value: totalRevisions, color: revisionColor(Math.round(totalRevisions / Math.max(allTopicIds.length, 1))) },
-          { label: "Avg per topic", value: `${avgRevision}×`, color: revisionColor(parseFloat(avgRevision as string)) },
-          { label: "Well-revised (5+)", value: wellRevisedCount, color: revisionColor(5) },
-          { label: "Not revised", value: unrevisedCount, color: unrevisedCount > 0 ? "var(--danger)" : "var(--botany)" },
+          { label: "Avg per topic", value: `${avgRevision}x`, color: revisionColor(Number(avgRevision)) },
+          { label: "Strongly revised", value: wellRevisedCount, color: revisionColor(5) },
+          { label: "Fresh topics", value: unrevisedCount, color: unrevisedCount > 0 ? "var(--danger)" : "var(--botany)" },
         ].map((stat) => (
-          <div key={stat.label} className="glass" style={{ borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>
-            <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 6 }}>{stat.label}</div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: stat.color }}>{stat.value}</div>
+          <div key={stat.label} className="study-summary-card">
+            <div className="study-summary-label">{stat.label}</div>
+            <div className="study-summary-value" style={{ color: stat.color }}>
+              {stat.value}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ── Chapter list ── */}
-      <div className="chapter-grid" style={{ display: "grid", gap: 10 }}>
-        {chapters.map((chapter) => (
+      <div className="chapter-grid study-chapter-grid">
+        {chapters.map((chapter, index) => (
           <ChapterAccordion
             key={chapter.id}
             chapter={chapter}
             pathname={pathname}
             optimisticMap={optimisticMap}
             revisionMap={revisionMap}
+            chapterIndex={index}
             onToggle={handleToggle}
             onRevisionChange={handleRevisionChange}
             onAddTopic={handleAddTopic}
@@ -583,23 +759,44 @@ export function StudyPageClient({ nodeId, nodeType, chapters: initialChapters, p
             onDeleteChapter={handleDeleteChapter}
             onRenameTopic={handleRenameTopic}
             onDeleteTopic={handleDeleteTopic}
+            isDragging={dragState?.type === "chapter" && dragState.id === chapter.id}
+            isDropTarget={dropState?.type === "chapter" && dropState.id === chapter.id}
+            onDragStart={() => {
+              setDragState({ type: "chapter", id: chapter.id });
+              setDropState({ type: "chapter", id: chapter.id });
+            }}
+            onDragOver={() => {
+              if (dragState?.type === "chapter" && dragState.id !== chapter.id) {
+                setDropState({ type: "chapter", id: chapter.id });
+              }
+            }}
+            onDrop={() => {
+              if (dragState?.type === "chapter" && dragState.id !== chapter.id) {
+                void handleMoveChapter(dragState.id, chapter.id);
+              }
+              clearDragState();
+            }}
+            onDragEnd={clearDragState}
+            dragState={dragState}
+            dropState={dropState}
+            setDragState={setDragState}
+            setDropState={setDropState}
+            onMoveTopic={(fromTopicId, toTopicId) => void handleMoveTopic(chapter.id, fromTopicId, toTopicId)}
           />
         ))}
       </div>
 
-      {/* ── Revision heat legend ── */}
-      <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>Revision heat:</span>
+      <div className="study-legend">
+        <span className="study-summary-label">Revision heat</span>
         {[
-          { label: "0 — Not started", color: revisionColor(0) },
-          { label: "1–2 — Light", color: revisionColor(1) },
-          { label: "3–5 — Good", color: revisionColor(4) },
-          { label: "6–10 — Strong", color: revisionColor(8) },
-          { label: "11–15 — Deep", color: revisionColor(12) },
-          { label: "16–20 — Mastered", color: revisionColor(18) },
+          { label: "0", color: revisionColor(0) },
+          { label: "1-2", color: revisionColor(1) },
+          { label: "3-5", color: revisionColor(4) },
+          { label: "6-10", color: revisionColor(8) },
+          { label: "11+", color: revisionColor(12) },
         ].map((item) => (
-          <span key={item.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "11px", fontWeight: 700, color: "var(--text-muted)" }}>
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: item.color, display: "inline-block" }} />
+          <span key={item.label} className="study-legend-item">
+            <span className="study-legend-dot" style={{ background: item.color }} />
             {item.label}
           </span>
         ))}

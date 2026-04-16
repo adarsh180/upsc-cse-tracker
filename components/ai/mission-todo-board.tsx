@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, CheckCheck, CircleDashed, Clock3, PauseCircle, PlayCircle } from "lucide-react";
+import { ArrowRight, CheckCheck, CircleDashed, Clock3, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
 
 import type { TodoTaskItem } from "@/lib/mission-control";
 
@@ -24,10 +24,12 @@ export function MissionTodoBoard({
   tasks,
   pendingTaskIds,
   onStatusChange,
+  onDeleteTask,
 }: {
   tasks: TodoTaskItem[];
   pendingTaskIds: string[];
   onStatusChange: (taskId: string, status: "TODO" | "IN_PROGRESS" | "DONE" | "SKIPPED") => void;
+  onDeleteTask: (taskId: string) => void;
 }) {
   const columns = useMemo(
     () => [
@@ -177,6 +179,15 @@ export function MissionTodoBoard({
                             Skip
                           </button>
                         ) : null}
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => onDeleteTask(task.id)}
+                          disabled={isPending}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
                       </div>
                     </div>
                   );

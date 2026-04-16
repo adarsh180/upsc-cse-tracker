@@ -174,31 +174,23 @@ function cleanJsonBlock(raw: string) {
 }
 
 async function generateWithFallback(prompt: string) {
-  const missionPrimary = process.env.GOOGLE_AI_MODEL_MISSION;
-  const analytics = process.env.GOOGLE_AI_MODEL_ANALYTICS;
-  const fallback = process.env.GOOGLE_AI_MODEL_FALLBACK;
-  const secondaryFallback = process.env.GOOGLE_AI_MODEL_SECOND_FALLBACK;
-  const primary = process.env.GOOGLE_AI_MODEL_PRIMARY;
-
-  const preferred = [
-    missionPrimary,
-    analytics,
-    fallback,
-    secondaryFallback,
-    primary,
-    "gemma-3-27b-it",
-    "gemma-3-12b-it",
-  ];
-
-  const gemma4 = preferred.filter((candidate) => candidate?.startsWith("gemma-4-"));
-  const nonGemma4 = preferred.filter((candidate) => candidate && !candidate.startsWith("gemma-4-"));
   const candidates = [
-    ...new Set([...nonGemma4, ...gemma4]),
-  ] as string[];
+    process.env.GOOGLE_AI_MODEL_MISSION,
+    "gemma-4-31b-it",
+    "gemma-4-26b-it",
+    "gemma-3-27b-it",
+    process.env.GOOGLE_AI_MODEL_ANALYTICS,
+    process.env.GOOGLE_AI_MODEL_FALLBACK,
+    process.env.GOOGLE_AI_MODEL_SECOND_FALLBACK,
+    process.env.GOOGLE_AI_MODEL_PRIMARY,
+    "gemma-3-12b-it",
+  ].filter(Boolean) as string[];
+
+  const uniqueCandidates = [...new Set(candidates)];
 
   let lastError: unknown;
 
-  for (const candidate of candidates) {
+  for (const candidate of uniqueCandidates) {
     try {
       const model = normalizeGoogleModelId(candidate);
       const result = await generateText({
@@ -448,6 +440,7 @@ export async function getMissionControlSnapshot() {
 
   const [missions, openTasks, completedToday, studyNodes] = await Promise.all([
     db.agentMission.findMany({
+      where: { status: { not: "HIDDEN" } },
       orderBy: { launchedAt: "desc" },
       take: 8,
       include: {
@@ -544,6 +537,7 @@ export async function getTodoBoardSnapshot() {
       take: 120,
     }),
     db.agentMission.findMany({
+      where: { status: { not: "HIDDEN" } },
       orderBy: { launchedAt: "desc" },
       select: {
         id: true,
@@ -906,6 +900,28 @@ export async function updateAgentTaskStatus(taskId: string, status: MissionTaskS
   await syncMissionStatus(task.missionId);
 
   return serializeTodoTask(task);
+}
+
+export async function deleteAgentTask(taskId: string) {
+  const existing = await db.agentTask.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      missionId: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error("Task not found.");
+  }
+
+  await db.agentTask.delete({
+    where: { id: taskId },
+  });
+
+  await syncMissionStatus(existing.missionId);
+
+  return { ok: true, taskId };
 }
 
 export async function applyMissionDailyLog(missionId: string) {

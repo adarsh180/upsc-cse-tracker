@@ -1,7 +1,7 @@
 import { TodoWorkspace } from "@/components/ai/todo-workspace";
-import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getTodoBoardSnapshot } from "@/lib/mission-control";
+import { PageIntro } from "@/components/ui/sections";
 
 export default async function TodoPage() {
   await requireSession();
@@ -11,16 +11,14 @@ export default async function TodoPage() {
     <main className="page-shell">
       <PageIntro
         eyebrow="Todo Workspace"
-        title="Run the work, with or without the agent."
-        description="Use this page as your real execution board. Agent-created tasks land here after a mission launch, and you can also add your own manual todos anytime."
+        title="Execution Board"
+        description="Manage your mission tasks and manual todos."
         actions={
           <>
-            <div className="pill">{snapshot.tasks.length} total tasks</div>
-            <div className="pill">{snapshot.missions.length} mission records</div>
+            <div className="pill">{snapshot.tasks.length} tasks</div>
           </>
         }
       />
-
       <TodoWorkspace
         tasks={snapshot.tasks}
         studyAreas={snapshot.studyAreas}

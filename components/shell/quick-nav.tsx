@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { ArrowRight, X } from "lucide-react";
 
 import { navGroups } from "@/components/shell/nav-config";
+import { SacredBrand } from "@/components/shell/sacred-brand";
 import { cn } from "@/lib/utils";
 
 export function QuickNav({
@@ -49,10 +50,13 @@ export function QuickNav({
           <div className="quicknav-panel-glow" />
 
           <div className="quicknav-header">
-            <div>
-              <div className="eyebrow">Navigation</div>
-              <div className="quicknav-title">UPSC workspace map</div>
-              <div className="quicknav-subtitle">All major sections in one premium command panel.</div>
+            <div className="quicknav-header-copy">
+              <SacredBrand className="quicknav-brand" subtitle="Liquid-glass workspace map" markSize="sm" />
+              <div>
+                <div className="eyebrow">Navigation</div>
+                <div className="quicknav-title">UPSC workspace map</div>
+                <div className="quicknav-subtitle">All major sections in one premium command panel.</div>
+              </div>
             </div>
 
             <button type="button" className="quicknav-close" onClick={onClose} aria-label="Close navigation">

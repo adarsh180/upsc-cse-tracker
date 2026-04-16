@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
-import { updateAgentTaskStatus } from "@/lib/mission-control";
+import { deleteAgentTask, updateAgentTaskStatus } from "@/lib/mission-control";
 
 export const runtime = "nodejs";
 
@@ -28,4 +28,18 @@ export async function PATCH(
   );
 
   return NextResponse.json(task);
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const result = await deleteAgentTask(id);
+  return NextResponse.json(result);
 }

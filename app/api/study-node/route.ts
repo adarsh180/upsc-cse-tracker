@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { createStudyNode, deleteStudyNode, updateStudyNode } from "@/lib/study-tree";
+import { createStudyNode, deleteStudyNode, reorderStudyNodes, updateStudyNode } from "@/lib/study-tree";
 
 // POST — create a new child node
 export async function POST(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "parentId and title required" }, { status: 400 });
     }
 
-    const node = await createStudyNode({
+    const result = await createStudyNode({
       parentId,
       title,
       overview,
@@ -23,9 +23,41 @@ export async function POST(req: NextRequest) {
 
     if (pathname) revalidatePath(pathname);
 
-    return NextResponse.json({ id: node.id, title: node.title, slug: node.slug });
+    return NextResponse.json({
+      id: result.node.id,
+      title: result.node.title,
+      slug: result.node.slug,
+      parentId: result.node.parentId,
+      created: result.created,
+    });
   } catch (err) {
     console.error("[study-node POST]", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+// PUT - reorder children under a parent node
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parentId = String(body.parentId ?? "").trim();
+    const pathname = String(body.pathname ?? "").trim();
+    const orderedIds = Array.isArray(body.orderedIds) ? body.orderedIds.map((id: unknown) => String(id)) : [];
+
+    if (!parentId || orderedIds.length === 0) {
+      return NextResponse.json({ error: "parentId and orderedIds required" }, { status: 400 });
+    }
+
+    const result = await reorderStudyNodes({
+      parentId,
+      orderedIds,
+    });
+
+    if (pathname) revalidatePath(pathname);
+
+    return NextResponse.json({ ok: true, orderedIds: result.orderedIds });
+  } catch (err) {
+    console.error("[study-node PUT]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

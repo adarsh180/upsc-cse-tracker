@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Sparkles, BookOpen, Target, BrainCircuit } from "lucide-react";
 
 import { signInAction } from "@/app/actions";
+import { SacredLogoMark } from "@/components/shell/sacred-brand";
 
 export default async function SignInPage({
   searchParams,
@@ -11,81 +12,227 @@ export default async function SignInPage({
   const params = await searchParams;
 
   return (
-    <main
-      className="page-shell"
-      style={{ minHeight: "100vh", display: "grid", placeItems: "center", paddingTop: 32, paddingBottom: 32 }}
-    >
-      <section className="glass panel hero-grid" style={{ width: "min(1180px, 100%)" }}>
-        <div style={{ alignSelf: "center" }}>
-          <div className="eyebrow">Secure Entry</div>
-          <h1 className="display" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", margin: "14px 0 12px", lineHeight: 1.02 }}>
-            Enter the UPSC
-            <br />
-            command room.
-          </h1>
-          <p className="muted" style={{ maxWidth: 620, lineHeight: 1.85 }}>
-            Your tracker, analytics, subject hierarchy and AI memory stay tied to the configured
-            credentials and live database. This entry screen now follows the same premium design
-            language as the rest of the redesign.
-          </p>
+    <div className="signin-shell">
+      {/* Ambient background */}
+      <div className="signin-bg-a" aria-hidden="true" />
 
-          <div className="metric-stack" style={{ marginTop: 22 }}>
+      {/* Floating OM orbs */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          width: 340,
+          height: 340,
+          borderRadius: "50%",
+          top: -120,
+          left: -80,
+          background: "radial-gradient(circle, hsla(38,92%,62%,0.12), transparent 70%)",
+          filter: "blur(80px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          width: 400,
+          height: 400,
+          borderRadius: "50%",
+          bottom: -150,
+          right: -100,
+          background: "radial-gradient(circle, hsla(216,88%,68%,0.10), transparent 70%)",
+          filter: "blur(90px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div className="signin-card glass">
+        {/* ── Left: Brand + Description ── */}
+        <div className="signin-left">
+          {/* OM Logo */}
+          <div className="signin-om-wrap">
+            <SacredLogoMark size="lg" />
+            <div className="signin-om-glow" aria-hidden="true" />
+          </div>
+
+          {/* Title */}
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 14 }}>Sacred Attempt · UPSC CSE 2027</div>
+            <h1 className="display signin-title">
+              Enter the command room.
+            </h1>
+            <p className="muted signin-desc" style={{ marginTop: 14 }}>
+              Your tracker, analytics, subject hierarchy and AI memory stay tied to your
+              workspace. Every number is real — no mock data, no self-deception.
+            </p>
+          </div>
+
+          {/* Feature pills */}
+          <div className="signin-pills">
             <div className="pill">
-              <ShieldCheck size={14} />
+              <ShieldCheck size={13} />
               Private workspace
             </div>
             <div className="pill">
-              <Sparkles size={14} />
-              Premium sacred-glass shell
-            </div>
-          </div>
-        </div>
-
-        <div className="glass panel glass-strong" style={{ alignSelf: "stretch", display: "grid", gap: 18 }}>
-          <div>
-            <div className="eyebrow">Authentication</div>
-            <div className="display" style={{ fontSize: "2rem", marginTop: 10 }}>
-              Sign in to continue
+              <Sparkles size={13} />
+              Liquid Glass · Sacred theme
             </div>
           </div>
 
-          <form action={signInAction} className="grid" style={{ gap: 14 }}>
-            <input
-              className="field"
-              type="email"
-              name="email"
-              defaultValue={process.env.AUTH_EMAIL}
-              placeholder="Email"
-              required
-            />
-            <input
-              className="field"
-              type="password"
-              name="password"
-              defaultValue={process.env.AUTH_PASSWORD}
-              placeholder="Password"
-              required
-            />
-
-            {params.error ? (
-              <div className="tag" style={{ color: "var(--rose-bright)", borderColor: "hsla(352 52% 54% / 0.25)" }}>
-                Invalid credentials. Check the configured email and password.
+          {/* Feature list */}
+          <div style={{ display: "grid", gap: 14 }}>
+            {[
+              { icon: BookOpen, text: "Full GS study tree with chapter-level tracking" },
+              { icon: Target, text: "Daily goals, discipline scores and mood signals" },
+              { icon: BrainCircuit, text: "UPSC Guru AI + deep analytics + rank prediction" },
+            ].map((item) => (
+              <div
+                key={item.text}
+                style={{ display: "flex", alignItems: "flex-start", gap: 14 }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    display: "grid",
+                    placeItems: "center",
+                    background: "linear-gradient(135deg, hsla(38,92%,62%,0.16), hsla(216,88%,68%,0.10))",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    color: "var(--gold-bright)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <item.icon size={15} />
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13.5,
+                    lineHeight: 1.72,
+                    color: "var(--text-secondary)",
+                    paddingTop: 8,
+                  }}
+                >
+                  {item.text}
+                </p>
               </div>
-            ) : null}
+            ))}
+          </div>
 
-            <button className="button" type="submit">
-              Enter workspace
-            </button>
-          </form>
-
-          <div className="divider" />
-
-          <Link href="/" className="button-secondary">
-            <ArrowLeft size={16} />
+          {/* Back link */}
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 13,
+              color: "var(--text-muted)",
+              width: "fit-content",
+              textDecoration: "none",
+            }}
+          >
+            <ArrowLeft size={14} />
             Back to landing
           </Link>
         </div>
-      </section>
-    </main>
+
+        {/* ── Right: Auth Form ── */}
+        <div className="signin-right glass-strong">
+          <div className="signin-form-header">
+            <div className="eyebrow">Authentication</div>
+            <div className="display signin-form-title">Sign in to continue</div>
+            <p className="signin-form-subtitle">
+              Enter your configured credentials to access your UPSC command workspace.
+            </p>
+          </div>
+
+          <form action={signInAction} style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "grid", gap: 8 }}>
+              <label
+                htmlFor="email"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}
+              >
+                Email address
+              </label>
+              <input
+                id="email"
+                className="field"
+                type="email"
+                name="email"
+                defaultValue={process.env.AUTH_EMAIL}
+                placeholder="your@email.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <label
+                htmlFor="password"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                className="field"
+                type="password"
+                name="password"
+                defaultValue={process.env.AUTH_PASSWORD}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            {params.error ? (
+              <div
+                className="tag"
+                style={{
+                  color: "var(--rose-bright)",
+                  borderColor: "hsla(352,52%,54%,0.26)",
+                  background: "hsla(352,52%,54%,0.08)",
+                }}
+              >
+                Invalid credentials. Check your configured email and password.
+              </div>
+            ) : null}
+
+            <button
+              className="button"
+              type="submit"
+              style={{ marginTop: 8, width: "100%", justifyContent: "center", minHeight: 52 }}
+            >
+              Enter workspace →
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div
+            style={{
+              height: 1,
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)",
+              margin: "8px 0",
+            }}
+          />
+
+          {/* Trust note */}
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: 12.5,
+              color: "var(--text-muted)",
+              lineHeight: 1.72,
+              margin: 0,
+            }}
+          >
+            Your data lives in a private Postgres database. No third-party analytics, no
+            tracking. Just you and your preparation.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -35,8 +35,34 @@ type StudyNodeReference = {
   nodeSlug?: string;
 };
 
+function getChapterNode(node: StudyNodeRecord) {
+  if (node.type !== "MODULE") return null;
+  if (node.parent?.type === "SUBJECT") return node;
+  if (node.parent?.type === "MODULE") return node.parent as StudyNodeRecord;
+  return null;
+}
+
+function getSubjectNode(node: StudyNodeRecord) {
+  if (node.type === "SUBJECT") return node;
+  if (node.parent?.type === "SUBJECT") return node.parent as StudyNodeRecord;
+  if (node.parent?.parent?.type === "SUBJECT") return node.parent.parent as StudyNodeRecord;
+  return null;
+}
+
+function getPaperNode(node: StudyNodeRecord) {
+  if (node.type === "PAPER") return node;
+  const subjectNode = getSubjectNode(node);
+  if (subjectNode?.parent?.type === "PAPER") return subjectNode.parent as StudyNodeRecord;
+  if (node.parent?.type === "PAPER") return node.parent as StudyNodeRecord;
+  return null;
+}
+
+function normalizeTitleInput(value: string | null | undefined) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
 function normalizeKey(value: string | null | undefined) {
-  return slugify(String(value ?? "").trim());
+  return slugify(normalizeTitleInput(value));
 }
 
 function levenshteinDistance(a: string, b: string) {
@@ -84,6 +110,27 @@ async function uniqueStudySlug(base: string) {
   return candidate;
 }
 
+async function findSimilarSibling(input: { parentId: string; title: string }) {
+  const normalizedTitle = normalizeKey(input.title);
+  const siblings = await db.studyNode.findMany({
+    where: { parentId: input.parentId },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return (
+    siblings.find((node) => {
+      const candidateTitle = normalizeKey(node.title);
+      const candidateSlug = normalizeKey(node.slug);
+      return (
+        candidateTitle === normalizedTitle ||
+        candidateSlug === normalizedTitle ||
+        isFuzzyMatch(candidateTitle, normalizedTitle) ||
+        isFuzzyMatch(candidateSlug, normalizedTitle)
+      );
+    }) ?? null
+  );
+}
+
 async function getNodeForMutation(id: string) {
   return db.studyNode.findUnique({
     where: { id },
@@ -104,6 +151,58 @@ function matchesNode(node: StudyNodeRecord, titleOrSlug: string) {
   return title === normalized || slug === normalized || isFuzzyMatch(title, normalized) || isFuzzyMatch(slug, normalized);
 }
 
+function scoreNodeMatch(node: StudyNodeRecord, reference: StudyNodeReference) {
+  let score = 0;
+
+  const scoreField = (target: StudyNodeRecord | null, value: string | undefined, exactPoints: number, fuzzyPoints: number) => {
+    if (!target || !value) return Number.NEGATIVE_INFINITY;
+    const normalized = normalizeKey(value);
+    const title = normalizeKey(target.title);
+    const slug = normalizeKey(target.slug);
+    if (title === normalized || slug === normalized) return exactPoints;
+    if (isFuzzyMatch(title, normalized) || isFuzzyMatch(slug, normalized)) return fuzzyPoints;
+    return Number.NEGATIVE_INFINITY;
+  };
+
+  if (reference.nodeSlug) {
+    const slugScore = scoreField(node, reference.nodeSlug, 120, 50);
+    if (slugScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += slugScore;
+  }
+
+  if (reference.nodeTitle) {
+    const nodeScore = scoreField(node, reference.nodeTitle, 80, 35);
+    if (nodeScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += nodeScore;
+  }
+
+  if (reference.topicTitle) {
+    const topicScore = scoreField(node, reference.topicTitle, 75, 30);
+    if (topicScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += topicScore;
+  }
+
+  if (reference.chapterTitle) {
+    const chapterScore = scoreField(getChapterNode(node), reference.chapterTitle, 60, 24);
+    if (chapterScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += chapterScore;
+  }
+
+  if (reference.subjectTitle) {
+    const subjectScore = scoreField(getSubjectNode(node), reference.subjectTitle, 45, 18);
+    if (subjectScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += subjectScore;
+  }
+
+  if (reference.paperTitle) {
+    const paperScore = scoreField(getPaperNode(node), reference.paperTitle, 30, 12);
+    if (paperScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += paperScore;
+  }
+
+  return score;
+}
+
 function matchesChain(node: StudyNodeRecord, reference: StudyNodeReference) {
   if (reference.nodeSlug && normalizeKey(node.slug) !== normalizeKey(reference.nodeSlug)) {
     return false;
@@ -118,44 +217,21 @@ function matchesChain(node: StudyNodeRecord, reference: StudyNodeReference) {
   }
 
   if (reference.chapterTitle) {
-    const parent = node.parent;
-    if (!parent || !matchesNode(parent as StudyNodeRecord, reference.chapterTitle)) {
+    const chapterNode = getChapterNode(node);
+    if (!chapterNode || !matchesNode(chapterNode, reference.chapterTitle)) {
       return false;
     }
   }
 
   if (reference.subjectTitle) {
-    const directParent = node.parent;
-    const subjectNode =
-      directParent?.type === "SUBJECT"
-        ? directParent
-        : directParent?.parent?.type === "SUBJECT"
-          ? directParent.parent
-          : node.type === "SUBJECT"
-            ? node
-            : null;
-
+    const subjectNode = getSubjectNode(node);
     if (!subjectNode || !matchesNode(subjectNode as StudyNodeRecord, reference.subjectTitle)) {
       return false;
     }
   }
 
   if (reference.paperTitle) {
-    const subjectNode =
-      node.type === "SUBJECT"
-        ? node
-        : node.parent?.type === "SUBJECT"
-          ? node.parent
-          : null;
-    const paperNode =
-      node.type === "PAPER"
-        ? node
-        : subjectNode?.parent?.type === "PAPER"
-          ? subjectNode.parent
-          : node.parent?.type === "PAPER"
-            ? node.parent
-            : null;
-
+    const paperNode = getPaperNode(node);
     if (!paperNode || !matchesNode(paperNode as StudyNodeRecord, reference.paperTitle)) {
       return false;
     }
@@ -194,7 +270,23 @@ export async function resolveStudyNode(reference: StudyNodeReference) {
   }
 
   if (matched.length > 1) {
-    throw new Error("Multiple study nodes matched. Please specify the paper or subject more clearly.");
+    const ranked = matched
+      .map((node) => ({
+        node,
+        score: scoreNodeMatch(node as StudyNodeRecord, reference),
+      }))
+      .sort((left, right) => right.score - left.score);
+
+    if (ranked[0] && ranked[0].score > Number.NEGATIVE_INFINITY) {
+      const best = ranked[0];
+      const second = ranked[1];
+
+      if (!second || best.score > second.score) {
+        return best.node;
+      }
+    }
+
+    throw new Error("Multiple study nodes matched. Please specify the paper, subject, or chapter more clearly.");
   }
 
   throw new Error("Study node not found.");
@@ -205,6 +297,7 @@ export async function createStudyNode(input: {
   title: string;
   overview?: string | null;
 }) {
+  const cleanTitle = normalizeTitleInput(input.title);
   const parent = await db.studyNode.findUnique({
     where: { id: input.parentId },
     select: { id: true, type: true },
@@ -214,18 +307,29 @@ export async function createStudyNode(input: {
     throw new Error("Parent study node not found.");
   }
 
+  const existing = await findSimilarSibling({
+    parentId: input.parentId,
+    title: cleanTitle,
+  });
+
+  if (existing) {
+    return { node: existing, created: false as const };
+  }
+
   const nextType = parent.type === "PAPER" ? "SUBJECT" : "MODULE";
 
-  return db.studyNode.create({
+  const node = await db.studyNode.create({
     data: {
       parentId: input.parentId,
-      title: input.title.trim(),
-      slug: await uniqueStudySlug(input.title),
+      title: cleanTitle,
+      slug: await uniqueStudySlug(cleanTitle),
       type: nextType,
       overview: input.overview?.trim() || null,
       sortOrder: (await db.studyNode.count({ where: { parentId: input.parentId } })) + 1,
     },
   });
+
+  return { node, created: true as const };
 }
 
 export async function updateStudyNode(input: {
@@ -264,6 +368,37 @@ export async function deleteStudyNode(id: string) {
   await db.studyNode.delete({
     where: { id },
   });
+}
+
+export async function reorderStudyNodes(input: {
+  parentId: string;
+  orderedIds: string[];
+}) {
+  const siblings = await db.studyNode.findMany({
+    where: { parentId: input.parentId },
+    select: { id: true },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  if (!siblings.length) {
+    throw new Error("No study nodes found for this parent.");
+  }
+
+  const siblingIds = siblings.map((node) => node.id);
+  const uniqueOrderedIds = Array.from(new Set(input.orderedIds)).filter((id) => siblingIds.includes(id));
+  const remainingIds = siblingIds.filter((id) => !uniqueOrderedIds.includes(id));
+  const finalIds = [...uniqueOrderedIds, ...remainingIds];
+
+  await db.$transaction(
+    finalIds.map((id, index) =>
+      db.studyNode.update({
+        where: { id },
+        data: { sortOrder: index + 1 },
+      }),
+    ),
+  );
+
+  return { orderedIds: finalIds };
 }
 
 export async function setStudyNodeCompletion(input: {
