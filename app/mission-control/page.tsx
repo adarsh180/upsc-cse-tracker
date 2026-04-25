@@ -12,7 +12,8 @@ export default async function MissionControlPage() {
       <PageIntro
         eyebrow="Mission Control"
         title="Agentic Execution"
-        description="The agent reads live data to build and execute missions."
+        description="Launch a deliberate planning pass, then send the output into daily goals and todos."
+        glyph="guru"
       />
       <MissionControlPanel
         activeMission={snapshot.activeMission}

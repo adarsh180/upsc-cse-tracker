@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Sparkles } from "lucide-react";
 
-import { SacredLogoMark } from "@/components/shell/sacred-brand";
+import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icons";
 import { cn } from "@/lib/utils";
 
 export function PageIntro({
@@ -9,33 +9,35 @@ export function PageIntro({
   title,
   description,
   actions,
+  glyph = "dashboard",
 }: {
   eyebrow: string;
   title: string;
   description: string;
   actions?: React.ReactNode;
+  glyph?: MotionGlyphName;
 }) {
   return (
-    <section className="glass panel hero-grid landing-hero page-intro-shell">
+    <section className="glass panel page-intro-shell">
       <div className="page-intro-copy">
-        <div className="eyebrow">{eyebrow}</div>
+        <div className="page-intro-kicker">
+          <MotionGlyph name={glyph} size={42} />
+          <span className="eyebrow">{eyebrow}</span>
+        </div>
         <h1 className="display page-intro-title">{title}</h1>
         <p className="muted page-intro-description">{description}</p>
       </div>
       <div className="glass panel glass-strong page-intro-aside">
-        <div className="page-intro-mark">
-          <SacredLogoMark size="sm" />
+        <div className="page-intro-mark" aria-hidden="true">
+          <MotionGlyph name={glyph} size={72} />
           <div className="page-intro-mark-glow" />
         </div>
         <div>
           <div className="pill">
             <Sparkles size={14} />
-            Sacred tracker system
+            Live tracker
           </div>
-          <div className="display page-intro-aside-title">Built for a hard third attempt.</div>
-          <p className="muted page-intro-aside-copy">
-            Timers, test evidence, discipline signals, AI interrogation and database-backed study control in one premium workspace.
-          </p>
+          <div className="display page-intro-aside-title">Clean signal. Fast action.</div>
         </div>
         <div className="page-intro-actions">{actions}</div>
       </div>
@@ -105,7 +107,10 @@ export function MetricCard({
 }) {
   return (
     <article className="glass panel metric-card">
-      <div className="eyebrow metric-card-label">{label}</div>
+      <div className="metric-card-top">
+        <MotionGlyph name="analytics" size={34} />
+        <div className="eyebrow metric-card-label">{label}</div>
+      </div>
       <div className="display metric-value">{value}</div>
       <div className="muted metric-card-hint">{hint}</div>
     </article>
@@ -180,8 +185,11 @@ export function StudyCard({
   return (
     <Link href={href} className="glass panel card-link study-card-shell">
       <div className="study-card-head">
-        <div className="tag study-card-tag">
-          {badge ?? "Open workspace"}
+        <div className="study-card-label-row">
+          <MotionGlyph name="study" size={38} style={{ color: accentColor }} />
+          <div className="tag study-card-tag">
+            {badge ?? "Open workspace"}
+          </div>
         </div>
         {completionPct !== undefined && (
           <CircularProgress pct={completionPct} size={52} stroke={5} color={accentColor} />
@@ -191,6 +199,11 @@ export function StudyCard({
         {title}
       </div>
       <p className="muted study-card-overview">{overview}</p>
+      {completionPct !== undefined ? (
+        <div className="study-card-progress-line" aria-hidden="true">
+          <span style={{ width: `${Math.max(0, Math.min(100, completionPct))}%`, background: accentColor }} />
+        </div>
+      ) : null}
       <div className="study-card-cta">
         Enter page <ArrowRight size={16} />
       </div>

@@ -17,9 +17,8 @@ import { signOutAction } from "@/app/actions";
 import { LiveExamTimer } from "@/components/ui/live-exam-timer";
 import { CountdownCard, MetricCard, StudyCard } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
-import { getDashboardSummary } from "@/lib/dashboard";
+import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
 import { examCountdown } from "@/lib/utils";
-import { db } from "@/lib/db";
 
 export default async function DashboardPage() {
   await requireSession();
@@ -36,20 +35,7 @@ export default async function DashboardPage() {
   const trackedHours = summary.metrics[0]?.value ?? "0h";
   const focusTrend = summary.metrics[3]?.value ?? "0/10";
 
-  const paperPctMap: Record<string, number> = {};
-  await Promise.all(
-    summary.papers.map(async (paper) => {
-      const ids = paper.children.map((c) => c.id);
-      if (ids.length === 0) {
-        paperPctMap[paper.id] = 0;
-        return;
-      }
-      const progress = await db.topicProgress.findMany({
-        where: { studyNodeId: { in: ids } },
-      });
-      paperPctMap[paper.id] = Math.round((progress.filter((p) => p.checked).length / ids.length) * 100);
-    })
-  );
+  const paperPctMap = await getPaperCompletionMap(summary.papers);
 
   return (
     <main className="page-shell">

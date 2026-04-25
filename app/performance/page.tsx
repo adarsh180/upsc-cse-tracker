@@ -31,7 +31,8 @@ export default async function PerformancePage() {
       <PageIntro
         eyebrow="Performance Analytics"
         title="See the shape of your preparation."
-        description="This view combines test results, daily discipline, completion and study volume so you can measure whether effort is compounding or just feeling busy."
+        description="Score, discipline, completion and study volume are stitched into one readable performance desk."
+        glyph="analytics"
       />
 
       <section className="section-stack">

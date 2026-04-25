@@ -4,6 +4,7 @@ import { FilePenLine, PenSquare, Sparkles } from "lucide-react";
 import { evaluateEssayAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { PageIntro } from "@/components/ui/sections";
 
 export default async function EssayCheckerPage() {
   await requireSession();
@@ -17,32 +18,18 @@ export default async function EssayCheckerPage() {
 
   return (
     <main className="page-shell">
-      <section className="glass panel hero-grid">
-        <div>
-          <div className="eyebrow">Essay Checker</div>
-          <h1 className="display" style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)", margin: "14px 0 10px" }}>
-            Turn draft writing into a review loop.
-          </h1>
-          <p className="muted" style={{ maxWidth: 780, lineHeight: 1.8 }}>
-            This page is dedicated to essay submission, review, history and score recall so the
-            process feels like a serious writing lab rather than a small form tucked into another page.
-          </p>
-        </div>
-        <article className="glass panel glass-strong">
+      <PageIntro
+        eyebrow="Essay Checker"
+        title="Turn drafts into a review loop."
+        description="Submit, score, review and revisit essays without leaving the writing lab."
+        glyph="essay"
+        actions={
           <div className="pill">
             <Sparkles size={14} />
-            Latest review
+            {latest ? `${latest.score ?? "Pending"} latest score` : "No score yet"}
           </div>
-          <div className="display" style={{ fontSize: "2rem", marginTop: 16 }}>
-            {latest?.score ?? "No score yet"}
-          </div>
-          <div className="muted" style={{ marginTop: 10, lineHeight: 1.7 }}>
-            {latest
-              ? `${latest.title} reviewed on ${format(latest.submittedAt, "dd MMM yyyy")}.`
-              : "Submit your first essay to create a review history."}
-          </div>
-        </article>
-      </section>
+        }
+      />
 
       <section className="section-stack">
         <div className="grid grid-2">

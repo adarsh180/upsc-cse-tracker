@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createStudyNode, deleteStudyNode, reorderStudyNodes, updateStudyNode } from "@/lib/study-tree";
 
+function revalidateStudySurfaces(pathname?: string) {
+  if (pathname) revalidatePath(pathname);
+  revalidatePath("/dashboard");
+  revalidatePath("/");
+  revalidatePath("/", "layout");
+}
+
 // POST — create a new child node
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +28,7 @@ export async function POST(req: NextRequest) {
       overview,
     });
 
-    if (pathname) revalidatePath(pathname);
+    revalidateStudySurfaces(pathname);
 
     return NextResponse.json({
       id: result.node.id,
@@ -53,7 +60,7 @@ export async function PUT(req: NextRequest) {
       orderedIds,
     });
 
-    if (pathname) revalidatePath(pathname);
+    revalidateStudySurfaces(pathname);
 
     return NextResponse.json({ ok: true, orderedIds: result.orderedIds });
   } catch (err) {
@@ -83,7 +90,7 @@ export async function PATCH(req: NextRequest) {
       details,
     });
 
-    if (pathname) revalidatePath(pathname);
+    revalidateStudySurfaces(pathname);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -105,7 +112,7 @@ export async function DELETE(req: NextRequest) {
 
     await deleteStudyNode(id);
 
-    if (pathname) revalidatePath(pathname);
+    revalidateStudySurfaces(pathname);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

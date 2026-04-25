@@ -445,7 +445,7 @@ function ChapterAccordion({
                 onToggle(id, checked);
                 await fetch("/api/topic-progress", {
                   method: "POST",
-                  body: JSON.stringify({ studyNodeId: id, checked }),
+                  body: JSON.stringify({ studyNodeId: id, checked, pathname }),
                   headers: { "Content-Type": "application/json" },
                 });
               }}
@@ -564,7 +564,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
     setRevisionMap((state) => ({ ...state, [id]: next }));
     await fetch("/api/topic-progress", {
       method: "POST",
-      body: JSON.stringify({ studyNodeId: id, revisionDelta: delta }),
+      body: JSON.stringify({ studyNodeId: id, revisionDelta: delta, pathname }),
       headers: { "Content-Type": "application/json" },
     });
   };
@@ -721,10 +721,10 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
           <div>
             <div className="eyebrow">Study Flow</div>
             <div className="display study-control-title">{totalDone} / {allTopicIds.length} topics completed</div>
-            <div className="muted study-control-copy">Smooth order control, duplicate-safe additions, and instant progress sync.</div>
+            <div className="muted study-control-copy">Current completion and revision state.</div>
           </div>
         </div>
-        <div className="study-head-note">Drag chapters and topics directly to reorder them. Minor title differences will map to the existing node instead of creating clutter.</div>
+        <div className="study-head-note">Chapter order, topic order and revision heat stay together.</div>
       </div>
 
       <div className="study-summary-grid">

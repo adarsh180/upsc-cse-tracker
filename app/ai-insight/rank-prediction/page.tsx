@@ -11,7 +11,8 @@ export default async function RankPredictionPage() {
       <PageIntro
         eyebrow="AI Rank Prediction"
         title="Where will you finish?"
-        description="A 3-layer AI engine reads your full preparation — tests, study hours, topic completion, mood trends and consistency patterns — and projects your Prelims score, Mains total and Final Selection rank band."
+        description="A three-layer engine projects prelims, mains and final-list readiness from live tracker data."
+        glyph="rank"
         actions={
           <div className="pill">
             <Trophy size={14} />

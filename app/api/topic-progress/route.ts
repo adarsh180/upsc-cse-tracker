@@ -12,23 +12,36 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "parentId required" }, { status: 400 });
     }
 
-    const parent = await db.studyNode.findUnique({
+    const root = await db.studyNode.findUnique({
       where: { id: parentId },
-      include: {
-        children: {
-          include: { children: true },
-        },
-      },
+      select: { id: true },
     });
 
-    if (!parent) {
+    if (!root) {
       return NextResponse.json({ error: "Node not found" }, { status: 404 });
     }
 
+    const nodes = await db.studyNode.findMany({
+      select: {
+        id: true,
+        parentId: true,
+      },
+    });
+
+    const childrenByParent = new Map<string, string[]>();
+    for (const node of nodes) {
+      if (!node.parentId) continue;
+      const children = childrenByParent.get(node.parentId) ?? [];
+      children.push(node.id);
+      childrenByParent.set(node.parentId, children);
+    }
+
     const allIds: string[] = [];
-    for (const child of parent.children) {
-      allIds.push(child.id);
-      for (const g of child.children) allIds.push(g.id);
+    const queue = [...(childrenByParent.get(parentId) ?? [])];
+    while (queue.length) {
+      const id = queue.shift()!;
+      allIds.push(id);
+      queue.push(...(childrenByParent.get(id) ?? []));
     }
 
     const records = await db.topicProgress.findMany({
@@ -58,9 +71,10 @@ export async function POST(req: NextRequest) {
       studyNodeId: string;
       checked?: boolean;
       revisionDelta?: number;
+      pathname?: string;
     };
 
-    const { studyNodeId, checked, revisionDelta } = body;
+    const { studyNodeId, checked, revisionDelta, pathname } = body;
 
     if (!studyNodeId) {
       return NextResponse.json({ error: "studyNodeId required" }, { status: 400 });
@@ -100,7 +114,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Invalidate the entire path to update dashboard and subjects real-time
+    if (pathname) {
+      revalidatePath(pathname);
+    }
+    revalidatePath("/dashboard");
+    revalidatePath("/");
     revalidatePath("/", "layout");
 
     return NextResponse.json({ success: true, record });

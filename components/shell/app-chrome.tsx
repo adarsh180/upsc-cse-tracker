@@ -7,7 +7,19 @@ import { Menu, X, Sparkles, ChevronRight } from "lucide-react";
 
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { navGroups } from "@/components/shell/nav-config";
+import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icons";
 import { cn } from "@/lib/utils";
+
+function glyphForHref(href: string): MotionGlyphName {
+  if (href.includes("rank-prediction")) return "rank";
+  if (href.includes("essay-checker")) return "essay";
+  if (href.includes("deep-analytics") || href.includes("performance")) return "analytics";
+  if (href.includes("guru") || href.includes("ai-insight") || href.includes("mission-control")) return "guru";
+  if (href.includes("goals") || href.includes("todo")) return "goals";
+  if (href.includes("tests")) return "tests";
+  if (href.includes("study")) return "study";
+  return "dashboard";
+}
 
 /* ─── Nav Drawer Overlay ─────────────────────────────────────── */
 function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -89,7 +101,6 @@ function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
                   const active =
                     pathname === item.href ||
                     pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
                   return (
                     <Link
                       key={item.href}
@@ -99,7 +110,7 @@ function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
                       style={{ "--nav-accent": item.accent } as React.CSSProperties}
                     >
                       <span className="nav-drawer-link-icon">
-                        <Icon size={14} />
+                        <MotionGlyph name={glyphForHref(item.href)} size={26} label={item.label} />
                       </span>
                       <span className="nav-drawer-link-label">{item.label}</span>
                       {active && <span className="nav-drawer-link-dot" />}

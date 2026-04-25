@@ -1,107 +1,227 @@
-import { format } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { CalendarDays, Flame, Save, Target, Trash2 } from "lucide-react";
 
-import { saveDailyGoalAction, deleteDailyGoalAction } from "@/app/actions";
+import { deleteDailyGoalAction, saveDailyGoalAction } from "@/app/actions";
+import { DailyGoalsSignalChart } from "@/components/charts/analytics-charts";
+import { ActivityHeatmap } from "@/components/ui/heatmap";
+import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { PageIntro } from "@/components/ui/sections";
-import { ActivityHeatmap } from "@/components/ui/heatmap";
-import { TrendChart } from "@/components/charts/analytics-charts";
+
+const IST_TIME_ZONE = "Asia/Kolkata";
+const HEATMAP_START_KEY = "2026-04-01";
+
+function formatIstDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: IST_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(date);
+
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const year = parts.find((part) => part.type === "year")?.value ?? "2026";
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatIstLabel(date: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: IST_TIME_ZONE,
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+function formatIstFullDate(date: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: IST_TIME_ZONE,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 export default async function GoalsPage() {
   await requireSession();
 
-  const date550DaysAgo = new Date();
-  date550DaysAgo.setDate(date550DaysAgo.getDate() - 550);
+  const todayKey = formatIstDateKey(new Date());
+  const todayLabel = formatIstLabel(new Date());
+  const heatmapStartDate = new Date("2026-04-01T00:00:00+05:30");
 
   const logs = await db.dailyLog.findMany({
     where: {
-      logDate: { gte: date550DaysAgo },
+      logDate: { gte: heatmapStartDate },
     },
     orderBy: { logDate: "desc" },
   });
 
   const tableLogs = logs.slice(0, 30);
-  const heatmapData = logs.map((l) => ({
-    date: format(l.logDate, "yyyy-MM-dd"),
-    hours: l.totalHours,
-    completion: l.completion,
+  const recentLogs = logs.slice(0, 7);
+  const latestLog = logs[0];
+  const sevenDayHours = recentLogs.reduce((sum, log) => sum + log.totalHours, 0);
+  const sevenDayQuestions = recentLogs.reduce((sum, log) => sum + log.questionsSolved, 0);
+  const avgDiscipline = recentLogs.length
+    ? Math.round(recentLogs.reduce((sum, log) => sum + log.disciplineScore, 0) / recentLogs.length)
+    : 0;
+  const avgCompletion = recentLogs.length
+    ? Math.round(recentLogs.reduce((sum, log) => sum + log.completion, 0) / recentLogs.length)
+    : 0;
+
+  const heatmapData = logs.map((log) => ({
+    date: formatIstDateKey(log.logDate),
+    hours: log.totalHours,
+    completion: log.completion,
   }));
 
-  const trendData = [...tableLogs].reverse().map((l) => ({
-    label: format(l.logDate, "dd MMM"),
-    value: l.totalHours,
-    questions: l.questionsSolved,
-    topics: l.topicsStudied,
+  const trendData = [...tableLogs].reverse().map((log) => ({
+    label: formatIstLabel(log.logDate),
+    hours: log.totalHours,
+    questions: log.questionsSolved,
+    topics: log.topicsStudied,
+    discipline: log.disciplineScore,
+    completion: log.completion,
   }));
 
   return (
-    <main className="page-shell">
+    <main className="page-shell goals-page">
       <PageIntro
         eyebrow="Daily Goals"
-        title="Measure execution, not intention."
-        description="Log your primary focus, actual study hours, completion, discipline and reflection so your preparation history stays honest and measurable."
+        title="Execution, beautifully measured."
+        description="A cleaner command surface for hours, output, discipline, blockers and tomorrow's next move."
+        glyph="goals"
       />
 
-      <section className="section-stack">
-        <ActivityHeatmap data={heatmapData} />
-        
-        <article className="glass panel">
-          <div className="eyebrow">Log today</div>
-          <form action={saveDailyGoalAction} style={{ marginTop: 16 }}>
-            <div className="grid grid-2" style={{ gap: 16, alignItems: "stretch" }}>
-              {/* Column 1: Core Metrics */}
-              <div className="grid" style={{ gap: 12, alignContent: "start" }}>
-                <input className="field" type="date" name="logDate" defaultValue={format(new Date(), "yyyy-MM-dd")} required title="Log Date" />
-                <input className="field" name="primaryFocus" placeholder="Primary focus of the day" required />
-                <div className="grid grid-3" style={{ gap: 10 }}>
-                  <input className="field" type="number" step="0.25" name="totalHours" placeholder="Hours" required />
-                  <input className="field" type="number" min="0" max="100" name="completion" placeholder="Done %" required />
-                  <input className="field" type="number" min="0" max="100" name="disciplineScore" placeholder="Discipline" required />
-                </div>
-                <div className="grid grid-2" style={{ gap: 10 }}>
-                  <input className="field" type="number" min="0" name="questionsSolved" placeholder="Questions solved" required />
-                  <input className="field" type="number" min="0" name="topicsStudied" placeholder="Topics studied" required />
-                </div>
-                <textarea className="textarea" name="tomorrowPlan" placeholder="Tomorrow plan" style={{ minHeight: 100 }} />
+      <section className="section-stack goals-redesign-stack">
+        <section className="goals-hero-console">
+          <article className="glass panel goals-entry-panel">
+            <div className="goals-panel-head">
+              <div>
+                <div className="eyebrow">Today</div>
+                <div className="display goals-panel-title">Daily command log</div>
               </div>
-              
-              {/* Column 2: Reflections */}
-              <div className="grid" style={{ gap: 12, display: "flex", flexDirection: "column" }}>
-                <textarea className="textarea" name="wins" placeholder="What went well? (Wins)" style={{ minHeight: 100 }} />
-                <textarea className="textarea" name="blockers" placeholder="What blocked you? (Blockers)" style={{ minHeight: 100 }} />
-                <button className="button" type="submit" style={{ padding: "14px", marginTop: "auto" }}>
-                  Save daily goal log
-                </button>
+              <div className="goals-date-chip">
+                <CalendarDays size={14} />
+                {todayLabel}
               </div>
             </div>
-          </form>
-        </article>
 
-        <article className="glass panel">
-          <div className="eyebrow" style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            Execution Output Trend
-            <div style={{ display: "flex", gap: 12, fontSize: "0.8rem", fontWeight: 600 }}>
-              <span style={{ color: "var(--botany)", display: "flex", alignItems: "center", gap: 6 }}><span style={{width: 8, height: 8, borderRadius: 4, background: "currentColor"}}/>Questions Solved</span>
-              <span style={{ color: "var(--gold)", display: "flex", alignItems: "center", gap: 6 }}><span style={{width: 8, height: 8, borderRadius: 4, background: "currentColor"}}/>Topics Studied</span>
-              <span style={{ color: "#54d2ff", display: "flex", alignItems: "center", gap: 6 }}><span style={{width: 8, height: 8, borderRadius: 4, background: "currentColor"}}/>Focused Hours</span>
+            <form action={saveDailyGoalAction} className="goals-entry-form">
+              <input className="field goals-full" type="date" name="logDate" defaultValue={todayKey} required title="Log Date" />
+              <input className="field goals-full" name="primaryFocus" placeholder="Primary focus" required />
+
+              <div className="goals-metric-input-grid">
+                <input className="field" type="number" step="0.25" name="totalHours" placeholder="Hours" required />
+                <input className="field" type="number" min="0" max="100" name="completion" placeholder="Done %" required />
+                <input className="field" type="number" min="0" max="100" name="disciplineScore" placeholder="Discipline" required />
+                <input className="field" type="number" min="0" name="questionsSolved" placeholder="Questions" required />
+                <input className="field" type="number" min="0" name="topicsStudied" placeholder="Topics" required />
+              </div>
+
+              <textarea className="textarea goals-full" name="wins" placeholder="Wins from the day" />
+              <textarea className="textarea goals-full" name="blockers" placeholder="Blockers or drift" />
+              <textarea className="textarea goals-full" name="tomorrowPlan" placeholder="Tomorrow's first clear action" />
+
+              <button className="button goals-save-button" type="submit">
+                <Save size={16} />
+                Save execution log
+              </button>
+            </form>
+          </article>
+
+          <div className="goals-signal-column">
+            <article className="glass panel goals-snapshot-panel">
+              <div className="goals-panel-head">
+                <div>
+                  <div className="eyebrow">7-day signal</div>
+                  <div className="display goals-panel-title">Current rhythm</div>
+                </div>
+                <div className="pill">
+                  <Flame size={14} />
+                  Live
+                </div>
+              </div>
+
+              <div className="goals-snapshot-grid">
+                {[
+                  { label: "Hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "var(--physics)" },
+                  { label: "Questions", value: sevenDayQuestions, tone: "var(--botany)" },
+                  { label: "Discipline", value: `${avgDiscipline}/100`, tone: "var(--gold)" },
+                  { label: "Completion", value: `${avgCompletion}%`, tone: "var(--rose-bright)" },
+                ].map((item) => (
+                  <div key={item.label} className="goals-snapshot-card">
+                    <span>{item.label}</span>
+                    <strong style={{ color: item.tone }}>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <ActivityHeatmap data={heatmapData} startDate={HEATMAP_START_KEY} />
+          </div>
+        </section>
+
+        <section className="goals-analysis-grid">
+          <article className="glass panel goals-chart-panel">
+            <div className="goals-panel-head">
+              <div>
+                <div className="eyebrow">Output trend</div>
+                <div className="display goals-panel-title">Execution XY signal</div>
+              </div>
+              <div className="pill">IST synced</div>
             </div>
-          </div>
-          <div style={{ marginTop: 24, padding: "0 10px" }}>
-            <TrendChart
-              data={trendData}
-              color="#54d2ff"
-              secondaryKey="questions"
-              secondaryColor="var(--botany)"
-              tertiaryKey="topics"
-              tertiaryColor="var(--gold)"
-            />
-          </div>
-        </article>
+            <div className="goals-chart-wrap">
+              <DailyGoalsSignalChart data={trendData} />
+            </div>
+          </article>
 
-        <article className="glass panel">
-          <div className="eyebrow">Goal log history</div>
-          <div className="table-wrap" style={{ marginTop: 14 }}>
+          <article className="glass panel goals-reflection-panel">
+            <div className="goals-panel-head">
+              <div>
+                <div className="eyebrow">Latest reflection</div>
+                <div className="display goals-panel-title">{latestLog ? formatIstFullDate(latestLog.logDate) : "No log yet"}</div>
+              </div>
+              <div className="pill">
+                <Target size={14} />
+                Review
+              </div>
+            </div>
+
+            {latestLog ? (
+              <div className="goals-reflection-stack">
+                <div>
+                  <span>Focus</span>
+                  <strong>{latestLog.primaryFocus}</strong>
+                </div>
+                <div>
+                  <span>Wins</span>
+                  <p>{latestLog.wins || "No wins written."}</p>
+                </div>
+                <div>
+                  <span>Blockers</span>
+                  <p>{latestLog.blockers || "No blockers written."}</p>
+                </div>
+                <div>
+                  <span>Tomorrow</span>
+                  <p>{latestLog.tomorrowPlan || "No plan written."}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="muted">Save your first daily log to create a reflection trail.</div>
+            )}
+          </article>
+        </section>
+
+        <article className="glass panel goals-history-panel">
+          <div className="goals-panel-head">
+            <div>
+              <div className="eyebrow">History</div>
+              <div className="display goals-panel-title">Recent execution ledger</div>
+            </div>
+            <div className="pill">{tableLogs.length} entries</div>
+          </div>
+
+          <div className="table-wrap goals-history-table">
             <table>
               <thead>
                 <tr>
@@ -118,7 +238,7 @@ export default async function GoalsPage() {
               <tbody>
                 {tableLogs.map((log) => (
                   <tr key={log.id}>
-                    <td style={{ whiteSpace: "nowrap" }}>{format(log.logDate, "dd MMM yyyy")}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{formatIstFullDate(log.logDate)}</td>
                     <td>{log.primaryFocus}</td>
                     <td>{log.totalHours.toFixed(1)}h</td>
                     <td>{log.questionsSolved}</td>
@@ -128,31 +248,18 @@ export default async function GoalsPage() {
                     <td>
                       <form action={deleteDailyGoalAction}>
                         <input type="hidden" name="id" value={log.id} />
-                        <button
-                          type="submit"
-                          style={{
-                            background: "rgba(255,80,80,0.1)",
-                            border: "1px solid rgba(255,80,80,0.22)",
-                            borderRadius: 8,
-                            padding: "5px 8px",
-                            color: "var(--danger)",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                          }}
-                          title="Delete"
-                        >
+                        <button type="submit" className="icon-action-button" title="Delete">
                           <Trash2 size={13} />
                         </button>
                       </form>
                     </td>
                   </tr>
                 ))}
-                {tableLogs.length === 0 && (
+                {tableLogs.length === 0 ? (
                   <tr>
-                     <td colSpan={8} className="muted">No daily logs yet.</td>
+                    <td colSpan={8} className="muted">No daily logs yet.</td>
                   </tr>
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>

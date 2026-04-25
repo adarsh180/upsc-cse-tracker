@@ -12,7 +12,8 @@ export default async function TodoPage() {
       <PageIntro
         eyebrow="Todo Workspace"
         title="Execution Board"
-        description="Manage your mission tasks and manual todos."
+        description="Manual tasks and mission tasks share one clean board with immediate state changes."
+        glyph="goals"
         actions={
           <>
             <div className="pill">{snapshot.tasks.length} tasks</div>

@@ -1,27 +1,32 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { BookOpen, Clock3, Layers3, Plus, Trash2 } from "lucide-react";
 
 import {
   addStudyLogAction,
   createStudyNodeAction,
+  deleteStudyLogAction,
   deleteStudyNodeAction,
   updateStudyNodeAction,
-  deleteStudyLogAction,
 } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { getStudyNodeBySlug, getStudyTree } from "@/lib/dashboard";
-import { CircularProgress, FormGrid, PageIntro, StudyCard } from "@/components/ui/sections";
+import { FormGrid, PageIntro, StudyCard } from "@/components/ui/sections";
 import { StudyPageClient } from "@/components/ui/study-checklist";
 
-// ─── Types ───────────────────────────────────────────────
+type ProgressRecord = {
+  checked: boolean;
+  revisionCount?: number;
+} | null;
+
 type TopicEntry = {
   id: string;
   title: string;
   overview: string | null;
-  topicProgress: { checked: boolean } | null;
-  children?: { id: string; title: string; overview: string | null; topicProgress: { checked: boolean } | null }[];
+  topicProgress: ProgressRecord;
+  children?: TopicEntry[];
 };
 
 type ChildWithProgress = {
@@ -31,29 +36,38 @@ type ChildWithProgress = {
   type: string;
   overview: string | null;
   accent: string | null;
-  topicProgress: { checked: boolean } | null;
+  topicProgress: ProgressRecord;
   children: TopicEntry[];
 };
 
-// ─── Helpers ─────────────────────────────────────────────
+type ProgressNode = {
+  topicProgress: ProgressRecord;
+  children?: ProgressNode[];
+};
+
+function collectLeaves(node: ProgressNode): ProgressNode[] {
+  const children = node.children ?? [];
+  if (!children.length) return [node];
+  return children.flatMap((child) => collectLeaves(child));
+}
+
 function computePct(node: ChildWithProgress): number {
-  const modules: { topicProgress: { checked: boolean } | null }[] = [];
+  const leaves = collectLeaves(node);
+  if (!leaves.length) return 0;
+  return Math.round((leaves.filter((leaf) => leaf.topicProgress?.checked).length / leaves.length) * 100);
+}
 
-  if (node.children.length > 0) {
-    for (const ch of node.children) {
-      if (ch.children && ch.children.length > 0) {
-        modules.push(...ch.children);
-      } else {
-        modules.push(ch);
-      }
-    }
-  } else {
-    modules.push(node);
-  }
+function summarizeProgress(nodes: ChildWithProgress[]) {
+  const leaves = nodes.flatMap((node) => collectLeaves(node));
+  const done = leaves.filter((leaf) => leaf.topicProgress?.checked).length;
+  const revisions = leaves.reduce((sum, leaf) => sum + (leaf.topicProgress?.revisionCount ?? 0), 0);
 
-  if (modules.length === 0) return 0;
-  const done = modules.filter((m) => m.topicProgress?.checked).length;
-  return Math.round((done / modules.length) * 100);
+  return {
+    total: leaves.length,
+    done,
+    pct: leaves.length ? Math.round((done / leaves.length) * 100) : 0,
+    revisions,
+  };
 }
 
 export default async function StudyNodePage({
@@ -73,19 +87,15 @@ export default async function StudyNodePage({
   }
 
   const pathname = `/study/${node.slug}`;
-
   const children = (node.children ?? []) as unknown as ChildWithProgress[];
   const hasSyllabusChildren = children.length > 0;
+  const progressSummary = summarizeProgress(children);
 
-  // PAPER → show subject cards + add subject form
-  // SUBJECT → show chapter checklist + add chapter/topic form
-  // MODULE/leaf → show topic checklist + add topic form
   const isPaper = node.type === "PAPER";
   const isSubject = node.type === "SUBJECT";
   const isModule = node.type === "MODULE";
   const isChecklist = isSubject || isModule;
 
-  // label for the "Add" form
   const addChildLabel = isPaper
     ? "Add Subject"
     : isSubject
@@ -99,17 +109,18 @@ export default async function StudyNodePage({
       : "Sub-topic name";
 
   return (
-    <main className="page-shell">
+    <main className="page-shell study-route-page">
       <PageIntro
         eyebrow={node.parent?.title ?? "Study space"}
         title={node.title}
-        description={node.overview ?? "Manage this subject, chapter or topic in real time."}
+        description={node.overview ?? "Manage syllabus, progress and study logs in one clean workspace."}
+        glyph="study"
         actions={
           <>
             <div className="pill">{node.type}</div>
             {node.parent ? (
               <Link href={`/study/${node.parent.slug ?? ""}`} className="pill">
-                ← {node.parent.title}
+                Back to {node.parent.title}
               </Link>
             ) : (
               <div className="pill">{papers.length} top-level papers</div>
@@ -119,139 +130,134 @@ export default async function StudyNodePage({
       />
 
       <section className="section-stack">
+        <section className="glass panel study-route-overview">
+          <div className="study-route-meter">
+            <div
+              className="study-route-ring"
+              style={{ "--study-pct": `${progressSummary.pct}%` } as CSSProperties}
+            >
+              <span>{progressSummary.pct}%</span>
+            </div>
+            <div>
+              <div className="eyebrow">Live Progress</div>
+              <div className="display study-route-title">
+                {progressSummary.done} of {progressSummary.total} topics done
+              </div>
+              <p className="muted study-route-copy">
+                Latest syllabus signal across this lane.
+              </p>
+            </div>
+          </div>
 
-        {/* ── Paper level: subject cards with progress ── */}
-        {isPaper && hasSyllabusChildren && (
-          <section>
-            <div className="eyebrow">Subjects in this paper</div>
-            <div className="grid grid-3" style={{ marginTop: 16 }}>
-              {children.map((subject) => {
-                const pct = computePct(subject);
-                return (
-                  <div key={subject.id} style={{ position: "relative" }}>
-                    <StudyCard
-                      href={`/study/${subject.slug}`}
-                      title={subject.title}
-                      overview={subject.overview}
-                      accent={subject.accent}
-                      badge={subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}
-                      completionPct={pct}
-                    />
-                    <form
-                      action={deleteStudyNodeAction}
-                      style={{ position: "absolute", bottom: 16, right: 16, zIndex: 10 }}
+          <div className="study-route-stat-grid">
+            {[
+              { label: isPaper ? "Subjects" : "Chapters", value: children.length, icon: Layers3 },
+              { label: "Leaf topics", value: progressSummary.total, icon: BookOpen },
+              { label: "Revisions", value: progressSummary.revisions, icon: Clock3 },
+            ].map((item) => (
+              <div key={item.label} className="study-route-stat">
+                <item.icon size={15} />
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {isPaper && hasSyllabusChildren ? (
+          <section className="glass panel study-paper-shell">
+            <div className="panel-title-row">
+              <div>
+                <div className="eyebrow">Subjects in this paper</div>
+                <div className="display study-section-title">Choose a study lane.</div>
+              </div>
+              <div className="pill">{children.length} lanes</div>
+            </div>
+
+            <div className="study-subject-grid">
+              {children.map((subject) => (
+                <div key={subject.id} className="study-card-wrap">
+                  <StudyCard
+                    href={`/study/${subject.slug}`}
+                    title={subject.title}
+                    overview={subject.overview}
+                    accent={subject.accent}
+                    badge={subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}
+                    completionPct={computePct(subject)}
+                  />
+                  <form action={deleteStudyNodeAction} className="study-card-delete-form">
+                    <input type="hidden" name="id" value={subject.id} suppressHydrationWarning />
+                    <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
+                    <button
+                      className="study-icon-btn danger"
+                      type="submit"
+                      title="Remove this page"
+                      suppressHydrationWarning
                     >
-                      <input type="hidden" name="id" value={subject.id} suppressHydrationWarning />
-                      <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-                      <button
-                        className="button-secondary"
-                        type="submit"
-                        style={{ padding: "6px 10px", fontSize: "11px" }}
-                        title="Remove this page"
-                        suppressHydrationWarning
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </form>
-                  </div>
-                );
-              })}
+                      <Trash2 size={12} />
+                    </button>
+                  </form>
+                </div>
+              ))}
             </div>
           </section>
-        )}
+        ) : null}
 
-        {/* ── Subject/Module level: checklist ── */}
-        {isChecklist && hasSyllabusChildren && (
+        {isChecklist && hasSyllabusChildren ? (
           <StudyPageClient
             nodeId={node.id}
             nodeType={node.type}
             chapters={
-              children.map((ch) => ({
-                id: ch.id,
-                title: ch.title,
-                overview: ch.overview,
-                topicProgress: ch.topicProgress,
-                children: ch.children.map((t) => ({
-                  id: t.id,
-                  title: t.title,
-                  overview: t.overview,
-                  topicProgress: t.topicProgress,
+              children.map((chapter) => ({
+                id: chapter.id,
+                title: chapter.title,
+                overview: chapter.overview,
+                topicProgress: chapter.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["topicProgress"],
+                children: chapter.children.map((topic) => ({
+                  id: topic.id,
+                  title: topic.title,
+                  overview: topic.overview,
+                  topicProgress: topic.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["children"][number]["topicProgress"],
                 })),
-              })) as Parameters<typeof StudyPageClient>[0]["chapters"]
+              }))
             }
             pathname={pathname}
           />
-        )}
+        ) : null}
 
-        {/* ── Edit + Add child ── */}
-        <FormGrid>
-          {/* Edit this page */}
-          <article className="glass panel">
-            <div className="eyebrow">Edit this page</div>
+        <FormGrid className="study-ops-grid">
+          <article className="glass panel study-form-panel">
+            <div className="panel-title-row">
+              <div>
+                <div className="eyebrow">Page controls</div>
+                <div className="display study-section-title">Edit metadata</div>
+              </div>
+            </div>
             <form action={updateStudyNodeAction} className="grid" style={{ gap: 12, marginTop: 16 }}>
               <input type="hidden" name="id" value={node.id} suppressHydrationWarning />
               <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-              <input
-                className="field"
-                name="title"
-                defaultValue={node.title}
-                placeholder="Page title"
-                required
-                suppressHydrationWarning
-              />
-              <textarea
-                className="textarea"
-                name="overview"
-                defaultValue={node.overview ?? ""}
-                placeholder="Short description or overview"
-                style={{ minHeight: 80 }}
-                suppressHydrationWarning
-              />
-              <textarea
-                className="textarea"
-                name="details"
-                defaultValue={node.details ?? ""}
-                placeholder="Detailed syllabus notes"
-                suppressHydrationWarning
-              />
+              <input className="field" name="title" defaultValue={node.title} placeholder="Page title" required suppressHydrationWarning />
+              <textarea className="textarea" name="overview" defaultValue={node.overview ?? ""} placeholder="Short description or overview" style={{ minHeight: 80 }} suppressHydrationWarning />
+              <textarea className="textarea" name="details" defaultValue={node.details ?? ""} placeholder="Detailed syllabus notes" suppressHydrationWarning />
               <button className="button" type="submit" suppressHydrationWarning>Save changes</button>
             </form>
           </article>
 
-          {/* Add chapter / topic / subject */}
-          <article className="glass panel">
-            <div className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Plus size={14} />
-              {addChildLabel}
+          <article className="glass panel study-form-panel">
+            <div className="panel-title-row">
+              <div>
+                <div className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Plus size={14} />
+                  {addChildLabel}
+                </div>
+                <div className="display study-section-title">Expand syllabus</div>
+              </div>
             </div>
-            <p className="muted" style={{ fontSize: "12px", marginTop: 6, lineHeight: 1.6 }}>
-              {isPaper
-                ? "Add a new subject under this paper. It will appear as a card above."
-                : isSubject
-                  ? "Add a chapter or topic. It will appear in the checklist above."
-                  : "Add a sub-topic. It will appear in the checklist."}
-            </p>
-            <form
-              action={createStudyNodeAction}
-              className="grid"
-              style={{ gap: 12, marginTop: 16 }}
-            >
+            <form action={createStudyNodeAction} className="grid" style={{ gap: 12, marginTop: 16 }}>
               <input type="hidden" name="parentId" value={node.id} suppressHydrationWarning />
               <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-              <input
-                className="field"
-                name="title"
-                placeholder={addChildPlaceholder}
-                required
-                suppressHydrationWarning
-              />
-              <textarea
-                className="textarea"
-                name="overview"
-                placeholder="Brief description (optional)"
-                style={{ minHeight: 60 }}
-                suppressHydrationWarning
-              />
+              <input className="field" name="title" placeholder={addChildPlaceholder} required suppressHydrationWarning />
+              <textarea className="textarea" name="overview" placeholder="Brief description (optional)" style={{ minHeight: 88 }} suppressHydrationWarning />
               <button className="button" type="submit" style={{ gap: 8 }} suppressHydrationWarning>
                 <Plus size={14} /> Add to syllabus
               </button>
@@ -259,12 +265,14 @@ export default async function StudyNodePage({
           </article>
         </FormGrid>
 
-
-
-        {/* ── Study log form + table ── */}
-        <FormGrid>
-          <article className="glass panel">
-            <div className="eyebrow">Log study session</div>
+        <FormGrid className="study-ops-grid">
+          <article className="glass panel study-form-panel">
+            <div className="panel-title-row">
+              <div>
+                <div className="eyebrow">Study log</div>
+                <div className="display study-section-title">Record a session</div>
+              </div>
+            </div>
             <form action={addStudyLogAction} className="grid" style={{ gap: 12, marginTop: 16 }}>
               <input type="hidden" name="studyNodeId" value={node.id} suppressHydrationWarning />
               <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
@@ -274,14 +282,20 @@ export default async function StudyNodePage({
               <input className="field" type="number" name="topicCount" placeholder="Topics covered" suppressHydrationWarning />
               <input className="field" type="number" min="0" max="100" name="completion" placeholder="Completion %" suppressHydrationWarning />
               <input className="field" type="number" min="0" max="10" name="focusScore" placeholder="Focus score /10" suppressHydrationWarning />
-              <textarea className="textarea" name="notes" placeholder="What happened in this session?" style={{ minHeight: 80 }} suppressHydrationWarning />
+              <textarea className="textarea" name="notes" placeholder="What happened in this session?" style={{ minHeight: 88 }} suppressHydrationWarning />
               <button className="button" type="submit" suppressHydrationWarning>Save study log</button>
             </form>
           </article>
 
-          <article className="glass panel">
-            <div className="eyebrow">Recent study logs</div>
-            <div className="table-wrap" style={{ marginTop: 12 }}>
+          <article className="glass panel study-form-panel">
+            <div className="panel-title-row">
+              <div>
+                <div className="eyebrow">Recent study logs</div>
+                <div className="display study-section-title">Latest work</div>
+              </div>
+              <div className="pill">{node.studyLogs.length} logs</div>
+            </div>
+            <div className="table-wrap" style={{ marginTop: 16 }}>
               <table>
                 <thead>
                   <tr>
@@ -300,25 +314,14 @@ export default async function StudyNodePage({
                         <td>{log.title}</td>
                         <td>{format(log.logDate, "dd MMM yyyy")}</td>
                         <td>{log.hours.toFixed(1)}h</td>
-                        <td>{log.topicCount ?? "—"}</td>
-                        <td>{log.completion ?? "—"}%</td>
+                        <td>{log.topicCount ?? "-"}</td>
+                        <td>{log.completion ?? "-"}%</td>
                         <td>
                           <form action={deleteStudyLogAction}>
                             <input type="hidden" name="id" value={log.id} />
                             <input type="hidden" name="pathname" value={pathname} />
-                            <button
-                              type="submit"
-                              style={{
-                                background: "rgba(255,80,80,0.1)",
-                                border: "1px solid rgba(255,80,80,0.22)",
-                                borderRadius: 8,
-                                padding: "4px 7px",
-                                color: "var(--danger)",
-                                cursor: "pointer",
-                              }}
-                              title="Delete log"
-                            >
-                              ✕
+                            <button type="submit" className="icon-action-button" title="Delete log">
+                              <Trash2 size={13} />
                             </button>
                           </form>
                         </td>

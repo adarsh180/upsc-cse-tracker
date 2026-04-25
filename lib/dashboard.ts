@@ -1,6 +1,70 @@
 import { db } from "@/lib/db";
 import { ensureSeeded, percent } from "@/lib/seed";
 
+type PaperWithChildren = {
+  id: string;
+  children: Array<{ id: string }>;
+};
+
+export async function getPaperCompletionMap(papers: PaperWithChildren[]) {
+  const rootIds = papers.map((paper) => paper.id);
+  const completionMap: Record<string, number> = Object.fromEntries(
+    papers.map((paper) => [paper.id, 0]),
+  );
+
+  if (rootIds.length === 0) {
+    return completionMap;
+  }
+
+  const nodes = await db.studyNode.findMany({
+    select: {
+      id: true,
+      parentId: true,
+      topicProgress: {
+        select: {
+          checked: true,
+        },
+      },
+    },
+  });
+
+  const childrenByParent = new Map<string, typeof nodes>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const siblings = childrenByParent.get(node.parentId) ?? [];
+    siblings.push(node);
+    childrenByParent.set(node.parentId, siblings);
+  }
+
+  function collectLeafNodes(rootId: string) {
+    const leaves: typeof nodes = [];
+    const queue = [...(childrenByParent.get(rootId) ?? [])];
+
+    while (queue.length) {
+      const current = queue.shift()!;
+      const children = childrenByParent.get(current.id) ?? [];
+
+      if (children.length === 0) {
+        leaves.push(current);
+        continue;
+      }
+
+      queue.push(...children);
+    }
+
+    return leaves;
+  }
+
+  for (const paper of papers) {
+    const leaves = collectLeafNodes(paper.id);
+    completionMap[paper.id] = leaves.length
+      ? Math.round((leaves.filter((leaf) => leaf.topicProgress?.checked).length / leaves.length) * 100)
+      : 0;
+  }
+
+  return completionMap;
+}
+
 export async function getStudyTree() {
   await ensureSeeded();
 
@@ -30,6 +94,12 @@ export async function getStudyNodeBySlug(slug: string) {
             orderBy: { sortOrder: "asc" },
             include: {
               topicProgress: true,
+              children: {
+                orderBy: { sortOrder: "asc" },
+                include: {
+                  topicProgress: true,
+                },
+              },
             },
           },
         },
@@ -127,12 +197,31 @@ export async function getPerformanceSummary() {
   await ensureSeeded();
 
   const [tests, moods, dailyLogs, studyLogs] = await Promise.all([
-    db.testRecord.findMany({ orderBy: { testDate: "asc" } }),
-    db.moodEntry.findMany({ orderBy: { moodDate: "asc" } }),
-    db.dailyLog.findMany({ orderBy: { logDate: "asc" } }),
+    db.testRecord.findMany({
+      orderBy: { testDate: "asc" },
+      select: { id: true, testDate: true, score: true, totalMarks: true },
+    }),
+    db.moodEntry.findMany({
+      orderBy: { moodDate: "asc" },
+      select: { id: true, moodDate: true, focus: true, stress: true },
+    }),
+    db.dailyLog.findMany({
+      orderBy: { logDate: "asc" },
+      select: { id: true, logDate: true, disciplineScore: true, completion: true },
+    }),
     db.studyLog.findMany({
       orderBy: { logDate: "asc" },
-      include: { studyNode: true },
+      select: {
+        id: true,
+        logDate: true,
+        hours: true,
+        studyNode: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
     }),
   ]);
 

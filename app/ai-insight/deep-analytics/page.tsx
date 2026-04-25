@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Activity, BrainCircuit, ChartColumnBig, Orbit } from "lucide-react";
 
 import { AreaTrendChart, TrendChart } from "@/components/charts/analytics-charts";
+import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPerformanceSummary } from "@/lib/dashboard";
 
@@ -45,17 +46,12 @@ export default async function DeepAnalyticsPage() {
 
   return (
     <main className="page-shell">
-      <section className="glass panel">
-        <div className="eyebrow">Deep Analytics</div>
-        <h1 className="display" style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)", margin: "14px 0 10px" }}>
-          Read the pattern, not just the number.
-        </h1>
-        <p className="muted" style={{ maxWidth: 860, lineHeight: 1.8 }}>
-          This page is meant to feel like a real analytics desk. It combines score movement,
-          discipline, completion, study hour distribution and mood pressure so you can judge
-          whether the preparation system is actually compounding.
-        </p>
-      </section>
+      <PageIntro
+        eyebrow="Deep Analytics"
+        title="Read the pattern, not just the number."
+        description="Scores, discipline, completion, hours and mood pressure in one analytics desk."
+        glyph="analytics"
+      />
 
       <section className="section-stack">
         <div className="grid grid-4">

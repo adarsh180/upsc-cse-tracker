@@ -14,7 +14,8 @@ export default async function AIInsightPage() {
       <PageIntro
         eyebrow="AI Insight"
         title="Four focused AI workspaces."
-        description="Each AI tool reads your real tracker data — tests, study hours, mood, topic completion — and gives you precision feedback instead of generic advice."
+        description="Guru, rank, essays and analytics all read the same live tracker context."
+        glyph="guru"
         actions={<div className="pill">All AI tools read real tracker context</div>}
       />
 

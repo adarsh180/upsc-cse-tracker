@@ -14,26 +14,15 @@ import {
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { CountdownCard, StudyCard } from "@/components/ui/sections";
 import { getSession } from "@/lib/auth";
-import { getStudyTree } from "@/lib/dashboard";
+import { getPaperCompletionMap, getStudyTree } from "@/lib/dashboard";
 import { examCountdown } from "@/lib/utils";
-import { db } from "@/lib/db";
 
 export default async function LandingPage() {
   const [session, tree] = await Promise.all([getSession(), getStudyTree()]);
   const prelims = examCountdown(process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30");
   const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
 
-  const paperPctMap: Record<string, number> = {};
-  for (const paper of tree) {
-    const subjectIds = paper.children.map((c) => c.id);
-    if (subjectIds.length === 0) continue;
-    const progress = await db.topicProgress.findMany({
-      where: { studyNodeId: { in: subjectIds } },
-    });
-    const total = subjectIds.length;
-    const done = progress.filter((p) => p.checked).length;
-    paperPctMap[paper.id] = total > 0 ? Math.round((done / total) * 100) : 0;
-  }
+  const paperPctMap = await getPaperCompletionMap(tree);
 
   const features = [
     {

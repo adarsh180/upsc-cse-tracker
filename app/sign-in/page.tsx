@@ -3,6 +3,7 @@ import { ArrowLeft, ShieldCheck, Sparkles, BookOpen, Target, BrainCircuit } from
 
 import { signInAction } from "@/app/actions";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
+import { MotionGlyph } from "@/components/ui/animated-icons";
 
 export default async function SignInPage({
   searchParams,
@@ -62,8 +63,7 @@ export default async function SignInPage({
               Enter the command room.
             </h1>
             <p className="muted signin-desc" style={{ marginTop: 14 }}>
-              Your tracker, analytics, subject hierarchy and AI memory stay tied to your
-              workspace. Every number is real — no mock data, no self-deception.
+              Tracker, analytics, study tree and AI memory in one private workspace.
             </p>
           </div>
 
@@ -83,8 +83,8 @@ export default async function SignInPage({
           <div style={{ display: "grid", gap: 14 }}>
             {[
               { icon: BookOpen, text: "Full GS study tree with chapter-level tracking" },
-              { icon: Target, text: "Daily goals, discipline scores and mood signals" },
-              { icon: BrainCircuit, text: "UPSC Guru AI + deep analytics + rank prediction" },
+              { icon: Target, text: "Daily goals, discipline and mood signals" },
+              { icon: BrainCircuit, text: "Guru, analytics, essays and rank prediction" },
             ].map((item) => (
               <div
                 key={item.text}
@@ -103,7 +103,10 @@ export default async function SignInPage({
                     flexShrink: 0,
                   }}
                 >
-                  <item.icon size={15} />
+                  <MotionGlyph
+                    name={item.icon === BookOpen ? "study" : item.icon === Target ? "goals" : "guru"}
+                    size={26}
+                  />
                 </div>
                 <p
                   style={{
@@ -228,8 +231,7 @@ export default async function SignInPage({
               margin: 0,
             }}
           >
-            Your data lives in a private Postgres database. No third-party analytics, no
-            tracking. Just you and your preparation.
+            Your data lives in a private database. No third-party analytics, no tracking.
           </p>
         </div>
       </div>
