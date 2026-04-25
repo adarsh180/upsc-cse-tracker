@@ -46,6 +46,10 @@ type TestOption = {
 type SubjectOption = {
   id: string;
   title: string;
+  children: Array<{
+    id: string;
+    title: string;
+  }>;
 };
 
 type QuestionLog = {
@@ -339,6 +343,41 @@ function toQuestionDraft(log: QuestionLog): DraftQuestion {
   };
 }
 
+function buildQuestionGrid(logs: QuestionLog[], plannedQuestions: number) {
+  const byNumber = new Map(logs.map((log) => [log.questionNumber, toQuestionDraft(log)]));
+  const maxLoggedQuestion = logs.reduce((max, log) => Math.max(max, log.questionNumber), 0);
+  const rowCount = Math.max(plannedQuestions, maxLoggedQuestion, logs.length, 1);
+
+  return Array.from({ length: rowCount }, (_, index) => {
+    const questionNumber = index + 1;
+    return byNumber.get(questionNumber) ?? { ...emptyQuestionDraft, questionNumber };
+  });
+}
+
+function hasQuestionGridSignal(row: DraftQuestion) {
+  return Boolean(
+    row.id ||
+      row.questionSummary.trim() ||
+      row.correctAnswer.trim() ||
+      row.correctExplanation.trim() ||
+      row.mainsApproach.trim() ||
+      row.mainsExamples.trim() ||
+      row.subject.trim() ||
+      row.topic.trim() ||
+      row.mistakeReason.trim() ||
+      row.actionFix.trim() ||
+      row.notes.trim() ||
+      row.outcome !== emptyQuestionDraft.outcome ||
+      row.resourceCovered !== emptyQuestionDraft.resourceCovered ||
+      row.errorType !== emptyQuestionDraft.errorType ||
+      row.difficulty !== emptyQuestionDraft.difficulty ||
+      row.studiedTopic ||
+      row.currentAffairsLinked ||
+      row.confidence.trim() ||
+      row.timeSpentSeconds.trim(),
+  );
+}
+
 function markdown(content: string) {
   return <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>;
 }
@@ -397,21 +436,25 @@ function StructuredReportStrip({ report }: { report: AnalysisReport }) {
 
 export function TestErrorAnalysisWorkspace({
   tests: initialTests,
-  subjects,
+  subjects: initialSubjects,
 }: {
   tests: TestOption[];
   subjects: SubjectOption[];
 }) {
   const [tests, setTests] = useState(initialTests);
+  const [subjects, setSubjects] = useState(initialSubjects);
   const [selectedTestId, setSelectedTestId] = useState(initialTests[0]?.id ?? "");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [memory, setMemory] = useState<PatternMemory | null>(null);
   const [globalReports, setGlobalReports] = useState<AnalysisReport[]>([]);
   const [testDraft, setTestDraft] = useState<DraftTest>(emptyTestDraft);
   const [questionDraft, setQuestionDraft] = useState<DraftQuestion>(emptyQuestionDraft);
+  const [viewMode, setViewMode] = useState<"form" | "grid">("form");
+  const [gridQuestions, setGridQuestions] = useState<DraftQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingTest, setSavingTest] = useState(false);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [savingBatch, setSavingBatch] = useState(false);
   const [aiBusy, setAiBusy] = useState<"test" | "global" | null>(null);
   const [error, setError] = useState("");
 
@@ -452,6 +495,7 @@ export function TestErrorAnalysisWorkspace({
   async function loadSnapshot(testId = selectedTestId) {
     if (!testId) {
       setSnapshot(null);
+      setGridQuestions([]);
       return;
     }
 
@@ -469,6 +513,7 @@ export function TestErrorAnalysisWorkspace({
       const nextSnapshot = (await testResponse.json()) as Snapshot;
       setSnapshot(nextSnapshot);
       setTestDraft(toTestDraft(nextSnapshot.test));
+      setGridQuestions(buildQuestionGrid(nextSnapshot.test.questionLogs, nextSnapshot.test.totalQuestions));
 
       if (globalResponse.ok) {
         const globalData = (await globalResponse.json()) as { reports: AnalysisReport[] };
@@ -502,6 +547,150 @@ export function TestErrorAnalysisWorkspace({
 
   function updateQuestionDraft<K extends keyof DraftQuestion>(key: K, value: DraftQuestion[K]) {
     setQuestionDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function getTopicOptions(subjectTitle: string) {
+    return subjects.find((subject) => subject.title === subjectTitle)?.children ?? [];
+  }
+
+  function findSubject(subjectTitle: string) {
+    return subjects.find((subject) => subject.title === subjectTitle) ?? null;
+  }
+
+  function hasTopicOption(subjectTitle: string, topicTitle: string) {
+    const cleanTopic = normalizeTopicTitle(topicTitle);
+    if (!cleanTopic) return false;
+    return getTopicOptions(subjectTitle).some((topic) => topic.title.toLowerCase() === cleanTopic.toLowerCase());
+  }
+
+  function isNewTopicDraft(subjectTitle: string, topicTitle: string) {
+    return Boolean(subjectTitle && normalizeTopicTitle(topicTitle) && !hasTopicOption(subjectTitle, topicTitle));
+  }
+
+  function normalizeTopicTitle(value: string) {
+    return value.replace(/\s+/g, " ").trim();
+  }
+
+  async function ensureTopicOption(subjectTitle: string, topicTitle: string) {
+    const cleanTopic = normalizeTopicTitle(topicTitle);
+    const subject = findSubject(subjectTitle);
+    if (!subject || !cleanTopic) return cleanTopic;
+
+    const existing = subject.children.find((topic) => topic.title.toLowerCase() === cleanTopic.toLowerCase());
+    if (existing) return existing.title;
+
+    const formData = new FormData();
+    formData.set("parentId", subject.id);
+    formData.set("title", cleanTopic);
+    formData.set("overview", "Added from test error-analysis logging.");
+    formData.set("pathname", "/tests/error-analysis");
+
+    const response = await fetch("/api/study-node", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Could not save this custom topic for future use.");
+    }
+
+    const created = (await response.json()) as { id: string; title: string };
+    setSubjects((current) =>
+      current.map((item) => {
+        if (item.id !== subject.id) return item;
+        const alreadyPresent = item.children.some((topic) => topic.title.toLowerCase() === created.title.toLowerCase());
+        if (alreadyPresent) return item;
+        return {
+          ...item,
+          children: [...item.children, { id: created.id, title: created.title }].sort((a, b) => a.title.localeCompare(b.title)),
+        };
+      }),
+    );
+
+    return created.title;
+  }
+
+  async function commitQuestionTopic(topicTitle: string) {
+    const cleanTopic = normalizeTopicTitle(topicTitle);
+    updateQuestionDraft("topic", cleanTopic);
+    if (!cleanTopic || !questionDraft.subject) return;
+
+    try {
+      const savedTitle = await ensureTopicOption(questionDraft.subject, cleanTopic);
+      updateQuestionDraft("topic", savedTitle);
+    } catch (caught) {
+      setError((caught as Error).message);
+    }
+  }
+
+  async function commitGridTopic(index: number, row: DraftQuestion) {
+    const cleanTopic = normalizeTopicTitle(row.topic);
+    updateGridQuestion(index, "topic", cleanTopic);
+    if (!cleanTopic || !row.subject) {
+      await saveGridQuestion({ ...row, topic: cleanTopic });
+      return;
+    }
+
+    try {
+      const savedTitle = await ensureTopicOption(row.subject, cleanTopic);
+      const nextRow = { ...row, topic: savedTitle };
+      updateGridQuestion(index, "topic", savedTitle);
+      await saveGridQuestion(nextRow);
+    } catch (caught) {
+      setError((caught as Error).message);
+    }
+  }
+
+  function updateQuestionSubject(subjectTitle: string) {
+    setQuestionDraft((current) => {
+      const topicOptions = getTopicOptions(subjectTitle);
+      const topicStillValid = topicOptions.some((topic) => topic.title === current.topic);
+      return {
+        ...current,
+        subject: subjectTitle,
+        topic: topicStillValid ? current.topic : "",
+      };
+    });
+  }
+
+  function updateGridQuestionSubject(index: number, subjectTitle: string) {
+    const topicOptions = getTopicOptions(subjectTitle);
+    let nextRow: DraftQuestion | null = null;
+
+    setGridQuestions((current) =>
+      current.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        const topicStillValid = topicOptions.some((topic) => topic.title === row.topic);
+        nextRow = {
+          ...row,
+          subject: subjectTitle,
+          topic: topicStillValid ? row.topic : "",
+        };
+        return nextRow;
+      }),
+    );
+
+    if (nextRow) void saveGridQuestion(nextRow);
+  }
+
+  function updateGridQuestion<K extends keyof DraftQuestion>(index: number, key: K, value: DraftQuestion[K]) {
+    setGridQuestions((current) =>
+      current.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)),
+    );
+  }
+
+  function updateGridQuestionAndSync<K extends keyof DraftQuestion>(index: number, key: K, value: DraftQuestion[K]) {
+    let nextRow: DraftQuestion | null = null;
+
+    setGridQuestions((current) =>
+      current.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        nextRow = { ...row, [key]: value };
+        return nextRow;
+      }),
+    );
+
+    if (nextRow) void saveGridQuestion(nextRow);
   }
 
   async function saveTest() {
@@ -589,6 +778,82 @@ export function TestErrorAnalysisWorkspace({
     }
   }
 
+  async function saveGridQuestion(row: DraftQuestion) {
+    if (!selectedTestId || !hasQuestionGridSignal(row)) return;
+
+    try {
+      const response = await fetch("/api/test-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "upsert_question",
+          question: {
+            ...row,
+            testRecordId: selectedTestId,
+            correctAnswer: isMainsMode ? "" : row.correctAnswer,
+            correctExplanation: isMainsMode ? "" : row.correctExplanation,
+            mainsApproach: isMainsMode ? row.mainsApproach : "",
+            mainsExamples: isMainsMode ? row.mainsExamples : "",
+            confidence: row.confidence ? Number(row.confidence) : null,
+            timeSpentSeconds: row.timeSpentSeconds ? Number(row.timeSpentSeconds) : null,
+          },
+        }),
+      });
+
+      if (!response.ok) throw new Error("Could not sync this spreadsheet row.");
+      await refreshTests();
+    } catch (caught) {
+      setError((caught as Error).message);
+    }
+  }
+
+  async function saveBatchQuestions() {
+    if (!selectedTestId || savingBatch) return;
+    const rowsToSave = gridQuestions.filter(hasQuestionGridSignal);
+    if (!rowsToSave.length) {
+      setError("Fill at least one spreadsheet row before saving.");
+      return;
+    }
+
+    setSavingBatch(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/test-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "bulk_upsert_questions",
+          testId: selectedTestId,
+          questions: rowsToSave.map((row) => ({
+            ...row,
+            testRecordId: selectedTestId,
+            correctAnswer: isMainsMode ? "" : row.correctAnswer,
+            correctExplanation: isMainsMode ? "" : row.correctExplanation,
+            mainsApproach: isMainsMode ? row.mainsApproach : "",
+            mainsExamples: isMainsMode ? row.mainsExamples : "",
+            confidence: row.confidence ? Number(row.confidence) : null,
+            timeSpentSeconds: row.timeSpentSeconds ? Number(row.timeSpentSeconds) : null,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not save the rapid question logs.");
+      }
+
+      await loadSnapshot(selectedTestId);
+      await refreshTests();
+      setViewMode("form");
+      setQuestionDraft({ ...emptyQuestionDraft, questionNumber: nextQuestionNumber + rowsToSave.length });
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setSavingBatch(false);
+    }
+  }
+
   async function deleteQuestion(questionId: string) {
     const response = await fetch("/api/test-analysis", {
       method: "POST",
@@ -668,6 +933,8 @@ export function TestErrorAnalysisWorkspace({
               setSnapshot(null);
               setTestDraft(emptyTestDraft);
               setQuestionDraft({ ...emptyQuestionDraft, questionNumber: 1 });
+              setGridQuestions([]);
+              setViewMode("form");
             }}
           >
             <Plus size={16} />
@@ -910,23 +1177,36 @@ export function TestErrorAnalysisWorkspace({
             </article>
           </section>
 
-          <section className="error-analysis-editor-grid">
+          <section className={`error-analysis-editor-grid${viewMode === "grid" ? " full" : ""}`}>
             <article className="glass panel error-analysis-form-panel">
               <div className="tests-panel-head">
                 <div>
                   <div className="eyebrow">Step 2</div>
-                  <div className="display tests-panel-title">{questionDraft.id ? "Edit question log" : "Record question log"}</div>
+                  <div className="display tests-panel-title">
+                    {viewMode === "form" ? (questionDraft.id ? "Edit question log" : "Record question log") : "Spreadsheet question entry"}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="icon-action-button"
-                  onClick={() => setQuestionDraft({ ...emptyQuestionDraft, questionNumber: nextQuestionNumber })}
-                  title="New question entry"
-                >
-                  <Plus size={14} />
-                </button>
+                <div className="error-analysis-mode-actions">
+                  <button type="button" className={viewMode === "form" ? "button" : "button-secondary"} onClick={() => setViewMode("form")}>
+                    Form
+                  </button>
+                  <button type="button" className={viewMode === "grid" ? "button" : "button-secondary"} onClick={() => setViewMode("grid")}>
+                    Spreadsheet
+                  </button>
+                  {viewMode === "form" ? (
+                    <button
+                      type="button"
+                      className="icon-action-button"
+                      onClick={() => setQuestionDraft({ ...emptyQuestionDraft, questionNumber: nextQuestionNumber })}
+                      title="New question entry"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
+              {viewMode === "form" ? (
               <div className="error-question-form">
                 <div className="tests-form-pair">
                   <input className="field" type="number" min={1} value={questionDraft.questionNumber} onChange={(event) => updateQuestionDraft("questionNumber", Number(event.target.value))} placeholder="Question number" />
@@ -972,14 +1252,41 @@ export function TestErrorAnalysisWorkspace({
                 )}
 
                 <div className="tests-form-pair">
-                  <input className="field" list="analysis-subjects" value={questionDraft.subject} onChange={(event) => updateQuestionDraft("subject", event.target.value)} placeholder="Subject" />
-                  <input className="field" value={questionDraft.topic} onChange={(event) => updateQuestionDraft("topic", event.target.value)} placeholder="Topic or micro-area" />
+                  <select className="select" value={questionDraft.subject} onChange={(event) => updateQuestionSubject(event.target.value)}>
+                    <option value="">Select subject</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.title}>{subject.title}</option>
+                    ))}
+                  </select>
+                  <div className="error-analysis-topic-entry">
+                    <input
+                      className="field"
+                      list="analysis-topic-options"
+                      value={questionDraft.topic}
+                      onChange={(event) => updateQuestionDraft("topic", event.target.value)}
+                      onBlur={(event) => void commitQuestionTopic(event.target.value)}
+                      disabled={!questionDraft.subject}
+                      placeholder={questionDraft.subject ? "Pick or type new topic" : "Select subject first"}
+                    />
+                    {isNewTopicDraft(questionDraft.subject, questionDraft.topic) ? (
+                      <button
+                        type="button"
+                        className="error-analysis-topic-save"
+                        title="Save as new topic"
+                        aria-label="Save as new topic"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => void commitQuestionTopic(questionDraft.topic)}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    ) : null}
+                  </div>
+                  <datalist id="analysis-topic-options">
+                    {getTopicOptions(questionDraft.subject).map((topic) => (
+                      <option key={topic.id} value={topic.title} />
+                    ))}
+                  </datalist>
                 </div>
-                <datalist id="analysis-subjects">
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.title} />
-                  ))}
-                </datalist>
 
                 <div className="tests-form-triplet">
                   <select className="select" value={questionDraft.resourceCovered} onChange={(event) => updateQuestionDraft("resourceCovered", event.target.value)}>
@@ -1026,6 +1333,138 @@ export function TestErrorAnalysisWorkspace({
                   {savingQuestion ? "Saving..." : questionDraft.id ? "Update question log" : "Save question log"}
                 </button>
               </div>
+              ) : (
+                <div className="error-analysis-grid-mode">
+                  <div className="error-analysis-grid-scroll">
+                    <table className="error-analysis-table error-analysis-edit-table">
+                      <thead>
+                        <tr>
+                          <th>Q</th>
+                          <th>Question</th>
+                          <th>{isMainsMode ? "Approach" : "Answer"}</th>
+                          <th>{isMainsMode ? "Examples" : "Why correct"}</th>
+                          <th>Subject</th>
+                          <th>Topic <span className="error-analysis-th-note">pick/type</span></th>
+                          <th>Outcome</th>
+                          <th>Resource</th>
+                          <th>Error</th>
+                          <th>Difficulty</th>
+                          <th>Studied</th>
+                          <th>CA</th>
+                          <th>Time</th>
+                          <th>Conf</th>
+                          <th>Fix</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gridQuestions.map((row, index) => (
+                          <tr key={`${row.id || "draft"}-${row.questionNumber}`}>
+                            <td>{row.questionNumber}</td>
+                            <td>
+                              <textarea className="textarea error-analysis-grid-text summary" value={row.questionSummary} onChange={(event) => updateGridQuestion(index, "questionSummary", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="Question clue" />
+                            </td>
+                            <td>
+                              <textarea
+                                className="textarea error-analysis-grid-text"
+                                value={isMainsMode ? row.mainsApproach : row.correctAnswer}
+                                onChange={(event) => updateGridQuestion(index, isMainsMode ? "mainsApproach" : "correctAnswer", event.target.value)}
+                                onBlur={() => void saveGridQuestion(gridQuestions[index])}
+                                placeholder={isMainsMode ? "Approach" : "Answer"}
+                              />
+                            </td>
+                            <td>
+                              <textarea
+                                className="textarea error-analysis-grid-text"
+                                value={isMainsMode ? row.mainsExamples : row.correctExplanation}
+                                onChange={(event) => updateGridQuestion(index, isMainsMode ? "mainsExamples" : "correctExplanation", event.target.value)}
+                                onBlur={() => void saveGridQuestion(gridQuestions[index])}
+                                placeholder={isMainsMode ? "Examples" : "Explanation"}
+                              />
+                            </td>
+                            <td>
+                              <select className="select error-analysis-grid-input" value={row.subject} onChange={(event) => updateGridQuestionSubject(index, event.target.value)}>
+                                <option value="">Subject</option>
+                                {subjects.map((subject) => (
+                                  <option key={subject.id} value={subject.title}>{subject.title}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <div className="error-analysis-topic-entry grid">
+                                <input
+                                  className="field error-analysis-grid-input topic"
+                                  list={`analysis-grid-topic-options-${index}`}
+                                  value={row.topic}
+                                  onChange={(event) => updateGridQuestion(index, "topic", event.target.value)}
+                                  onBlur={(event) => void commitGridTopic(index, { ...gridQuestions[index], topic: event.target.value })}
+                                  disabled={!row.subject}
+                                  placeholder={row.subject ? "Pick / type new" : "Subject first"}
+                                />
+                                {isNewTopicDraft(row.subject, row.topic) ? (
+                                  <button
+                                    type="button"
+                                    className="error-analysis-topic-save"
+                                    title="Save as new topic"
+                                    aria-label={`Save ${row.topic} as new topic`}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => void commitGridTopic(index, row)}
+                                  >
+                                    <Plus size={14} />
+                                  </button>
+                                ) : null}
+                              </div>
+                              <datalist id={`analysis-grid-topic-options-${index}`}>
+                                {getTopicOptions(row.subject).map((topic) => (
+                                  <option key={topic.id} value={topic.title} />
+                                ))}
+                              </datalist>
+                            </td>
+                            <td>
+                              <select className="select error-analysis-grid-input" value={row.outcome} onChange={(event) => updateGridQuestionAndSync(index, "outcome", event.target.value)}>
+                                {Object.entries(outcomeLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>{label}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select className="select error-analysis-grid-input" value={row.resourceCovered} onChange={(event) => updateGridQuestionAndSync(index, "resourceCovered", event.target.value)}>
+                                <option value="YES">Yes</option>
+                                <option value="PARTIAL">Partial</option>
+                                <option value="NO">No</option>
+                                <option value="UNKNOWN">Unknown</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select className="select error-analysis-grid-input" value={row.errorType} onChange={(event) => updateGridQuestionAndSync(index, "errorType", event.target.value)}>
+                                {Object.entries(errorTypeLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>{label}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select className="select error-analysis-grid-input" value={row.difficulty} onChange={(event) => updateGridQuestionAndSync(index, "difficulty", event.target.value)}>
+                                <option value="EASY">Easy</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="HARD">Hard</option>
+                              </select>
+                            </td>
+                            <td><input type="checkbox" checked={row.studiedTopic} onChange={(event) => updateGridQuestionAndSync(index, "studiedTopic", event.target.checked)} /></td>
+                            <td><input type="checkbox" checked={row.currentAffairsLinked} onChange={(event) => updateGridQuestionAndSync(index, "currentAffairsLinked", event.target.checked)} /></td>
+                            <td><input className="field error-analysis-grid-input tiny" type="number" min={0} value={row.timeSpentSeconds} onChange={(event) => updateGridQuestion(index, "timeSpentSeconds", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="s" /></td>
+                            <td><input className="field error-analysis-grid-input tiny" type="number" min={1} max={5} value={row.confidence} onChange={(event) => updateGridQuestion(index, "confidence", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="/5" /></td>
+                            <td><input className="field error-analysis-grid-input fix" value={row.actionFix} onChange={(event) => updateGridQuestion(index, "actionFix", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="Fix" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <button type="button" className="button tests-submit-button" onClick={() => void saveBatchQuestions()} disabled={savingBatch || !selectedTestId}>
+                    {savingBatch ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />}
+                    {savingBatch ? "Saving spreadsheet..." : "Save spreadsheet changes"}
+                  </button>
+                </div>
+              )}
             </article>
 
             <article className="glass panel error-analysis-ai-panel">

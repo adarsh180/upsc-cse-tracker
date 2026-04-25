@@ -194,6 +194,39 @@ export async function upsertQuestionLog(input: QuestionLogInput) {
   });
 }
 
+export async function upsertQuestionLogs(testRecordId: string, inputs: QuestionLogInput[]) {
+  const safeTestId = cleanString(testRecordId, 120);
+
+  await db.testRecord.findUniqueOrThrow({
+    where: { id: safeTestId },
+    select: { id: true },
+  });
+
+  const byQuestionNumber = new Map<number, ReturnType<typeof normalizeQuestionInput>>();
+  for (const input of inputs) {
+    const data = normalizeQuestionInput({ ...input, testRecordId: safeTestId });
+    byQuestionNumber.set(data.questionNumber, data);
+  }
+
+  const rows = [...byQuestionNumber.values()].sort((a, b) => a.questionNumber - b.questionNumber);
+  if (!rows.length) return [];
+
+  return db.$transaction(
+    rows.map((data) =>
+      db.testQuestionLog.upsert({
+        where: {
+          testRecordId_questionNumber: {
+            testRecordId: data.testRecordId,
+            questionNumber: data.questionNumber,
+          },
+        },
+        update: data,
+        create: data,
+      }),
+    ),
+  );
+}
+
 export async function deleteQuestionLog(id: string) {
   await db.testQuestionLog.delete({ where: { id } });
   return { ok: true };

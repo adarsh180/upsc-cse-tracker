@@ -5164,6 +5164,7 @@ body::-webkit-scrollbar-thumb,
 }
 
 .error-question-form,
+.error-analysis-grid-mode,
 .error-analysis-answer-grid,
 .error-analysis-ai-actions,
 .error-analysis-report-stack {
@@ -5177,6 +5178,127 @@ body::-webkit-scrollbar-thumb,
 
 .error-question-form {
   margin-top: 18px;
+}
+
+.error-analysis-editor-grid.full {
+  grid-template-columns: 1fr;
+}
+
+.error-analysis-mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.error-analysis-mode-actions .button,
+.error-analysis-mode-actions .button-secondary {
+  min-height: 38px;
+  padding: 9px 14px;
+  font-size: 12px;
+}
+
+.error-analysis-grid-mode {
+  margin-top: 18px;
+}
+
+.error-analysis-grid-scroll {
+  width: 100%;
+  max-height: 620px;
+  overflow: auto;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+}
+
+.error-analysis-edit-table {
+  min-width: 1880px;
+}
+
+.error-analysis-edit-table th,
+.error-analysis-edit-table td {
+  padding: 8px;
+}
+
+.error-analysis-edit-table tr {
+  cursor: default;
+}
+
+.error-analysis-th-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.error-analysis-grid-text {
+  min-height: 64px;
+  width: 220px;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.error-analysis-grid-text.summary {
+  width: 260px;
+}
+
+.error-analysis-grid-input {
+  min-height: 36px;
+  width: 150px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.error-analysis-topic-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.error-analysis-topic-entry .field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.error-analysis-topic-entry.grid {
+  width: 190px;
+}
+
+.error-analysis-topic-entry.grid .error-analysis-grid-input.topic {
+  width: 150px;
+}
+
+.error-analysis-topic-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(245, 197, 66, 0.38);
+  border-radius: 10px;
+  background: rgba(245, 197, 66, 0.12);
+  color: var(--gold);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.error-analysis-topic-save:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 197, 66, 0.68);
+  background: rgba(245, 197, 66, 0.2);
+}
+
+.error-analysis-grid-input.tiny {
+  width: 70px;
+}
+
+.error-analysis-grid-input.fix {
+  width: 220px;
 }
 
 .error-analysis-checks {

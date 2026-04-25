@@ -24,10 +24,18 @@ export default async function TestErrorAnalysisPage() {
     }),
     db.studyNode.findMany({
       where: { type: "SUBJECT" },
-      orderBy: { title: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
       select: {
         id: true,
         title: true,
+        children: {
+          where: { type: "MODULE" },
+          orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+          select: {
+            id: true,
+            title: true,
+          },
+        },
       },
     }),
   ]);
@@ -58,4 +66,3 @@ export default async function TestErrorAnalysisPage() {
     </main>
   );
 }
-

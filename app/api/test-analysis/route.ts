@@ -10,6 +10,7 @@ import {
   getErrorAnalysisMemory,
   getTestAnalysisSnapshot,
   upsertQuestionLog,
+  upsertQuestionLogs,
 } from "@/lib/test-analysis";
 
 export const runtime = "nodejs";
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
     action?: string;
     test?: unknown;
     question?: unknown;
+    questions?: unknown;
     questionId?: string;
     testId?: string;
   };
@@ -155,6 +157,52 @@ export async function POST(request: Request) {
     revalidatePath("/tests/error-analysis");
     revalidatePath("/performance");
     return NextResponse.json(saved);
+  }
+
+  if (body.action === "bulk_upsert_questions") {
+    if (!body.testId) {
+      return NextResponse.json({ error: "testId is required" }, { status: 400 });
+    }
+
+    if (!Array.isArray(body.questions) || body.questions.length === 0) {
+      return NextResponse.json({ error: "At least one question row is required" }, { status: 400 });
+    }
+
+    const questions = body.questions.slice(0, 500).map((item) => {
+      const question = item as Record<string, unknown>;
+      return {
+        testRecordId: body.testId!,
+        questionNumber: Number(question.questionNumber ?? 1),
+        questionSummary: String(question.questionSummary ?? ""),
+        correctAnswer: question.correctAnswer ? String(question.correctAnswer) : null,
+        correctExplanation: question.correctExplanation ? String(question.correctExplanation) : null,
+        mainsApproach: question.mainsApproach ? String(question.mainsApproach) : null,
+        mainsExamples: question.mainsExamples ? String(question.mainsExamples) : null,
+        subject: question.subject ? String(question.subject) : null,
+        topic: question.topic ? String(question.topic) : null,
+        sourceType: question.sourceType ? String(question.sourceType) : null,
+        outcome: question.outcome ? String(question.outcome) : null,
+        studiedTopic: Boolean(question.studiedTopic),
+        resourceCovered: question.resourceCovered ? String(question.resourceCovered) : null,
+        currentAffairsLinked: Boolean(question.currentAffairsLinked),
+        errorType: question.errorType ? String(question.errorType) : null,
+        difficulty: question.difficulty ? String(question.difficulty) : null,
+        confidence: question.confidence === null || question.confidence === undefined ? null : Number(question.confidence),
+        timeSpentSeconds:
+          question.timeSpentSeconds === null || question.timeSpentSeconds === undefined
+            ? null
+            : Number(question.timeSpentSeconds),
+        mistakeReason: question.mistakeReason ? String(question.mistakeReason) : null,
+        actionFix: question.actionFix ? String(question.actionFix) : null,
+        notes: question.notes ? String(question.notes) : null,
+      };
+    });
+
+    const saved = await upsertQuestionLogs(body.testId, questions);
+    revalidatePath("/tests");
+    revalidatePath("/tests/error-analysis");
+    revalidatePath("/performance");
+    return NextResponse.json({ count: saved.length, questions: saved });
   }
 
   if (body.action === "delete_question") {
