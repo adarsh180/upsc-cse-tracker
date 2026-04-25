@@ -75,6 +75,7 @@ export async function signOutAction() {
 }
 
 export async function createStudyNodeAction(formData: FormData) {
+  await requireSession();
   const parentId = String(formData.get("parentId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const overview = String(formData.get("overview") ?? "").trim();
@@ -94,6 +95,7 @@ export async function createStudyNodeAction(formData: FormData) {
 }
 
 export async function deleteStudyNodeAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   const pathname = String(formData.get("pathname") ?? "");
 
@@ -107,6 +109,7 @@ export async function deleteStudyNodeAction(formData: FormData) {
 }
 
 export async function toggleTopicProgressAction(formData: FormData) {
+  await requireSession();
   const studyNodeId = String(formData.get("studyNodeId") ?? "");
   const checked = formData.get("checked") === "true";
   const pathname = String(formData.get("pathname") ?? "");
@@ -130,6 +133,7 @@ export async function toggleTopicProgressAction(formData: FormData) {
 }
 
 export async function addStudyLogAction(formData: FormData) {
+  await requireSession();
   await db.studyLog.create({
     data: {
       studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
@@ -147,6 +151,7 @@ export async function addStudyLogAction(formData: FormData) {
 }
 
 export async function saveDailyGoalAction(formData: FormData) {
+  await requireSession();
   const logDate = new Date(String(formData.get("logDate") ?? new Date().toISOString()));
 
   await db.dailyLog.upsert({
@@ -180,6 +185,7 @@ export async function saveDailyGoalAction(formData: FormData) {
 }
 
 export async function saveMoodAction(formData: FormData) {
+  await requireSession();
   const rawDate = String(formData.get("moodDate") ?? "");
   const baseDate = rawDate ? new Date(`${rawDate}T00:00:00+05:30`) : new Date();
   const dayStart = new Date(baseDate);
@@ -229,6 +235,7 @@ export async function saveMoodAction(formData: FormData) {
 }
 
 export async function saveTestAction(formData: FormData) {
+  await requireSession();
   await db.testRecord.create({
     data: {
       studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
@@ -236,6 +243,7 @@ export async function saveTestAction(formData: FormData) {
       examStage: String(formData.get("examStage") ?? "PRELIMS"),
       testType: String(formData.get("testType") ?? "SECTIONAL"),
       testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
+      totalQuestions: Number(formData.get("totalQuestions") ?? 0),
       totalMarks: Number(formData.get("totalMarks") ?? 0),
       score: Number(formData.get("score") ?? 0),
       correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
@@ -251,6 +259,7 @@ export async function saveTestAction(formData: FormData) {
 }
 
 export async function updateTestAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.testRecord.update({
@@ -261,6 +270,7 @@ export async function updateTestAction(formData: FormData) {
       examStage: String(formData.get("examStage") ?? "PRELIMS"),
       testType: String(formData.get("testType") ?? "SECTIONAL"),
       testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
+      totalQuestions: Number(formData.get("totalQuestions") ?? 0),
       totalMarks: Number(formData.get("totalMarks") ?? 0),
       score: Number(formData.get("score") ?? 0),
       correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
@@ -275,6 +285,7 @@ export async function updateTestAction(formData: FormData) {
 }
 
 export async function deleteTestAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.testRecord.delete({ where: { id } });
@@ -282,6 +293,7 @@ export async function deleteTestAction(formData: FormData) {
 }
 
 export async function deleteDailyGoalAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.dailyLog.delete({ where: { id } });
@@ -289,6 +301,7 @@ export async function deleteDailyGoalAction(formData: FormData) {
 }
 
 export async function updateStudyNodeAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const overview = String(formData.get("overview") ?? "").trim();
@@ -305,6 +318,7 @@ export async function updateStudyNodeAction(formData: FormData) {
 }
 
 export async function deleteStudyLogAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id") ?? "");
   const pathname = String(formData.get("pathname") ?? "");
   if (!id) return;
@@ -385,6 +399,7 @@ async function getOrCreateConversation() {
 const AI_MEMORY_REFRESH_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function sendGuruMessageAction(formData: FormData) {
+  await requireSession();
   const userMessage = String(formData.get("message") ?? "").trim();
   const attachment = formData.get("attachment");
 
@@ -462,6 +477,7 @@ ${userMessage || "Please review the attached PDF and respond."}`;
 }
 
 export async function evaluateEssayAction(formData: FormData) {
+  await requireSession();
   const title = String(formData.get("title") ?? "Essay practice").trim();
   const promptText = String(formData.get("prompt") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();

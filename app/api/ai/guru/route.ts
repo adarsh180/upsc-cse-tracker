@@ -14,6 +14,7 @@ import {
   refreshGuruMemoryProfile,
 } from "@/lib/ai-context-builder";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createManualTodoTask, deleteAgentTask, updateAgentTaskStatus } from "@/lib/mission-control";
 import {
@@ -343,6 +344,11 @@ async function executeTodoOperation(input: z.infer<typeof todoOperationSchema>) 
 }
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const formData = await request.formData();
   const modeValue = formData.get("mode");
   const conversationIdValue = formData.get("conversationId");

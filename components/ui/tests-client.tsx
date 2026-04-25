@@ -16,6 +16,7 @@ type TestRecord = {
   examStage: string;
   testType: string;
   testDate: Date | string;
+  totalQuestions: number;
   totalMarks: number;
   score: number;
   correctQuestions: number | null;
@@ -129,9 +130,9 @@ export function TestsClient({
                 </option>
               ))}
             </select>
-            <input
-              className="field"
-              type="date"
+              <input
+                className="field"
+                type="date"
               name="testDate"
               defaultValue={editTest ? dateValue(editTest.testDate) : format(new Date(), "yyyy-MM-dd")}
               required
@@ -140,6 +141,7 @@ export function TestsClient({
 
           <div className="tests-form-section">
             <span>Score matrix</span>
+            <input className="field" type="number" name="totalQuestions" placeholder="Total questions" defaultValue={editTest?.totalQuestions ?? ""} />
             <div className="tests-form-pair">
               <input className="field" type="number" step="0.01" name="totalMarks" placeholder="Total marks" defaultValue={editTest?.totalMarks ?? ""} required />
               <input className="field" type="number" step="0.01" name="score" placeholder="Score" defaultValue={editTest?.score ?? ""} required />

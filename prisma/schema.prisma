@@ -100,6 +100,7 @@ model TestRecord {
   examStage          String
   testType           String
   testDate           DateTime
+  totalQuestions     Int        @default(0)
   totalMarks         Float
   score              Float
   correctQuestions   Int?
@@ -109,8 +110,59 @@ model TestRecord {
   timeMinutes        Int?
   notes              String?    @db.Text
   studyNode          StudyNode? @relation(fields: [studyNodeId], references: [id], onDelete: SetNull)
+  questionLogs       TestQuestionLog[]
+  analysisReports    TestAnalysisReport[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
+}
+
+model TestQuestionLog {
+  id                  String     @id @default(cuid())
+  testRecordId        String
+  questionNumber      Int
+  questionSummary     String     @db.Text
+  correctAnswer       String?    @db.Text
+  correctExplanation  String?    @db.Text
+  mainsApproach       String?    @db.Text
+  mainsExamples       String?    @db.Text
+  subject             String?
+  topic               String?
+  sourceType          String     @default("PRACTICE_TEST")
+  outcome             String     @default("SKIPPED")
+  studiedTopic        Boolean    @default(false)
+  resourceCovered     String     @default("UNKNOWN")
+  currentAffairsLinked Boolean   @default(false)
+  errorType           String?
+  difficulty          String     @default("MEDIUM")
+  confidence          Int?
+  timeSpentSeconds    Int?
+  mistakeReason       String?    @db.Text
+  actionFix           String?    @db.Text
+  notes               String?    @db.Text
+  testRecord          TestRecord @relation(fields: [testRecordId], references: [id], onDelete: Cascade)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@unique([testRecordId, questionNumber])
+  @@index([testRecordId, outcome])
+  @@index([subject, topic])
+}
+
+model TestAnalysisReport {
+  id              String      @id @default(cuid())
+  scope           String
+  testRecordId    String?
+  title           String
+  reportText      String      @db.LongText
+  highlightsJson  String?     @db.LongText
+  weakAreasJson   String?     @db.LongText
+  recommendationsJson String?  @db.LongText
+  model           String?
+  createdAt       DateTime    @default(now())
+  testRecord      TestRecord? @relation(fields: [testRecordId], references: [id], onDelete: Cascade)
+
+  @@index([scope, createdAt])
+  @@index([testRecordId, createdAt])
 }
 
 model EssaySubmission {

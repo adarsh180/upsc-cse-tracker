@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth";
 import { createStudyNode, deleteStudyNode, reorderStudyNodes, updateStudyNode } from "@/lib/study-tree";
 
 function revalidateStudySurfaces(pathname?: string) {
@@ -9,8 +10,19 @@ function revalidateStudySurfaces(pathname?: string) {
   revalidatePath("/", "layout");
 }
 
+async function requireApiSession() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
 // POST — create a new child node
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const fd = await req.formData();
     const parentId = String(fd.get("parentId") ?? "").trim();
@@ -45,6 +57,9 @@ export async function POST(req: NextRequest) {
 
 // PUT - reorder children under a parent node
 export async function PUT(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await req.json();
     const parentId = String(body.parentId ?? "").trim();
@@ -71,6 +86,9 @@ export async function PUT(req: NextRequest) {
 
 // PATCH — rename (update title/overview)
 export async function PATCH(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const fd = await req.formData();
     const id = String(fd.get("id") ?? "").trim();
@@ -101,6 +119,9 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE — remove a node
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id") ?? "";

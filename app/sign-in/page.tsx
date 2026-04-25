@@ -164,7 +164,7 @@ export default async function SignInPage({
                 className="field"
                 type="email"
                 name="email"
-                defaultValue={process.env.AUTH_EMAIL}
+                defaultValue={process.env.NODE_ENV === "development" ? process.env.AUTH_EMAIL : ""}
                 placeholder="your@email.com"
                 required
                 autoComplete="email"
@@ -183,7 +183,7 @@ export default async function SignInPage({
                 className="field"
                 type="password"
                 name="password"
-                defaultValue={process.env.AUTH_PASSWORD}
+                defaultValue={process.env.NODE_ENV === "development" ? process.env.AUTH_PASSWORD : ""}
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"

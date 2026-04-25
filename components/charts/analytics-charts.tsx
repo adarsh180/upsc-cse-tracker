@@ -383,6 +383,165 @@ export function DailyGoalsSignalChart({ data }: { data: DailyGoalPoint[] }) {
   );
 }
 
+type QuestionTrendPoint = {
+  question: number;
+  accuracy: number;
+  cumulativeScore: number;
+  attempted: number;
+  outcome: string;
+};
+
+function QuestionTrendTooltip({
+  active,
+  payload,
+  label,
+}: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload as QuestionTrendPoint | undefined;
+  if (!point) return null;
+
+  return (
+    <div className="test-chart-tooltip">
+      <strong>Question {label}</strong>
+      <span>Running accuracy: {point.accuracy}%</span>
+      <span>Cumulative score: {point.cumulativeScore}</span>
+      <span>Attempted till here: {point.attempted}</span>
+      <span>Outcome: {point.outcome.replaceAll("_", " ")}</span>
+    </div>
+  );
+}
+
+export function QuestionErrorTrendChart({ data }: { data: QuestionTrendPoint[] }) {
+  const hasData = data.length > 0;
+  const points = hasData ? data : [{ question: 0, accuracy: 0, cumulativeScore: 0, attempted: 0, outcome: "NO_DATA" }];
+
+  return (
+    <div className="error-analysis-chart">
+      <ComposedResponsiveContainer>
+        <ComposedLineChart data={points} margin={{ top: 14, right: 18, bottom: 6, left: 0 }}>
+          <ComposedCartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+          <ComposedXAxis
+            dataKey="question"
+            tickLine={false}
+            axisLine={false}
+            stroke="rgba(238,232,217,0.48)"
+            tick={{ fontSize: 11, fontWeight: 800 }}
+            minTickGap={12}
+          />
+          <ComposedYAxis
+            domain={[0, 100]}
+            tickLine={false}
+            axisLine={false}
+            stroke="rgba(238,232,217,0.42)"
+            tick={{ fontSize: 11, fontWeight: 800 }}
+            tickFormatter={(value) => `${value}%`}
+            width={42}
+          />
+          <ComposedTooltip content={<QuestionTrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.16)", strokeWidth: 1 }} />
+          <ComposedLine
+            type="monotone"
+            dataKey="accuracy"
+            stroke="var(--gold-bright)"
+            strokeWidth={3.4}
+            dot={false}
+            activeDot={{ r: 5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+            strokeLinecap="round"
+            animationDuration={980}
+            animationEasing="ease-out"
+          />
+          <ComposedLine
+            type="monotone"
+            dataKey="attempted"
+            stroke="var(--physics)"
+            strokeWidth={2.4}
+            dot={false}
+            strokeLinecap="round"
+            animationDuration={1140}
+            animationEasing="ease-out"
+          />
+        </ComposedLineChart>
+      </ComposedResponsiveContainer>
+    </div>
+  );
+}
+
+type SubjectErrorPoint = {
+  subject: string;
+  total: number;
+  accuracy: number;
+  errorRate: number;
+  skipped: number;
+};
+
+function SubjectErrorTooltip({
+  active,
+  payload,
+  label,
+}: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload as SubjectErrorPoint | undefined;
+  if (!point) return null;
+
+  return (
+    <div className="test-chart-tooltip">
+      <strong>{label}</strong>
+      <span>Total logged: {point.total}</span>
+      <span>Accuracy: {point.accuracy}%</span>
+      <span>Error rate: {point.errorRate}%</span>
+      <span>Skipped: {point.skipped}</span>
+    </div>
+  );
+}
+
+export function SubjectErrorBreakdownChart({ data }: { data: SubjectErrorPoint[] }) {
+  const hasData = data.length > 0;
+  const points = hasData ? data.slice(0, 8) : [{ subject: "No data", total: 0, accuracy: 0, errorRate: 0, skipped: 0 }];
+
+  return (
+    <div className="error-analysis-chart compact">
+      <ResponsiveContainer>
+        <RechartsComposedChart data={points} margin={{ top: 14, right: 18, bottom: 6, left: 0 }}>
+          <CartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+          <XAxis
+            dataKey="subject"
+            tickLine={false}
+            axisLine={false}
+            stroke="rgba(238,232,217,0.48)"
+            tick={{ fontSize: 11, fontWeight: 800 }}
+            minTickGap={10}
+          />
+          <YAxis
+            domain={[0, 100]}
+            tickLine={false}
+            axisLine={false}
+            stroke="rgba(238,232,217,0.42)"
+            tick={{ fontSize: 11, fontWeight: 800 }}
+            width={42}
+          />
+          <Tooltip content={<SubjectErrorTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+          <ComposedBar
+            dataKey="errorRate"
+            barSize={18}
+            radius={[9, 9, 3, 3]}
+            fill="rgba(255,128,128,0.42)"
+            animationDuration={760}
+          />
+          <Line
+            type="monotone"
+            dataKey="accuracy"
+            stroke="var(--botany)"
+            strokeWidth={2.8}
+            dot={false}
+            strokeLinecap="round"
+            animationDuration={980}
+            animationEasing="ease-out"
+          />
+        </RechartsComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 type ChartPoint = {
   label: string;
   value: number;

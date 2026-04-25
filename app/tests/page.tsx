@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import { Award, Clock3, FileCheck2, Gauge } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Award, BrainCircuit, Clock3, FileCheck2, Gauge } from "lucide-react";
 
 import { TestPerformanceChart } from "@/components/charts/analytics-charts";
 import { PageIntro } from "@/components/ui/sections";
@@ -144,6 +145,19 @@ export default async function TestsPage() {
           }))}
           subjects={subjects.map((subject) => ({ id: subject.id, title: subject.title }))}
         />
+
+        <Link href="/tests/error-analysis" className="glass panel tests-error-entry-card">
+          <div>
+            <div className="pill"><BrainCircuit size={13} />Method and Error Analysis</div>
+            <div className="display tests-error-entry-title">Open question-wise error lab.</div>
+            <p className="muted tests-error-entry-copy">
+              Create a test, set its question count, log every question, and generate AI reports for repeated mistakes, recovery signals and next-test correction.
+            </p>
+          </div>
+          <div className="tests-error-entry-action">
+            Start logging <ArrowRight size={16} />
+          </div>
+        </Link>
       </section>
     </main>
   );

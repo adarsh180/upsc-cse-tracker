@@ -1,10 +1,22 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+async function requireApiSession() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 
 // GET /api/topic-progress?parentId=xxx
 // Returns checked + revisionCount map for all descendants of a parent node
 export async function GET(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const parentId = req.nextUrl.searchParams.get("parentId");
 
@@ -66,6 +78,9 @@ export async function GET(req: NextRequest) {
 // Body: { studyNodeId: string, checked?: boolean, revisionDelta?: number }
 // revisionDelta: +1 to increment, -1 to decrement (clamped 0-20)
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = (await req.json()) as {
       studyNodeId: string;
