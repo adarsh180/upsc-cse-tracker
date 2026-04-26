@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties, PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,6 +17,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -451,6 +453,8 @@ export function TestErrorAnalysisWorkspace({
   const [questionDraft, setQuestionDraft] = useState<DraftQuestion>(emptyQuestionDraft);
   const [viewMode, setViewMode] = useState<"form" | "grid">("form");
   const [gridQuestions, setGridQuestions] = useState<DraftQuestion[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [orbRotation, setOrbRotation] = useState({ x: -10, y: 18 });
   const [loading, setLoading] = useState(false);
   const [savingTest, setSavingTest] = useState(false);
   const [savingQuestion, setSavingQuestion] = useState(false);
@@ -468,6 +472,8 @@ export function TestErrorAnalysisWorkspace({
   const plannedQuestions = snapshot?.test.totalQuestions || selectedTest?.totalQuestions || 0;
   const loggedPct = plannedQuestions ? Math.round((logs.length / plannedQuestions) * 100) : 0;
   const isMainsMode = (snapshot?.test.examStage ?? selectedTest?.examStage ?? testDraft.examStage) === "MAINS";
+  const orbDragRef = useRef({ active: false, x: 0, y: 0, moved: false });
+  const meetingAngle = useMemo(() => Math.round(Math.random() * 360), []);
 
   const nextQuestionNumber = useMemo(() => {
     const used = new Set(logs.map((log) => log.questionNumber));
@@ -891,186 +897,360 @@ export function TestErrorAnalysisWorkspace({
     }
   }
 
+  function startOrbDrag(event: PointerEvent<HTMLButtonElement>) {
+    orbDragRef.current = {
+      active: true,
+      x: event.clientX,
+      y: event.clientY,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveOrbDrag(event: PointerEvent<HTMLButtonElement>) {
+    const drag = orbDragRef.current;
+    if (!drag.active) return;
+
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) {
+      drag.moved = true;
+    }
+
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    setOrbRotation((current) => ({
+      x: (current.x - dy * 0.65) % 360,
+      y: (current.y + dx * 0.65) % 360,
+    }));
+  }
+
+  function stopOrbDrag(event: PointerEvent<HTMLButtonElement>) {
+    orbDragRef.current.active = false;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
   return (
     <section className="error-analysis-shell error-analysis-route">
       <article className="glass panel error-analysis-hero">
-        <div>
+        <div className="error-analysis-hero-copy">
           <Link href="/tests" className="pill error-analysis-back">
             <ArrowLeft size={13} />
             Tests overview
           </Link>
-          <div className="eyebrow" style={{ marginTop: 18 }}>Method and Error Analysis</div>
-          <h1 className="display error-analysis-title">Create a test. Log every question. Track the pattern.</h1>
+          <div className="error-analysis-hero-tags">
+            <div className="pill error-analysis-hero-tag">
+              <FileSpreadsheet size={13} />
+              Question ledger
+            </div>
+            <div className="pill error-analysis-hero-tag">
+              <LineChart size={13} />
+              Local pattern engine
+            </div>
+            <div className="pill error-analysis-hero-tag">
+              <BrainCircuit size={13} />
+              AI only on request
+            </div>
+          </div>
+          <div className="eyebrow">Method and Error Analysis</div>
+          <h1 className="display error-analysis-title">A black-box flight recorder for every test.</h1>
           <p className="muted error-analysis-copy">
-            First create the exact test container, then record each question under that test with resource, current affairs, mistake type and correction data.
+            Create the test container, log each question, and let the local engine expose repetition, recovery, resource gaps and severity without spending AI calls.
           </p>
         </div>
 
-        <div className="error-analysis-hero-meter">
-          <span>Logged coverage</span>
-          <strong>{loggedPct}%</strong>
-          <em>{logs.length} of {plannedQuestions || 0} questions</em>
+        <div className="error-analysis-hero-orb">
+          <div className="error-analysis-hero-meter">
+            <span>Logged coverage</span>
+            <strong>{loggedPct}%</strong>
+            <em>{logs.length} of {plannedQuestions || 0} questions</em>
+          </div>
+          <div className="error-analysis-hero-stats">
+            <div className="error-analysis-hero-stat">
+              <span>Accuracy</span>
+              <strong>{analytics?.accuracy ?? 0}%</strong>
+            </div>
+            <div className="error-analysis-hero-stat">
+              <span>Severity</span>
+              <strong>{analytics?.severity.avgScore ?? 0}</strong>
+            </div>
+            <div className="error-analysis-hero-stat">
+              <span>Loops</span>
+              <strong>{memory?.activeLoops.length ?? 0}</strong>
+            </div>
+          </div>
         </div>
       </article>
 
       {error ? <div className="error-analysis-alert">{error}</div> : null}
 
-      <section className="error-analysis-workbench">
-        <aside className="glass panel error-analysis-history-panel">
+      <section className="error-analysis-command-grid">
+        <article className="glass panel error-analysis-history-launch">
           <div className="tests-panel-head">
             <div>
-              <div className="eyebrow">All test history</div>
-              <div className="display tests-panel-title">Error ledgers</div>
+              <div className="eyebrow">Test history</div>
+              <div className="display tests-panel-title">Open the archive</div>
             </div>
             <History size={18} style={{ color: "var(--gold-bright)" }} />
           </div>
 
           <button
             type="button"
-            className="button error-analysis-new-test"
+            className="error-analysis-history-orb"
             onClick={() => {
-              setSelectedTestId("");
-              setSnapshot(null);
-              setTestDraft(emptyTestDraft);
-              setQuestionDraft({ ...emptyQuestionDraft, questionNumber: 1 });
-              setGridQuestions([]);
-              setViewMode("form");
+              if (orbDragRef.current.moved) {
+                orbDragRef.current.moved = false;
+                return;
+              }
+              setHistoryOpen(true);
             }}
+            onPointerDown={startOrbDrag}
+            onPointerMove={moveOrbDrag}
+            onPointerUp={stopOrbDrag}
+            onPointerCancel={stopOrbDrag}
+            style={{
+              "--orb-rotate-x": `${orbRotation.x}deg`,
+              "--orb-rotate-y": `${orbRotation.y}deg`,
+              "--meeting-angle": `${meetingAngle}deg`,
+            } as CSSProperties}
+            aria-label="Open test history"
           >
-            <Plus size={16} />
-            New test log
+            <span className="error-analysis-astrolabe-face" aria-hidden="true">
+              <span className="error-analysis-universe-field" />
+              <span className="error-analysis-gravity-well" />
+              <span className="error-analysis-fibonacci-spiral" />
+              <span className="error-analysis-ecliptic-plane" />
+              <span className="error-analysis-constellation-lattice" />
+              <span className="error-analysis-meeting-node" />
+              <span className="error-analysis-astrolabe-ring outer" />
+              <span className="error-analysis-astrolabe-ring middle" />
+              <span className="error-analysis-astrolabe-ring inner" />
+              <span className="error-analysis-astrolabe-ticks" />
+              <span className="error-analysis-astrolabe-orbit orbit-a">
+                <span />
+              </span>
+              <span className="error-analysis-astrolabe-orbit orbit-b">
+                <span />
+              </span>
+              <span className="error-analysis-astrolabe-orbit orbit-c">
+                <span />
+              </span>
+            </span>
+            <span className="error-analysis-orb-hud">
+              <span className="display">{tests.length}</span>
+              <em>tests</em>
+            </span>
           </button>
 
-          <div className="error-analysis-history-list">
-            {tests.map((test) => {
-              const active = test.id === selectedTestId;
-              const logged = test._count?.questionLogs ?? 0;
-              const total = test.totalQuestions || 0;
-              return (
+          <div className="error-analysis-history-current">
+            <span>Selected ledger</span>
+            <strong>{selectedTest?.title ?? "No test selected"}</strong>
+            <em>
+              {selectedTest
+                ? `${selectedTest.examStage} | ${selectedTest._count?.questionLogs ?? 0}/${selectedTest.totalQuestions || "-"} logged`
+                : "Create or select a test to begin."}
+            </em>
+          </div>
+
+          <div className="error-analysis-history-launch-actions">
+            <button type="button" className="button-secondary" onClick={() => setHistoryOpen(true)}>
+              <History size={15} />
+              Browse history
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setSelectedTestId("");
+                setSnapshot(null);
+                setTestDraft(emptyTestDraft);
+                setQuestionDraft({ ...emptyQuestionDraft, questionNumber: 1 });
+                setGridQuestions([]);
+                setViewMode("form");
+              }}
+            >
+              <Plus size={16} />
+              New test
+            </button>
+          </div>
+        </article>
+
+        {historyOpen ? (
+          <div className="error-analysis-history-overlay" role="dialog" aria-modal="true" aria-label="Test history">
+            <button
+              type="button"
+              className="error-analysis-history-backdrop"
+              onClick={() => setHistoryOpen(false)}
+              aria-label="Close test history"
+            />
+            <aside className="glass panel error-analysis-history-menu">
+              <div className="error-analysis-history-menu-head">
+                <div>
+                  <div className="eyebrow">All test history</div>
+                  <div className="display tests-panel-title">Error ledgers</div>
+                </div>
                 <button
-                  key={test.id}
                   type="button"
-                  className={`error-analysis-history-card${active ? " active" : ""}`}
-                  onClick={() => setSelectedTestId(test.id)}
+                  className="icon-action-button"
+                  onClick={() => setHistoryOpen(false)}
+                  aria-label="Close test history"
                 >
-                  <span>{format(new Date(test.testDate), "dd MMM yyyy")}</span>
-                  <strong>{test.title}</strong>
-                  <em>{test.examStage} | {test.testType.replaceAll("_", " ")}</em>
-                  <i>{logged}/{total || "-"} questions logged</i>
+                  <X size={15} />
                 </button>
-              );
-            })}
-            {tests.length === 0 ? (
-              <div className="tests-empty-state">No tests yet. Create the first error-analysis test container.</div>
+              </div>
+
+              <button
+                type="button"
+                className="button error-analysis-new-test"
+                onClick={() => {
+                  setSelectedTestId("");
+                  setSnapshot(null);
+                  setTestDraft(emptyTestDraft);
+                  setQuestionDraft({ ...emptyQuestionDraft, questionNumber: 1 });
+                  setGridQuestions([]);
+                  setViewMode("form");
+                  setHistoryOpen(false);
+                }}
+              >
+                <Plus size={16} />
+                New test log
+              </button>
+
+              <div className="error-analysis-history-list">
+                {tests.map((test) => {
+                  const active = test.id === selectedTestId;
+                  const logged = test._count?.questionLogs ?? 0;
+                  const total = test.totalQuestions || 0;
+                  return (
+                    <button
+                      key={test.id}
+                      type="button"
+                      className={`error-analysis-history-card${active ? " active" : ""}`}
+                      onClick={() => {
+                        setSelectedTestId(test.id);
+                        setHistoryOpen(false);
+                      }}
+                    >
+                      <span>{format(new Date(test.testDate), "dd MMM yyyy")}</span>
+                      <strong>{test.title}</strong>
+                      <em>{test.examStage} | {test.testType.replaceAll("_", " ")}</em>
+                      <i>{logged}/{total || "-"} questions logged</i>
+                    </button>
+                  );
+                })}
+                {tests.length === 0 ? (
+                  <div className="tests-empty-state">No tests yet. Create the first error-analysis test container.</div>
+                ) : null}
+              </div>
+            </aside>
+          </div>
+        ) : null}
+
+        <article className="glass panel error-analysis-test-form-panel">
+          <div className="tests-panel-head">
+            <div>
+              <div className="eyebrow">Step 1</div>
+              <div className="display tests-panel-title">{testDraft.id ? "Edit test container" : "Create test container"}</div>
+            </div>
+            {testDraft.id ? (
+              <button
+                type="button"
+                className="icon-action-button danger"
+                title="Delete this test and its question logs"
+                onClick={() => void deleteTest(testDraft.id!)}
+              >
+                <Trash2 size={14} />
+              </button>
             ) : null}
           </div>
-        </aside>
 
-        <div className="error-analysis-main-column">
-          <article className="glass panel error-analysis-test-form-panel">
-            <div className="tests-panel-head">
-              <div>
-                <div className="eyebrow">Step 1</div>
-                <div className="display tests-panel-title">{testDraft.id ? "Edit test container" : "Create test container"}</div>
-              </div>
-              {testDraft.id ? (
-                <button
-                  type="button"
-                  className="icon-action-button danger"
-                  title="Delete this test and its question logs"
-                  onClick={() => void deleteTest(testDraft.id!)}
-                >
-                  <Trash2 size={14} />
-                </button>
-              ) : null}
-            </div>
-
-            <div className="error-analysis-test-form">
+          <div className="error-analysis-test-form">
+            <input
+              className="field"
+              value={testDraft.title}
+              onChange={(event) => updateTestDraft("title", event.target.value)}
+              placeholder="Test name, e.g. Vision batch test 12 or UPSC Prelims PYQ 2023"
+            />
+            <div className="tests-form-triplet">
+              <select className="select" value={testDraft.examStage} onChange={(event) => updateTestDraft("examStage", event.target.value)}>
+                <option value="PRELIMS">Prelims test</option>
+                <option value="MAINS">Mains test</option>
+              </select>
+              <select className="select" value={testDraft.testType} onChange={(event) => updateTestDraft("testType", event.target.value)}>
+                <option value="SECTIONAL">Sectional</option>
+                <option value="UNIT">Unit</option>
+                <option value="SUBJECT">Subject-wise</option>
+                <option value="FULL">Full length</option>
+                <option value="PYQ">PYQ</option>
+                <option value="REAL_ATTEMPT">Real attempt</option>
+                <option value="ALL_INDIA">All India</option>
+              </select>
               <input
                 className="field"
-                value={testDraft.title}
-                onChange={(event) => updateTestDraft("title", event.target.value)}
-                placeholder="Test name, e.g. Vision batch test 12 or UPSC Prelims PYQ 2023"
+                type="date"
+                value={testDraft.testDate}
+                onChange={(event) => updateTestDraft("testDate", event.target.value)}
               />
-              <div className="tests-form-triplet">
-                <select className="select" value={testDraft.examStage} onChange={(event) => updateTestDraft("examStage", event.target.value)}>
-                  <option value="PRELIMS">Prelims test</option>
-                  <option value="MAINS">Mains test</option>
-                </select>
-                <select className="select" value={testDraft.testType} onChange={(event) => updateTestDraft("testType", event.target.value)}>
-                  <option value="SECTIONAL">Sectional</option>
-                  <option value="UNIT">Unit</option>
-                  <option value="SUBJECT">Subject-wise</option>
-                  <option value="FULL">Full length</option>
-                  <option value="PYQ">PYQ</option>
-                  <option value="REAL_ATTEMPT">Real attempt</option>
-                  <option value="ALL_INDIA">All India</option>
-                </select>
-                <input
-                  className="field"
-                  type="date"
-                  value={testDraft.testDate}
-                  onChange={(event) => updateTestDraft("testDate", event.target.value)}
-                />
-              </div>
-
-              <div className="tests-form-triplet">
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  value={testDraft.totalQuestions}
-                  onChange={(event) => updateTestDraft("totalQuestions", event.target.value)}
-                  placeholder="Number of questions"
-                />
-                <input
-                  className="field"
-                  type="number"
-                  step="0.01"
-                  value={testDraft.totalMarks}
-                  onChange={(event) => updateTestDraft("totalMarks", event.target.value)}
-                  placeholder="Total marks"
-                />
-                <input
-                  className="field"
-                  type="number"
-                  step="0.01"
-                  value={testDraft.score}
-                  onChange={(event) => updateTestDraft("score", event.target.value)}
-                  placeholder="Score"
-                />
-              </div>
-
-              <div className="tests-form-triplet">
-                <input className="field" type="number" value={testDraft.correctQuestions} onChange={(event) => updateTestDraft("correctQuestions", event.target.value)} placeholder="Correct" />
-                <input className="field" type="number" value={testDraft.incorrectQuestions} onChange={(event) => updateTestDraft("incorrectQuestions", event.target.value)} placeholder="Incorrect" />
-                <input className="field" type="number" value={testDraft.attemptedQuestions} onChange={(event) => updateTestDraft("attemptedQuestions", event.target.value)} placeholder="Attempted" />
-              </div>
-
-              <div className="tests-form-triplet">
-                <input className="field" type="number" step="0.01" value={testDraft.percentile} onChange={(event) => updateTestDraft("percentile", event.target.value)} placeholder="Percentile" />
-                <input className="field" type="number" value={testDraft.timeMinutes} onChange={(event) => updateTestDraft("timeMinutes", event.target.value)} placeholder="Time minutes" />
-                <select className="select" value={testDraft.studyNodeId} onChange={(event) => updateTestDraft("studyNodeId", event.target.value)}>
-                  <option value="">Subject optional</option>
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>{subject.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              <textarea
-                className="textarea"
-                value={testDraft.notes}
-                onChange={(event) => updateTestDraft("notes", event.target.value)}
-                placeholder="Test context, source, batch, attempt condition, or anything important"
-              />
-
-              <button type="button" className="button tests-submit-button" onClick={() => void saveTest()} disabled={savingTest}>
-                {savingTest ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />}
-                {savingTest ? "Saving test..." : testDraft.id ? "Update test container" : "Create test and start logging"}
-              </button>
             </div>
-          </article>
+
+            <div className="tests-form-triplet">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                value={testDraft.totalQuestions}
+                onChange={(event) => updateTestDraft("totalQuestions", event.target.value)}
+                placeholder="Number of questions"
+              />
+              <input
+                className="field"
+                type="number"
+                step="0.01"
+                value={testDraft.totalMarks}
+                onChange={(event) => updateTestDraft("totalMarks", event.target.value)}
+                placeholder="Total marks"
+              />
+              <input
+                className="field"
+                type="number"
+                step="0.01"
+                value={testDraft.score}
+                onChange={(event) => updateTestDraft("score", event.target.value)}
+                placeholder="Score"
+              />
+            </div>
+
+            <div className="tests-form-triplet">
+              <input className="field" type="number" value={testDraft.correctQuestions} onChange={(event) => updateTestDraft("correctQuestions", event.target.value)} placeholder="Correct" />
+              <input className="field" type="number" value={testDraft.incorrectQuestions} onChange={(event) => updateTestDraft("incorrectQuestions", event.target.value)} placeholder="Incorrect" />
+              <input className="field" type="number" value={testDraft.attemptedQuestions} onChange={(event) => updateTestDraft("attemptedQuestions", event.target.value)} placeholder="Attempted" />
+            </div>
+
+            <div className="tests-form-triplet">
+              <input className="field" type="number" step="0.01" value={testDraft.percentile} onChange={(event) => updateTestDraft("percentile", event.target.value)} placeholder="Percentile" />
+              <input className="field" type="number" value={testDraft.timeMinutes} onChange={(event) => updateTestDraft("timeMinutes", event.target.value)} placeholder="Time minutes" />
+              <select className="select" value={testDraft.studyNodeId} onChange={(event) => updateTestDraft("studyNodeId", event.target.value)}>
+                <option value="">Subject optional</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>{subject.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <textarea
+              className="textarea"
+              value={testDraft.notes}
+              onChange={(event) => updateTestDraft("notes", event.target.value)}
+              placeholder="Test context, source, batch, attempt condition, or anything important"
+            />
+
+            <button type="button" className="button tests-submit-button" onClick={() => void saveTest()} disabled={savingTest}>
+              {savingTest ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />}
+              {savingTest ? "Saving test..." : testDraft.id ? "Update test container" : "Create test and start logging"}
+            </button>
+          </div>
+        </article>
+      </section>
 
           <section className="error-analysis-metrics">
             {[
@@ -1092,10 +1272,13 @@ export function TestErrorAnalysisWorkspace({
           <section className="glass panel error-analysis-memory-panel">
             <div className="tests-panel-head">
               <div>
-                <div className="eyebrow">Mistake memory</div>
+                <div className="eyebrow">Mistake memory · local algorithm</div>
                 <div className="display tests-panel-title">Recovery, repetition and severity</div>
               </div>
-              <div className="pill">{memory?.patterns.length ?? 0} tracked patterns</div>
+              <div className="pill">
+                <LineChart size={13} />
+                {memory?.patterns.length ?? 0} tracked patterns
+              </div>
             </div>
 
             {memory?.comparison ? (
@@ -1466,52 +1649,55 @@ export function TestErrorAnalysisWorkspace({
                 </div>
               )}
             </article>
-
-            <article className="glass panel error-analysis-ai-panel">
-              <div className="tests-panel-head">
-                <div>
-                  <div className="eyebrow">On-demand AI</div>
-                  <div className="display tests-panel-title">Pattern reports</div>
-                </div>
-                <BrainCircuit size={20} style={{ color: "var(--gold-bright)" }} />
-              </div>
-
-              <div className="error-analysis-ai-actions">
-                <button type="button" className="button" onClick={() => void generateReport("test")} disabled={Boolean(aiBusy) || !selectedTestId}>
-                  {aiBusy === "test" ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
-                  Analyze this test
-                </button>
-                <button type="button" className="button-secondary" onClick={() => void generateReport("global")} disabled={Boolean(aiBusy)}>
-                  {aiBusy === "global" ? <Loader2 size={16} className="spin" /> : <BrainCircuit size={16} />}
-                  Analyze all test history
-                </button>
-              </div>
-
-              <div className="error-analysis-report-stack">
-                {(snapshot?.test.analysisReports ?? []).map((report) => (
-                  <article key={report.id} className="error-analysis-report-card">
-                    <div className="error-analysis-report-meta">
-                      <span>{report.title}</span>
-                      <strong>{format(new Date(report.createdAt), "dd MMM yyyy, hh:mm a")}</strong>
-                    </div>
-                    <StructuredReportStrip report={report} />
-                    <div className="gurux-message-text markdown-body">{markdown(report.reportText)}</div>
-                  </article>
-                ))}
-
-                {globalReports.map((report) => (
-                  <article key={report.id} className="error-analysis-report-card global">
-                    <div className="error-analysis-report-meta">
-                      <span>{report.title}</span>
-                      <strong>{format(new Date(report.createdAt), "dd MMM yyyy, hh:mm a")}</strong>
-                    </div>
-                    <StructuredReportStrip report={report} />
-                    <div className="gurux-message-text markdown-body">{markdown(report.reportText)}</div>
-                  </article>
-                ))}
-              </div>
-            </article>
           </section>
+
+          <article className="glass panel error-analysis-ai-panel">
+            <div className="tests-panel-head">
+              <div>
+                <div className="eyebrow">On-demand AI · manual trigger</div>
+                <div className="display tests-panel-title">Pattern reports</div>
+              </div>
+              <BrainCircuit size={20} style={{ color: "var(--gold-bright)" }} />
+            </div>
+            <p className="muted" style={{ margin: 0, lineHeight: 1.75, fontSize: 13 }}>
+              These buttons call the AI API only when you press them. The mistake memory above is computed locally from saved logs.
+            </p>
+
+            <div className="error-analysis-ai-actions">
+              <button type="button" className="button" onClick={() => void generateReport("test")} disabled={Boolean(aiBusy) || !selectedTestId}>
+                {aiBusy === "test" ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                Analyze this test
+              </button>
+              <button type="button" className="button-secondary" onClick={() => void generateReport("global")} disabled={Boolean(aiBusy)}>
+                {aiBusy === "global" ? <Loader2 size={16} className="spin" /> : <BrainCircuit size={16} />}
+                Analyze all test history
+              </button>
+            </div>
+
+            <div className="error-analysis-report-stack">
+              {(snapshot?.test.analysisReports ?? []).map((report) => (
+                <article key={report.id} className="error-analysis-report-card">
+                  <div className="error-analysis-report-meta">
+                    <span>{report.title}</span>
+                    <strong>{format(new Date(report.createdAt), "dd MMM yyyy, hh:mm a")}</strong>
+                  </div>
+                  <StructuredReportStrip report={report} />
+                  <div className="gurux-message-text markdown-body">{markdown(report.reportText)}</div>
+                </article>
+              ))}
+
+              {globalReports.map((report) => (
+                <article key={report.id} className="error-analysis-report-card global">
+                  <div className="error-analysis-report-meta">
+                    <span>{report.title}</span>
+                    <strong>{format(new Date(report.createdAt), "dd MMM yyyy, hh:mm a")}</strong>
+                  </div>
+                  <StructuredReportStrip report={report} />
+                  <div className="gurux-message-text markdown-body">{markdown(report.reportText)}</div>
+                </article>
+              ))}
+            </div>
+          </article>
 
           <article className="glass panel error-analysis-table-panel">
             <div className="tests-panel-head">
@@ -1599,8 +1785,6 @@ export function TestErrorAnalysisWorkspace({
               </table>
             </div>
           </article>
-        </div>
-      </section>
     </section>
   );
 }

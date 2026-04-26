@@ -14,18 +14,28 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions";
-import { LiveExamTimer } from "@/components/ui/live-exam-timer";
-import { CountdownCard, MetricCard, StudyCard } from "@/components/ui/sections";
+import { ExamCountdownMatrix } from "@/components/ui/live-exam-timer";
+import { MetricCard, StudyCard } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
-import { examCountdown } from "@/lib/utils";
+
+function clampPct(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function average(values: number[]) {
+  const usable = values.filter((value) => Number.isFinite(value));
+  return usable.length ? usable.reduce((sum, value) => sum + value, 0) / usable.length : 0;
+}
+
+function scorePct(score: number, totalMarks: number) {
+  return totalMarks > 0 ? (score / totalMarks) * 100 : 0;
+}
 
 export default async function DashboardPage() {
   await requireSession();
 
   const summary = await getDashboardSummary();
-  const prelims = examCountdown(process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30");
-  const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
 
   const recentLog = summary.dailyLogs[0];
   const recentTest = summary.tests[0];
@@ -36,6 +46,56 @@ export default async function DashboardPage() {
   const focusTrend = summary.metrics[3]?.value ?? "0/10";
 
   const paperPctMap = await getPaperCompletionMap(summary.papers);
+  const syllabusCompletion = average(Object.values(paperPctMap));
+  const totalHoursLast30 = summary.studyLogs.reduce((sum, log) => sum + log.hours, 0);
+  const hoursScore = clampPct((totalHoursLast30 / 120) * 100);
+  const avgDiscipline = average(summary.dailyLogs.map((log) => log.disciplineScore));
+  const avgDailyCompletion = average(summary.dailyLogs.map((log) => log.completion));
+  const avgFocus = average(summary.moods.map((mood) => mood.focus)) * 10;
+  const testVolumeScore = clampPct((summary.tests.length / 20) * 100);
+  const prelimsTests = summary.tests.filter((test) => test.examStage === "PRELIMS");
+  const mainsTests = summary.tests.filter((test) => test.examStage === "MAINS");
+  const allTestScore = average(summary.tests.map((test) => scorePct(test.score, test.totalMarks)));
+  const prelimsScore = average(prelimsTests.map((test) => scorePct(test.score, test.totalMarks))) || allTestScore;
+  const mainsScore = average(mainsTests.map((test) => scorePct(test.score, test.totalMarks))) || allTestScore;
+  const prelimsReadiness = clampPct(
+    syllabusCompletion * 0.22 +
+      prelimsScore * 0.28 +
+      avgDiscipline * 0.16 +
+      avgFocus * 0.10 +
+      hoursScore * 0.12 +
+      testVolumeScore * 0.12,
+  );
+  const mainsReadiness = clampPct(
+    syllabusCompletion * 0.28 +
+      mainsScore * 0.20 +
+      avgDailyCompletion * 0.18 +
+      avgDiscipline * 0.16 +
+      hoursScore * 0.12 +
+      avgFocus * 0.06,
+  );
+  const readinessLabel = (score: number) =>
+    score >= 80 ? "attack-ready" : score >= 62 ? "building edge" : score >= 42 ? "unstable build" : "needs logging";
+  const examReadiness = {
+    prelims: {
+      score: prelimsReadiness,
+      label: readinessLabel(prelimsReadiness),
+      signals: [
+        `${Math.round(prelimsScore)}% test avg`,
+        `${Math.round(avgDiscipline)}/100 discipline`,
+        `${Math.round(syllabusCompletion)}% syllabus`,
+      ],
+    },
+    mains: {
+      score: mainsReadiness,
+      label: readinessLabel(mainsReadiness),
+      signals: [
+        `${Math.round(mainsScore)}% test avg`,
+        `${Math.round(avgDailyCompletion)}% daily completion`,
+        `${totalHoursLast30.toFixed(1)}h logged`,
+      ],
+    },
+  };
 
   return (
     <main className="page-shell">
@@ -256,21 +316,18 @@ export default async function DashboardPage() {
       {/* ══════════════════════════════════════
           COUNTDOWNS
           ══════════════════════════════════════ */}
-      <section className="countdown-grid" style={{ marginBottom: 28 }}>
-        <CountdownCard label="UPSC Prelims 2027" days={prelims.days} dateLabel={prelims.dateLabel} tone="var(--gold)" />
-        <CountdownCard label="UPSC Mains 2027" days={mains.days} dateLabel={mains.dateLabel} tone="var(--physics)" />
+      <section style={{ marginBottom: 28 }}>
+        <ExamCountdownMatrix
+          prelimsDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
+          mainsDate={process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30"}
+          initialNow={Date.now()}
+          readiness={examReadiness}
+        />
       </section>
 
       {/* ══════════════════════════════════════
           LIVE EXAM TIMER
           ══════════════════════════════════════ */}
-      <section style={{ marginBottom: 28 }}>
-        <LiveExamTimer
-          label="Live Countdown To UPSC Prelims"
-          targetDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
-        />
-      </section>
-
       {/* ══════════════════════════════════════
           STUDY SPACES
           ══════════════════════════════════════ */}
