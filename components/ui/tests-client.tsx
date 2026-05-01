@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { format } from "date-fns";
-import { CalendarDays, CheckCircle2, Clock3, Pencil, Save, Trash2, X } from "lucide-react";
+import { BookOpenCheck, CalendarDays, CheckCircle2, Clock3, Pencil, Save, Trash2, X } from "lucide-react";
 
 import {
   deleteTestAction,
@@ -29,6 +30,23 @@ type TestRecord = {
 };
 
 type Subject = { id: string; title: string };
+
+function TestField({
+  label,
+  children,
+  span,
+}: {
+  label: string;
+  children: ReactNode;
+  span?: "full";
+}) {
+  return (
+    <label className={`tests-field${span === "full" ? " full" : ""}`}>
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
 
 function dateValue(date: Date | string) {
   return format(new Date(date), "yyyy-MM-dd");
@@ -66,6 +84,7 @@ export function TestsClient({
 
   return (
     <section className="tests-client-grid">
+      {/* ── Capture Form ── */}
       <article className="glass panel tests-form-panel">
         <div className="tests-panel-head">
           <div>
@@ -100,72 +119,111 @@ export function TestsClient({
         >
           {editId ? <input type="hidden" name="id" value={editId} /> : null}
 
-          <div className="tests-form-section">
-            <span>Identity</span>
-            <input
-              className="field"
-              name="title"
-              placeholder="Test title"
-              defaultValue={editTest?.title ?? ""}
-              required
-            />
-            <div className="tests-form-pair">
-              <select className="select" name="examStage" defaultValue={editTest?.examStage ?? "PRELIMS"}>
-                <option value="PRELIMS">Prelims</option>
-                <option value="MAINS">Mains</option>
-              </select>
-              <select className="select" name="testType" defaultValue={editTest?.testType ?? "SECTIONAL"}>
-                <option value="SECTIONAL">Sectional</option>
-                <option value="UNIT">Unit</option>
-                <option value="SUBJECT">Subject-wise</option>
-                <option value="FULL">Full length</option>
-                <option value="ALL_INDIA">All India</option>
-              </select>
+          <div className="tests-form-hero">
+            <div className="tests-form-hero-icon">
+              <BookOpenCheck size={20} />
             </div>
-            <select className="select" name="studyNodeId" defaultValue={editTest?.studyNode?.id ?? ""}>
-              <option value="">Subject optional</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.title}
-                </option>
-              ))}
-            </select>
-              <input
-                className="field"
-                type="date"
-              name="testDate"
-              defaultValue={editTest ? dateValue(editTest.testDate) : format(new Date(), "yyyy-MM-dd")}
-              required
-            />
-          </div>
-
-          <div className="tests-form-section">
-            <span>Score matrix</span>
-            <input className="field" type="number" name="totalQuestions" placeholder="Total questions" defaultValue={editTest?.totalQuestions ?? ""} />
-            <div className="tests-form-pair">
-              <input className="field" type="number" step="0.01" name="totalMarks" placeholder="Total marks" defaultValue={editTest?.totalMarks ?? ""} required />
-              <input className="field" type="number" step="0.01" name="score" placeholder="Score" defaultValue={editTest?.score ?? ""} required />
-            </div>
-            <div className="tests-form-triplet">
-              <input className="field" type="number" name="correctQuestions" placeholder="Correct" defaultValue={editTest?.correctQuestions ?? ""} />
-              <input className="field" type="number" name="incorrectQuestions" placeholder="Incorrect" defaultValue={editTest?.incorrectQuestions ?? ""} />
-              <input className="field" type="number" name="attemptedQuestions" placeholder="Attempted" defaultValue={editTest?.attemptedQuestions ?? ""} />
-            </div>
-            <div className="tests-form-pair">
-              <input className="field" type="number" step="0.01" name="percentile" placeholder="Percentile" defaultValue={editTest?.percentile ?? ""} />
-              <input className="field" type="number" name="timeMinutes" placeholder="Time min" defaultValue={editTest?.timeMinutes ?? ""} />
+            <div>
+              <strong>{editId ? "Editing saved mock" : "Fresh mock entry"}</strong>
+              <span>Paper identity, score and answer quality stay tied to the same record.</span>
             </div>
           </div>
 
-          <textarea className="textarea tests-note-field" name="notes" placeholder="Performance note" defaultValue={editTest?.notes ?? ""} />
+          <div className="tests-form-section">
+            <div className="tests-form-section-title">Paper identity</div>
+            <div className="tests-field-grid">
+              <TestField label="Test title" span="full">
+                <input
+                  className="field"
+                  name="title"
+                  placeholder="e.g. Polity sectional mock"
+                  defaultValue={editTest?.title ?? ""}
+                  required
+                />
+              </TestField>
+              <TestField label="Stage">
+                <select className="select" name="examStage" defaultValue={editTest?.examStage ?? "PRELIMS"}>
+                  <option value="PRELIMS">Prelims</option>
+                  <option value="MAINS">Mains</option>
+                </select>
+              </TestField>
+              <TestField label="Type">
+                <select className="select" name="testType" defaultValue={editTest?.testType ?? "SECTIONAL"}>
+                  <option value="SECTIONAL">Sectional</option>
+                  <option value="UNIT">Unit</option>
+                  <option value="SUBJECT">Subject-wise</option>
+                  <option value="FULL">Full length</option>
+                  <option value="ALL_INDIA">All India</option>
+                </select>
+              </TestField>
+              <TestField label="Subject">
+                <select className="select" name="studyNodeId" defaultValue={editTest?.studyNode?.id ?? ""}>
+                  <option value="">General</option>
+                  {subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>{subject.title}</option>
+                  ))}
+                </select>
+              </TestField>
+              <TestField label="Date">
+                <input
+                  className="field"
+                  type="date"
+                  name="testDate"
+                  defaultValue={editTest ? dateValue(editTest.testDate) : format(new Date(), "yyyy-MM-dd")}
+                  required
+                />
+              </TestField>
+            </div>
+          </div>
+
+          <div className="tests-form-section">
+            <div className="tests-form-section-title">Result</div>
+            <div className="tests-field-grid compact">
+              <TestField label="Total questions">
+                <input className="field" type="number" name="totalQuestions" placeholder="100" defaultValue={editTest?.totalQuestions ?? ""} />
+              </TestField>
+              <TestField label="Total marks">
+                <input className="field" type="number" step="0.01" name="totalMarks" placeholder="200" defaultValue={editTest?.totalMarks ?? ""} required />
+              </TestField>
+              <TestField label="Score">
+                <input className="field" type="number" step="0.01" name="score" placeholder="126.5" defaultValue={editTest?.score ?? ""} required />
+              </TestField>
+              <TestField label="Percentile">
+                <input className="field" type="number" step="0.01" name="percentile" placeholder="Optional" defaultValue={editTest?.percentile ?? ""} />
+              </TestField>
+            </div>
+          </div>
+
+          <div className="tests-form-section">
+            <div className="tests-form-section-title">Answer quality</div>
+            <div className="tests-field-grid compact">
+              <TestField label="Correct">
+                <input className="field" type="number" name="correctQuestions" placeholder="68" defaultValue={editTest?.correctQuestions ?? ""} />
+              </TestField>
+              <TestField label="Incorrect">
+                <input className="field" type="number" name="incorrectQuestions" placeholder="21" defaultValue={editTest?.incorrectQuestions ?? ""} />
+              </TestField>
+              <TestField label="Attempted">
+                <input className="field" type="number" name="attemptedQuestions" placeholder="89" defaultValue={editTest?.attemptedQuestions ?? ""} />
+              </TestField>
+              <TestField label="Time (min)">
+                <input className="field" type="number" name="timeMinutes" placeholder="120" defaultValue={editTest?.timeMinutes ?? ""} />
+              </TestField>
+            </div>
+          </div>
+
+          <TestField label="Performance note" span="full">
+            <textarea className="textarea tests-note-field" name="notes" placeholder="What changed, what failed, what to fix next." defaultValue={editTest?.notes ?? ""} />
+          </TestField>
 
           <button className="button tests-submit-button" type="submit" disabled={pending}>
             <Save size={16} />
-            {pending ? "Saving..." : editId ? "Update test" : "Save test"}
+            {pending ? "Saving…" : editId ? "Update test" : "Save test"}
           </button>
         </form>
       </article>
 
+      {/* ── Test Ledger ── */}
       <article className="glass panel tests-ledger-panel">
         <div className="tests-panel-head">
           <div>
@@ -181,20 +239,22 @@ export function TestsClient({
           ) : (
             sortedTests.map((test) => {
               const pct = scorePct(test);
-              const accuracy = testAccuracy(test);
+              const acc = testAccuracy(test);
               const active = editId === test.id;
+              const scoreTone =
+                pct >= 80 ? "var(--gold-bright)" : pct >= 60 ? "var(--physics)" : "var(--rose-bright)";
 
               return (
                 <article key={test.id} className={`tests-record-card${active ? " active" : ""}`}>
                   <div className="tests-record-main">
                     <div className="tests-record-title-row">
                       <strong>{test.title}</strong>
-                      <span>{pct}%</span>
+                      <span style={{ color: scoreTone }}>{pct}%</span>
                     </div>
                     <div className="tests-record-meta">
-                      <span><CalendarDays size={13} />{displayDate(test.testDate)}</span>
-                      <span><CheckCircle2 size={13} />{accuracy}% accuracy</span>
-                      <span><Clock3 size={13} />{test.timeMinutes ?? 0} min</span>
+                      <span><CalendarDays size={12} />{displayDate(test.testDate)}</span>
+                      <span><CheckCircle2 size={12} />{acc}% acc</span>
+                      <span><Clock3 size={12} />{test.timeMinutes ?? 0} min</span>
                     </div>
                     <div className="tests-record-progress">
                       <span style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
@@ -204,7 +264,7 @@ export function TestsClient({
                   <div className="tests-record-side">
                     <span>{test.examStage}</span>
                     <span>{test.studyNode?.title ?? "General"}</span>
-                    <strong>{test.score}/{test.totalMarks}</strong>
+                    <strong style={{ color: scoreTone }}>{test.score}/{test.totalMarks}</strong>
                   </div>
 
                   <div className="tests-record-actions">

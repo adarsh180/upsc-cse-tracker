@@ -31,11 +31,13 @@ type TestPerformancePoint = {
   title: string;
   scorePct: number;
   accuracy: number;
+  precision?: number;
   percentile: number;
   score: number;
   totalMarks: number;
   attempted: number;
   correct: number;
+  incorrect?: number;
   timeMinutes: number;
 };
 
@@ -136,6 +138,118 @@ export function TestPerformanceChart({ data }: { data: TestPerformancePoint[] })
             animationEasing="ease-out"
           />
         </RechartsComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+type TestTrendKey = "scorePct" | "accuracy" | "precision" | "percentile" | "timeMinutes";
+
+const testTrendLabels: Record<TestTrendKey, string> = {
+  scorePct: "Score",
+  accuracy: "Accuracy",
+  precision: "Precision",
+  percentile: "Percentile",
+  timeMinutes: "Time",
+};
+
+function TestMetricTooltip({
+  active,
+  payload,
+  label,
+}: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const point = entry?.payload as TestPerformancePoint | undefined;
+  const dataKey = String(entry?.dataKey ?? "scorePct") as TestTrendKey;
+  if (!point) return null;
+
+  const suffix = dataKey === "timeMinutes" ? " min" : dataKey === "percentile" ? "" : "%";
+
+  return (
+    <div className="test-chart-tooltip">
+      <strong>{point.title || label}</strong>
+      <span>
+        {testTrendLabels[dataKey] ?? "Value"}: {Number(entry.value ?? 0).toFixed(dataKey === "timeMinutes" ? 0 : 1)}
+        {suffix}
+      </span>
+      <span>Score: {point.score}/{point.totalMarks}</span>
+      <span>Correct: {point.correct} | Incorrect: {point.incorrect ?? 0}</span>
+      <span>Attempted: {point.attempted}</span>
+    </div>
+  );
+}
+
+export function TestMetricTrendChart({
+  data,
+  dataKey,
+  color,
+  domain = [0, 100],
+  suffix = "%",
+}: {
+  data: TestPerformancePoint[];
+  dataKey: TestTrendKey;
+  color: string;
+  domain?: [number, number | "auto"];
+  suffix?: string;
+}) {
+  const rawId = useId();
+  const gradientId = `test-metric-${dataKey}-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const hasData = data.length > 0;
+  const points = hasData
+    ? data
+    : [{
+        label: "No data",
+        title: "No test recorded",
+        scorePct: 0,
+        accuracy: 0,
+        precision: 0,
+        percentile: 0,
+        score: 0,
+        totalMarks: 0,
+        attempted: 0,
+        correct: 0,
+        incorrect: 0,
+        timeMinutes: 0,
+      }];
+
+  return (
+    <div className="tests-metric-trend-chart">
+      <ResponsiveContainer>
+        <AreaChart data={points} margin={{ top: 12, right: 12, bottom: 2, left: -8 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.44} />
+              <stop offset="72%" stopColor={color} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            stroke="rgba(238,232,217,0.36)"
+            tick={{ fontSize: 10, fontWeight: 800 }}
+            minTickGap={18}
+          />
+          <YAxis
+            domain={domain}
+            hide
+          />
+          <Tooltip content={<TestMetricTooltip />} cursor={{ stroke: "rgba(255,255,255,0.14)", strokeWidth: 1 }} />
+          <Area
+            type="monotone"
+            dataKey={dataKey}
+            stroke={color}
+            strokeWidth={3.4}
+            fill={`url(#${gradientId})`}
+            dot={false}
+            activeDot={{ r: 5.5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+            strokeLinecap="round"
+            animationDuration={900}
+            animationEasing="ease-out"
+          />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
