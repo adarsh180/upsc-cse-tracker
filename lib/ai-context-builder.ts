@@ -129,6 +129,33 @@ type BaseUPSCContext = {
     missionPatternSignals: string[];
     currentBacklogHighlights: string[];
   };
+  questionErrorSummary: {
+    totalLoggedQuestions: number;
+    recentMistakeCount: number;
+    studiedButWrongCount: number;
+    currentAffairsGapCount: number;
+    topErrorTypes: { label: string; count: number }[];
+    weakSubjects: { subject: string; total: number; mistakes: number; accuracy: number }[];
+    activeMistakeLoops: {
+      subject: string;
+      topic: string;
+      errorType: string;
+      count: number;
+      lastSeen: string;
+      latestTest: string;
+    }[];
+    latestActionFixes: string[];
+    riskSignals: string[];
+  };
+  strategicSnapshot: {
+    phase: string;
+    readinessScore: number;
+    readinessLabel: "RED" | "AMBER" | "GREEN";
+    riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    topRisks: string[];
+    nextBestActions: string[];
+    answerPolicy: string[];
+  };
   memory: {
     summaryText: string;
     recurringStrengths: string[];
@@ -198,6 +225,16 @@ function getTopPaperSignals(
   });
 
   return sorted.slice(0, count);
+}
+
+function getReadinessLabel(score: number): "RED" | "AMBER" | "GREEN" {
+  if (score >= 72) return "GREEN";
+  if (score >= 48) return "AMBER";
+  return "RED";
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function extractConversationThemes(messages: { content: string }[]) {
@@ -335,6 +372,253 @@ function deriveExecutionSummary(
   };
 }
 
+function deriveQuestionErrorSummary(
+  questionLogs: Array<{
+    subject: string | null;
+    topic: string | null;
+    outcome: string;
+    studiedTopic: boolean;
+    currentAffairsLinked: boolean;
+    errorType: string | null;
+    actionFix: string | null;
+    createdAt: Date;
+    testRecord: {
+      title: string;
+      testDate: Date;
+    };
+  }>,
+): BaseUPSCContext["questionErrorSummary"] {
+  const mistakeLogs = questionLogs.filter((log) => log.outcome !== "CORRECT");
+  const studiedButWrongCount = mistakeLogs.filter((log) => log.studiedTopic).length;
+  const currentAffairsGapCount = mistakeLogs.filter(
+    (log) => log.currentAffairsLinked || log.errorType === "CURRENT_AFFAIRS_GAP",
+  ).length;
+
+  const topErrorTypes = Object.entries(
+    mistakeLogs.reduce<Record<string, number>>((acc, log) => {
+      const key = log.errorType && log.errorType !== "NONE" ? log.errorType : "UNCLASSIFIED";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  const weakSubjects = Object.entries(
+    questionLogs.reduce<Record<string, { total: number; correct: number; mistakes: number }>>(
+      (acc, log) => {
+        const subject = log.subject?.trim() || "Unmapped";
+        const current = acc[subject] ?? { total: 0, correct: 0, mistakes: 0 };
+        current.total += 1;
+        if (log.outcome === "CORRECT") current.correct += 1;
+        if (log.outcome !== "CORRECT") current.mistakes += 1;
+        acc[subject] = current;
+        return acc;
+      },
+      {},
+    ),
+  )
+    .map(([subject, stats]) => ({
+      subject,
+      total: stats.total,
+      mistakes: stats.mistakes,
+      accuracy: stats.total ? Number(((stats.correct / stats.total) * 100).toFixed(1)) : 0,
+    }))
+    .filter((subject) => subject.total >= 2 && subject.mistakes > 0)
+    .sort((a, b) => b.mistakes - a.mistakes || a.accuracy - b.accuracy)
+    .slice(0, 6);
+
+  const activeMistakeLoops = Object.entries(
+    mistakeLogs.reduce<
+      Record<
+        string,
+        {
+          subject: string;
+          topic: string;
+          errorType: string;
+          count: number;
+          lastSeen: Date;
+          latestTest: string;
+        }
+      >
+    >((acc, log) => {
+      const subject = log.subject?.trim() || "Unmapped";
+      const topic = log.topic?.trim() || subject;
+      const errorType = log.errorType && log.errorType !== "NONE" ? log.errorType : "UNCLASSIFIED";
+      const key = `${subject.toLowerCase()}::${topic.toLowerCase()}::${errorType}`;
+      const current = acc[key] ?? {
+        subject,
+        topic,
+        errorType,
+        count: 0,
+        lastSeen: log.testRecord.testDate,
+        latestTest: log.testRecord.title,
+      };
+      current.count += 1;
+      if (log.testRecord.testDate > current.lastSeen) {
+        current.lastSeen = log.testRecord.testDate;
+        current.latestTest = log.testRecord.title;
+      }
+      acc[key] = current;
+      return acc;
+    }, {}),
+  )
+    .map(([, loop]) => ({
+      subject: loop.subject,
+      topic: loop.topic,
+      errorType: loop.errorType,
+      count: loop.count,
+      lastSeen: loop.lastSeen.toISOString(),
+      latestTest: loop.latestTest,
+    }))
+    .filter((loop) => loop.count >= 2)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
+  const latestActionFixes = mistakeLogs
+    .filter((log) => Boolean(log.actionFix?.trim()))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 8)
+    .map((log) => {
+      const subject = log.subject?.trim() || "Unmapped";
+      const topic = log.topic?.trim() || subject;
+      return `${subject} / ${topic}: ${log.actionFix?.trim()}`;
+    });
+
+  const riskSignals = [
+    ...(activeMistakeLoops[0]
+      ? [
+          `Repeated mistake loop: ${activeMistakeLoops[0].subject} / ${activeMistakeLoops[0].topic} (${activeMistakeLoops[0].errorType}) has ${activeMistakeLoops[0].count} misses`,
+        ]
+      : []),
+    ...(studiedButWrongCount >= 3
+      ? [`${studiedButWrongCount} recent mistakes came from topics already marked as studied`] : []),
+    ...(currentAffairsGapCount >= 3
+      ? [`${currentAffairsGapCount} recent mistakes are linked to current affairs gaps`] : []),
+    ...(weakSubjects[0]
+      ? [`Weakest logged subject signal is ${weakSubjects[0].subject} at ${weakSubjects[0].accuracy}% accuracy`] : []),
+    ...(topErrorTypes[0]
+      ? [`Dominant error type is ${topErrorTypes[0].label} with ${topErrorTypes[0].count} recent instances`] : []),
+  ].slice(0, 5);
+
+  return {
+    totalLoggedQuestions: questionLogs.length,
+    recentMistakeCount: mistakeLogs.length,
+    studiedButWrongCount,
+    currentAffairsGapCount,
+    topErrorTypes,
+    weakSubjects,
+    activeMistakeLoops,
+    latestActionFixes,
+    riskSignals,
+  };
+}
+
+function deriveStrategicSnapshot(
+  context: Omit<BaseUPSCContext, "memory" | "strategicSnapshot">,
+): BaseUPSCContext["strategicSnapshot"] {
+  const revisionHealth = context.revisionSummary.totalTopicsTracked
+    ? ((context.revisionSummary.totalTopicsTracked - context.revisionSummary.unrevisedTopics) /
+        context.revisionSummary.totalTopicsTracked) *
+      100
+    : 0;
+  const activityHealth = (context.performanceSummary.activeDaysLast7 / 7) * 100;
+  const prelimsHealth = context.testSummary.prelimsAveragePct || context.testSummary.avgOverallPct;
+  const executionHealth =
+    context.executionSummary.tasksCreated > 0 ? context.executionSummary.taskCompletionRate : 45;
+  const accuracyHealth = context.testSummary.negativeMarkingAccuracy || 45;
+
+  const readinessScore = Number(
+    (
+      clamp(context.performanceSummary.overallCompletionPct, 0, 100) * 0.2 +
+      clamp(prelimsHealth, 0, 100) * 0.25 +
+      clamp(activityHealth, 0, 100) * 0.15 +
+      clamp(revisionHealth, 0, 100) * 0.15 +
+      clamp(executionHealth, 0, 100) * 0.15 +
+      clamp(accuracyHealth, 0, 100) * 0.1
+    ).toFixed(1),
+  );
+
+  const topPaperRisk = getTopPaperSignals(context.papers, "weak", 1)[0];
+  const activeLoop = context.questionErrorSummary.activeMistakeLoops[0];
+  const weakSubject = context.questionErrorSummary.weakSubjects[0];
+
+  const topRisks = [
+    ...(context.performanceSummary.activeDaysLast7 < 5
+      ? [`Only ${context.performanceSummary.activeDaysLast7}/7 recent days have logged study activity`] : []),
+    ...(prelimsHealth > 0 && prelimsHealth < context.benchmarkProfile.prelimsSafePct
+      ? [
+          `Prelims/test average is ${prelimsHealth}% against ${context.benchmarkProfile.prelimsSafePct}% internal safe benchmark`,
+        ]
+      : []),
+    ...(context.testSummary.negativeMarkingAccuracy > 0 &&
+    context.testSummary.negativeMarkingAccuracy < 70
+      ? [`Negative marking accuracy is unsafe at ${context.testSummary.negativeMarkingAccuracy}%`] : []),
+    ...(context.revisionSummary.unrevisedTopics > 0
+      ? [`${context.revisionSummary.unrevisedTopics} leaf topics have no recorded revision`] : []),
+    ...(context.executionSummary.taskSkipRate >= 25
+      ? [`Todo skip rate is high at ${context.executionSummary.taskSkipRate}%`] : []),
+    ...(activeLoop
+      ? [`Active mistake loop: ${activeLoop.subject} / ${activeLoop.topic} (${activeLoop.errorType})`] : []),
+    ...(topPaperRisk
+      ? [`Weak paper coverage: ${topPaperRisk.title} at ${topPaperRisk.completionPct}% completion`] : []),
+  ].slice(0, 6);
+
+  const nextBestActions = [
+    ...(activeLoop
+      ? [
+          `Run a 45-minute error-loop repair on ${activeLoop.subject} / ${activeLoop.topic}, then retest 10 questions`,
+        ]
+      : []),
+    ...(weakSubject
+      ? [`Build a 20-question mixed drill for ${weakSubject.subject} and log mistakes by error type`] : []),
+    ...(context.revisionSummary.leastRevised[0]
+      ? [
+          `Revise ${context.revisionSummary.leastRevised[0].topic} today and increment its revision count after recall`,
+        ]
+      : []),
+    ...(context.executionSummary.currentBacklogHighlights[0]
+      ? [`Clear the current backlog starting with ${context.executionSummary.currentBacklogHighlights[0]}`] : []),
+    ...(topPaperRisk
+      ? [`Schedule one focused block for ${topPaperRisk.title} because it is a coverage drag`] : []),
+    "End the day with a daily log: hours, questions, blockers, tomorrow plan and discipline score",
+  ].slice(0, 5);
+
+  const phase =
+    context.daysToPrelimsDate <= 90
+      ? "Prelims final sprint"
+      : context.daysToPrelimsDate <= 180
+        ? "Prelims consolidation"
+        : context.daysToPrelimsDate <= 365
+          ? "Foundation-to-test ramp"
+          : "Long runway foundation";
+
+  const riskLevel: BaseUPSCContext["strategicSnapshot"]["riskLevel"] =
+    topRisks.length >= 5 || readinessScore < 38
+      ? "CRITICAL"
+      : topRisks.length >= 3 || readinessScore < 52
+        ? "HIGH"
+        : topRisks.length >= 1 || readinessScore < 72
+          ? "MEDIUM"
+          : "LOW";
+
+  return {
+    phase,
+    readinessScore,
+    readinessLabel: getReadinessLabel(readinessScore),
+    riskLevel,
+    topRisks,
+    nextBestActions,
+    answerPolicy: [
+      "For planning or performance questions, lead with the strongest risk signal before advice.",
+      "Convert advice into a tracker action: syllabus progress, todo, mission, revision, mock analysis or daily log.",
+      "When a question touches a weak subject or active mistake loop, include a quick diagnostic drill.",
+      "When data is missing, say what cannot be inferred and ask for the exact tracker input needed.",
+    ],
+  };
+}
+
 function deriveMemoryPayload(
   context: Omit<BaseUPSCContext, "memory">,
   recentUserMessages: { content: string }[],
@@ -372,6 +656,7 @@ function deriveMemoryPayload(
       ? [`Task skip rate is high at ${context.executionSummary.taskSkipRate}%`] : []),
     ...context.executionSummary.repeatedSkipSignals,
     ...weakPapers,
+    ...context.questionErrorSummary.riskSignals,
   ].slice(0, 6);
 
   const behavioralPatterns = [
@@ -392,6 +677,11 @@ function deriveMemoryPayload(
     ...(context.executionSummary.weakestExecutionTypes[0] &&
     context.executionSummary.weakestExecutionTypes[0].completionRate <= 40
       ? [`${context.executionSummary.weakestExecutionTypes[0].type} tasks are repeatedly under-executed at ${context.executionSummary.weakestExecutionTypes[0].completionRate}% completion`] : []),
+    ...(context.questionErrorSummary.activeMistakeLoops[0]
+      ? [
+          `The sharpest question-level loop is ${context.questionErrorSummary.activeMistakeLoops[0].subject} / ${context.questionErrorSummary.activeMistakeLoops[0].topic}`,
+        ]
+      : []),
   ].slice(0, 6);
 
   const mentorPriorities = [
@@ -406,6 +696,9 @@ function deriveMemoryPayload(
     ...(context.executionSummary.currentBacklogHighlights[0]
       ? [`Force execution on the current backlog starting with ${context.executionSummary.currentBacklogHighlights[0]}`]
       : []),
+    ...(context.strategicSnapshot.nextBestActions[0]
+      ? [`Next best tracked action: ${context.strategicSnapshot.nextBestActions[0]}`]
+      : []),
   ].slice(0, 4);
 
   const recentConversationThemes = extractConversationThemes(recentUserMessages);
@@ -414,6 +707,8 @@ function deriveMemoryPayload(
     `Adarsh Tiwari is on his 3rd UPSC CSE attempt targeting IAS specifically and aiming for a top-rank outcome in 2027.`,
     `The mentor currently tracks ${context.performanceSummary.totalLoggedHours.toFixed(1)} logged study hours, ${context.testSummary.testsTaken} tests, ${context.recentMoodEntries.length} recent mood entries, and ${context.recentDailyLogs.length} recent daily logs.`,
     `Mission execution history includes ${context.executionSummary.missionsLaunched} launched missions, ${context.executionSummary.tasksCreated} tracked tasks, ${context.executionSummary.taskCompletionRate}% completion and ${context.executionSummary.taskSkipRate}% skip rate.`,
+    `Strategic snapshot is ${context.strategicSnapshot.readinessLabel} with ${context.strategicSnapshot.readinessScore}/100 readiness and ${context.strategicSnapshot.riskLevel.toLowerCase()} risk in the ${context.strategicSnapshot.phase} phase.`,
+    `Question-level error memory has ${context.questionErrorSummary.totalLoggedQuestions} logged questions, ${context.questionErrorSummary.recentMistakeCount} recent mistakes and ${context.questionErrorSummary.activeMistakeLoops.length} active repeated mistake loops.`,
     `The strongest study zones right now are ${strongPapers.join(" and ") || "not yet clearly visible"}.`,
     `The weakest live signals are ${recurringWeaknesses.slice(0, 3).join("; ") || "insufficient evidence due to missing logs"}.`,
     `Recent behavioral pattern signals: ${behavioralPatterns.slice(0, 3).join("; ") || "not enough durable pattern evidence yet"}.`,
@@ -443,6 +738,8 @@ function deriveMemoryPayload(
       "Essay submissions and score history",
       "Paper-wise completion derived from leaf topic and sub-topic status",
       "Mission history and todo execution",
+      "Question-level mock-test error logs",
+      "Strategic readiness snapshot",
       "Conversation history",
       "Uploaded PDF text",
     ],
@@ -500,7 +797,7 @@ async function buildBaseUPSCContext() {
     topRevised,
     leastRevised,
   };
-  const [missions, agentTasks] = await Promise.all([
+  const [missions, agentTasks, recentQuestionLogs] = await Promise.all([
     db.agentMission.findMany({
       orderBy: { launchedAt: "desc" },
       take: 40,
@@ -524,8 +821,29 @@ async function buildBaseUPSCContext() {
         },
       },
     }),
+    db.testQuestionLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 250,
+      select: {
+        subject: true,
+        topic: true,
+        outcome: true,
+        studiedTopic: true,
+        currentAffairsLinked: true,
+        errorType: true,
+        actionFix: true,
+        createdAt: true,
+        testRecord: {
+          select: {
+            title: true,
+            testDate: true,
+          },
+        },
+      },
+    }),
   ]);
   const executionSummary = deriveExecutionSummary(missions, agentTasks);
+  const questionErrorSummary = deriveQuestionErrorSummary(recentQuestionLogs);
   // ──────────────────────────────────────────────────
 
   const activeDaysLast7 = dailyLogs.filter((log) => {
@@ -592,7 +910,7 @@ async function buildBaseUPSCContext() {
     ).toFixed(1),
   );
 
-  return {
+  const baseContext: Omit<BaseUPSCContext, "memory" | "strategicSnapshot"> = {
     student: {
       name: "Adarsh Tiwari",
       exam: "UPSC CSE 2027",
@@ -687,6 +1005,12 @@ async function buildBaseUPSCContext() {
     },
     revisionSummary,
     executionSummary,
+    questionErrorSummary,
+  };
+
+  return {
+    ...baseContext,
+    strategicSnapshot: deriveStrategicSnapshot(baseContext),
   };
 }
 
@@ -829,6 +1153,14 @@ What you know in real time:
 2. Stored memory profile from recurring strengths, weaknesses, behavioral patterns and prior chat themes
 3. Active chat history from the current and past Guru conversations
 
+Strategic operating snapshot:
+- Phase: ${context.strategicSnapshot.phase}
+- Readiness: ${context.strategicSnapshot.readinessLabel} (${context.strategicSnapshot.readinessScore}/100)
+- Risk level: ${context.strategicSnapshot.riskLevel}
+- Top risks: ${context.strategicSnapshot.topRisks.join("; ") || "No strong risk signal yet"}
+- Next best actions: ${context.strategicSnapshot.nextBestActions.join("; ") || "Ask for more tracker data before prescribing"}
+- Question error signals: ${context.questionErrorSummary.riskSignals.join("; ") || "No repeated question-level mistake loop logged yet"}
+
 Inviolable rules:
 1. Prefer short paragraphs, numbered sections and clean markdown tables when structure helps.
 2. Never use decorative bullet spam, fluff, fake praise or vague motivational filler.
@@ -841,6 +1173,10 @@ Inviolable rules:
 9. When discussing performance, mention the metric or source you used.
 10. Do not pretend to know live topper data or fresh exam trends unless those are explicitly present in the supplied context.
 11. Treat repeated skipped tasks, weak task completion rates and backlog accumulation as execution-pattern evidence, not as isolated events.
+12. For planning, performance, revision or "what should I do now" questions, use the strategic operating snapshot before giving general UPSC advice.
+13. When question-level error signals exist, name the subject/topic/error type and prescribe a repair drill, not a vague study suggestion.
+14. Every serious recommendation should map to one tracker action: syllabus progress, todo, mission, revision count, test error log, essay submission or daily log.
+15. If the tracker lacks enough data for a confident diagnosis, say exactly which log or test-analysis input is missing.
 
 ${modeBlock}`;
 }
