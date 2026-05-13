@@ -84,9 +84,9 @@ function shouldForceVisualForMessage(message: string, mode: "guru" | "deep-analy
   const nonVisualPatterns = [
     /\btodo\b/,
     /\btask\b/,
-    /\badd\b.+\b(topic|chapter|subject)\b/,
-    /\bdelete\b.+\b(topic|chapter|subject)\b/,
-    /\bupdate\b.+\b(topic|chapter|subject)\b/,
+    /\badd\b.+\b(topic|sub-topic|subtopic|chapter|subject)\b/,
+    /\bdelete\b.+\b(topic|sub-topic|subtopic|chapter|subject)\b/,
+    /\bupdate\b.+\b(topic|sub-topic|subtopic|chapter|subject)\b/,
     /\bmark\b.+\bcomplete\b/,
     /\bscore\b/,
     /\brank\b/,
@@ -112,6 +112,9 @@ function revalidateStudyNodeChain(node: {
     slug: string;
     parent?: {
       slug: string;
+      parent?: {
+        slug: string;
+      } | null;
     } | null;
   } | null;
 }) {
@@ -124,15 +127,20 @@ function revalidateStudyNodeChain(node: {
   if (node.parent?.parent?.slug) {
     revalidatePath(`/study/${node.parent.parent.slug}`);
   }
+
+  if (node.parent?.parent?.parent?.slug) {
+    revalidatePath(`/study/${node.parent.parent.parent.slug}`);
+  }
 }
 
 const syllabusOperationSchema = z.object({
   action: z.enum(["create", "update", "delete", "set_progress"]),
-  targetType: z.enum(["subject", "chapter", "topic"]),
+  targetType: z.enum(["subject", "chapter", "topic", "subtopic"]),
   paperTitle: z.string().optional(),
   subjectTitle: z.string().optional(),
   chapterTitle: z.string().optional(),
   topicTitle: z.string().optional(),
+  subTopicTitle: z.string().optional(),
   title: z.string().optional(),
   newTitle: z.string().optional(),
   overview: z.string().optional(),
@@ -155,7 +163,8 @@ const todoOperationSchema = z.object({
   subjectTitle: z.string().optional(),
   chapterTitle: z.string().optional(),
   topicTitle: z.string().optional(),
-  targetType: z.enum(["subject", "chapter", "topic"]).optional(),
+  subTopicTitle: z.string().optional(),
+  targetType: z.enum(["subject", "chapter", "topic", "subtopic"]).optional(),
 });
 
 async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationSchema>) {
@@ -163,7 +172,8 @@ async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationS
     const parentNode = await resolveNodeForCreate({
       paperTitle: input.paperTitle,
       subjectTitle: input.subjectTitle,
-      chapterTitle: input.targetType === "topic" ? input.chapterTitle : undefined,
+      chapterTitle: input.targetType === "topic" || input.targetType === "subtopic" ? input.chapterTitle : undefined,
+      topicTitle: input.targetType === "subtopic" ? input.topicTitle : undefined,
     });
 
     const title = String(
@@ -172,7 +182,9 @@ async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationS
           ? input.subjectTitle
           : input.targetType === "chapter"
             ? input.chapterTitle
-            : input.topicTitle) ??
+            : input.targetType === "topic"
+              ? input.topicTitle
+              : input.subTopicTitle) ??
         "",
     ).trim();
     if (!title) {
@@ -186,6 +198,7 @@ async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationS
     });
     refreshStudyViews();
     revalidatePath(`/study/${parentNode.slug}`);
+    revalidateStudyNodeChain(parentNode);
 
     return {
       ok: true,
@@ -211,12 +224,15 @@ async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationS
     subjectTitle: input.targetType === "subject" ? input.subjectTitle ?? input.title : input.subjectTitle,
     chapterTitle: input.targetType === "chapter" ? input.chapterTitle ?? input.title : input.chapterTitle,
     topicTitle: input.targetType === "topic" ? input.topicTitle ?? input.title : input.topicTitle,
+    subTopicTitle: input.targetType === "subtopic" ? input.subTopicTitle ?? input.title : input.subTopicTitle,
     nodeTitle:
       input.targetType === "subject"
         ? input.subjectTitle ?? input.title
         : input.targetType === "chapter"
           ? input.chapterTitle ?? input.title
-          : input.topicTitle ?? input.title,
+          : input.targetType === "topic"
+            ? input.topicTitle ?? input.title
+            : input.subTopicTitle ?? input.title,
   });
 
   if (input.action === "update") {
@@ -266,7 +282,7 @@ async function executeSyllabusOperation(input: z.infer<typeof syllabusOperationS
   const progressResult = await setStudyNodeCompletion({
     nodeId: resolved.id,
     completed: input.completed,
-    cascade: input.targetType !== "topic",
+    cascade: input.targetType !== "subtopic",
   });
   refreshStudyViews();
   revalidateStudyNodeChain(resolved);
@@ -292,14 +308,17 @@ async function resolveLinkedStudyNodeIdForTodo(input: z.infer<typeof todoOperati
   const resolved = await resolveStudyNode({
     paperTitle: input.paperTitle,
     subjectTitle: input.subjectTitle,
-    chapterTitle: input.targetType === "chapter" || input.targetType === "topic" ? input.chapterTitle : undefined,
-    topicTitle: input.targetType === "topic" ? input.topicTitle : undefined,
+    chapterTitle: input.targetType === "chapter" || input.targetType === "topic" || input.targetType === "subtopic" ? input.chapterTitle : undefined,
+    topicTitle: input.targetType === "topic" || input.targetType === "subtopic" ? input.topicTitle : undefined,
+    subTopicTitle: input.targetType === "subtopic" ? input.subTopicTitle : undefined,
     nodeTitle:
       input.targetType === "subject"
         ? input.subjectTitle
         : input.targetType === "chapter"
           ? input.chapterTitle
-          : input.topicTitle,
+          : input.targetType === "topic"
+            ? input.topicTitle
+            : input.subTopicTitle,
   });
 
   return resolved.id;
@@ -379,12 +398,12 @@ export async function POST(request: Request) {
   const system = `${buildUPSCSystemPrompt(context, mode)}
 
 Tooling rules for syllabus operations:
-- If the user asks to add, edit, delete, or mark complete/incomplete any subject, chapter, or topic, use the syllabus management tool instead of only describing the steps.
-- If the user explicitly asks to add a topic, create only a topic. If the user asks to add a chapter, create only a chapter. Do not silently swap target types.
+- If the user asks to add, edit, delete, or mark complete/incomplete any subject, chapter, topic, or sub-topic, use the syllabus management tool instead of only describing the steps.
+- If the user explicitly asks to add a topic or sub-topic, create only that requested level. If the user asks to add a chapter, create only a chapter. Do not silently swap target types.
 - If the user asks for multiple syllabus changes in one message, execute all of them with the batch syllabus tool.
 - Treat "status" as completion progress.
-- For subject and chapter completion changes, update the full subtree unless the user explicitly asks for only one item.
-- Before creating a new subject, chapter, or topic, prefer the closest existing match when the difference is only case, spacing, or a small spelling mistake.
+- For subject, chapter, and topic completion changes, update the full subtree unless the user explicitly asks for only one item. Sub-topic completion changes affect only that sub-topic.
+- Duplicate names are allowed at subject, chapter, topic, and sub-topic level; use the user's requested title as a new node when the intent is creation.
 - If the user asks to create, update, or delete todos, use the todo tool instead of only describing the steps.
 - If a target reference is ambiguous, ask a short clarifying question in the final answer.`;
 
@@ -504,13 +523,13 @@ Instructions for this turn:
     tools: {
       manage_syllabus: tool({
         description:
-          "Add, edit, delete, or change completion progress for a subject, chapter, or topic in the UPSC study tree.",
+          "Add, edit, delete, or change completion progress for a subject, chapter, topic, or sub-topic in the UPSC study tree.",
         inputSchema: syllabusOperationSchema,
         execute: executeSyllabusOperation,
       }),
       manage_syllabus_batch: tool({
         description:
-          "Execute multiple syllabus operations in one request, such as adding several topics across different subjects and chapters.",
+          "Execute multiple syllabus operations in one request, such as adding several topics or sub-topics across different subjects and chapters.",
         inputSchema: z.object({
           operations: z.array(syllabusOperationSchema).min(1).max(20),
         }),

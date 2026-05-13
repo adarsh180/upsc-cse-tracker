@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { setStudyNodeCompletion } from "@/lib/study-tree";
 
 async function requireApiSession() {
   const session = await getSession();
@@ -86,13 +87,31 @@ export async function POST(req: NextRequest) {
       studyNodeId: string;
       checked?: boolean;
       revisionDelta?: number;
+      cascade?: boolean;
       pathname?: string;
     };
 
-    const { studyNodeId, checked, revisionDelta, pathname } = body;
+    const { studyNodeId, checked, revisionDelta, cascade, pathname } = body;
 
     if (!studyNodeId) {
       return NextResponse.json({ error: "studyNodeId required" }, { status: 400 });
+    }
+
+    if (checked !== undefined && cascade) {
+      const result = await setStudyNodeCompletion({
+        nodeId: studyNodeId,
+        completed: checked,
+        cascade: true,
+      });
+
+      if (pathname) {
+        revalidatePath(pathname);
+      }
+      revalidatePath("/dashboard");
+      revalidatePath("/");
+      revalidatePath("/", "layout");
+
+      return NextResponse.json({ success: true, affectedNodes: result.affectedNodes });
     }
 
     // Get existing record to compute new revision count

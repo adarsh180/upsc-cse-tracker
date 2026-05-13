@@ -18,6 +18,7 @@ type TopicNode = {
   title: string;
   overview: string | null;
   topicProgress: { checked: boolean; revisionCount: number } | null;
+  children?: TopicNode[];
 };
 
 type ChapterNode = {
@@ -64,6 +65,63 @@ function moveItem<T>(items: T[], from: number, to: number) {
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
+}
+
+function nodeChildren(node: TopicNode) {
+  return node.children ?? [];
+}
+
+function collectNodeIds(node: TopicNode): string[] {
+  return [node.id, ...nodeChildren(node).flatMap((child) => collectNodeIds(child))];
+}
+
+function collectLeafIds(nodes: TopicNode[]): string[] {
+  return nodes.flatMap((node) => {
+    const children = nodeChildren(node);
+    return children.length ? collectLeafIds(children) : [node.id];
+  });
+}
+
+function updateTopicTree(nodes: TopicNode[], id: string, update: (node: TopicNode) => TopicNode): TopicNode[] {
+  return nodes.map((node) => {
+    if (node.id === id) return update(node);
+    const children = nodeChildren(node);
+    if (!children.length) return node;
+    return { ...node, children: updateTopicTree(children, id, update) };
+  });
+}
+
+function removeTopicTreeNode(nodes: TopicNode[], id: string): TopicNode[] {
+  return nodes
+    .filter((node) => node.id !== id)
+    .map((node) => {
+      const children = nodeChildren(node);
+      return children.length ? { ...node, children: removeTopicTreeNode(children, id) } : node;
+    });
+}
+
+function findTopicTreeNode(nodes: TopicNode[], id: string): TopicNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const found = findTopicTreeNode(nodeChildren(node), id);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function addProgressFromTopics(
+  topics: TopicNode[],
+  progressMap: Record<string, boolean>,
+  revisionMap: Record<string, number>,
+) {
+  for (const topic of topics) {
+    if (topic.topicProgress) {
+      progressMap[topic.id] = topic.topicProgress.checked;
+      revisionMap[topic.id] = topic.topicProgress.revisionCount;
+    }
+    addProgressFromTopics(nodeChildren(topic), progressMap, revisionMap);
+  }
 }
 
 function normalizeTitle(value: string) {
@@ -140,12 +198,15 @@ function InlineEdit({
 
 function TopicRow({
   topic,
+  level = 0,
+  pathname,
   optimisticMap,
   revisionMap,
   onToggle,
   onRename,
   onDelete,
   onRevisionChange,
+  onAddSubTopic,
   isDragging,
   isDropTarget,
   onDragStart,
@@ -154,12 +215,15 @@ function TopicRow({
   onDragEnd,
 }: {
   topic: TopicNode;
+  level?: number;
+  pathname: string;
   optimisticMap: Record<string, boolean>;
   revisionMap: Record<string, number>;
-  onToggle: (id: string, checked: boolean) => void;
+  onToggle: (ids: string[], checked: boolean) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
   onRevisionChange: (id: string, delta: number) => void;
+  onAddSubTopic: (topicId: string, title: string) => Promise<void>;
   isDragging: boolean;
   isDropTarget: boolean;
   onDragStart: () => void;
@@ -169,8 +233,19 @@ function TopicRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const isChecked = optimisticMap[topic.id] ?? false;
+  const [addOpen, setAddOpen] = useState(false);
+  const [newSubTopic, setNewSubTopic] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const subTopics = nodeChildren(topic);
+  const leafIds = collectLeafIds([topic]);
+  const isContainer = subTopics.length > 0;
+  const doneCount = leafIds.filter((id) => optimisticMap[id] ?? false).length;
+  const isChecked = leafIds.length ? doneCount === leafIds.length : optimisticMap[topic.id] ?? false;
+  const pct = leafIds.length ? Math.round((doneCount / leafIds.length) * 100) : 0;
   const revCount = revisionMap[topic.id] ?? 0;
+  const avgRevision = leafIds.length
+    ? Math.round(leafIds.reduce((sum, id) => sum + (revisionMap[id] ?? 0), 0) / leafIds.length)
+    : revCount;
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -178,68 +253,161 @@ function TopicRow({
     return () => window.clearTimeout(timeout);
   }, [confirmDelete]);
 
-  return (
-    <div
-      className={`study-topic-row${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
-      draggable={!editing}
-      onDragStart={() => onDragStart()}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragOver();
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop();
-      }}
-      onDragEnd={onDragEnd}
-    >
-      <div className="study-row-leading">
-        <span className="study-drag-chip" aria-hidden="true" title="Drag to reorder">
-          <GripVertical size={12} />
-        </span>
-        <button type="button" onClick={() => onToggle(topic.id, !isChecked)} className="study-topic-main">
-          <div className="topic-checkbox" />
-          {!editing ? (
-            <div className="topic-label">
-              <span className={isChecked ? "done" : ""}>{topic.title}</span>
-              {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
-            </div>
-          ) : null}
-        </button>
-      </div>
+  const handleAddSubTopic = () => {
+    const title = normalizeTitle(newSubTopic);
+    if (!title) return;
 
-      {editing ? (
-        <InlineEdit
-          label={topic.title}
-          onSave={(title) => {
-            if (title) onRename(topic.id, title);
-            setEditing(false);
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
-        <div className="study-row-actions">
-          <RevisionBadge count={revCount} onIncrement={() => onRevisionChange(topic.id, 1)} onDecrement={() => onRevisionChange(topic.id, -1)} />
-          <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title="Rename topic">
-            <Pencil size={12} />
-          </button>
+    startTransition(async () => {
+      await onAddSubTopic(topic.id, title);
+      setNewSubTopic("");
+      setAddOpen(false);
+    });
+  };
+
+  return (
+    <div className={level > 0 ? "study-subtopic-block" : undefined}>
+      <div
+        className={`study-topic-row${level > 0 ? " subtopic" : ""}${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+        draggable={level === 0 && !editing}
+        onDragStart={() => {
+          if (level === 0) onDragStart();
+        }}
+        onDragOver={(event) => {
+          if (level !== 0) return;
+          event.preventDefault();
+          onDragOver();
+        }}
+        onDrop={(event) => {
+          if (level !== 0) return;
+          event.preventDefault();
+          onDrop();
+        }}
+        onDragEnd={onDragEnd}
+      >
+        <div className="study-row-leading">
+          {level === 0 ? (
+            <span className="study-drag-chip" aria-hidden="true" title="Drag to reorder">
+              <GripVertical size={12} />
+            </span>
+          ) : (
+            <span className="study-subtopic-dot" aria-hidden="true" />
+          )}
           <button
             type="button"
-            onClick={() => {
-              if (!confirmDelete) {
-                setConfirmDelete(true);
-                return;
-              }
-              onDelete(topic.id);
-              setConfirmDelete(false);
+            onClick={async () => {
+              const nextChecked = !isChecked;
+              const idsToUpdate = isContainer ? collectNodeIds(topic) : [topic.id];
+              onToggle(idsToUpdate, nextChecked);
+              await fetch("/api/topic-progress", {
+                method: "POST",
+                body: JSON.stringify({ studyNodeId: topic.id, checked: nextChecked, cascade: isContainer, pathname }),
+                headers: { "Content-Type": "application/json" },
+              });
             }}
-            className="study-icon-btn danger"
-            title={confirmDelete ? "Confirm delete" : "Delete topic"}
+            className="study-topic-main"
           >
-            {confirmDelete ? "Sure?" : <Trash2 size={12} />}
+            <div className="topic-checkbox" />
+            {!editing ? (
+              <div className="topic-label">
+                <span className={isChecked ? "done" : ""}>{topic.title}</span>
+                {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
+              </div>
+            ) : null}
           </button>
         </div>
-      )}
+
+        {editing ? (
+          <InlineEdit
+            label={topic.title}
+            onSave={(title) => {
+              if (title) onRename(topic.id, title);
+              setEditing(false);
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <div className="study-row-actions">
+            {isContainer ? (
+              <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{leafIds.length}</span>
+            ) : (
+              <RevisionBadge count={revCount} onIncrement={() => onRevisionChange(topic.id, 1)} onDecrement={() => onRevisionChange(topic.id, -1)} />
+            )}
+            {isContainer && avgRevision > 0 ? (
+              <span className="study-soft-pill" style={{ color: revisionColor(avgRevision), borderColor: `${revisionColor(avgRevision)}44` }}>
+                avg {avgRevision}x
+              </span>
+            ) : null}
+            {level === 0 ? (
+              <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add sub-topic">
+                <Plus size={12} />
+              </button>
+            ) : null}
+            <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title={level > 0 ? "Rename sub-topic" : "Rename topic"}>
+              <Pencil size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  return;
+                }
+                onDelete(topic.id);
+                setConfirmDelete(false);
+              }}
+              className="study-icon-btn danger"
+              title={confirmDelete ? "Confirm delete" : level > 0 ? "Delete sub-topic" : "Delete topic"}
+            >
+              {confirmDelete ? "Sure?" : <Trash2 size={12} />}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {addOpen ? (
+        <div className="study-inline-creator study-subtopic-creator">
+          <input
+            autoFocus
+            value={newSubTopic}
+            onChange={(event) => setNewSubTopic(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleAddSubTopic();
+              if (event.key === "Escape") setAddOpen(false);
+            }}
+            placeholder="Add a sub-topic"
+            className="study-inline-input"
+          />
+          <button type="button" onClick={handleAddSubTopic} disabled={isPending || !normalizeTitle(newSubTopic)} className="button-secondary">
+            {isPending ? "Adding..." : "Add"}
+          </button>
+        </div>
+      ) : null}
+
+      {subTopics.length ? (
+        <div className="study-subtopic-stack">
+          {subTopics.map((subTopic) => (
+            <TopicRow
+              key={subTopic.id}
+              topic={subTopic}
+              level={level + 1}
+              pathname={pathname}
+              optimisticMap={optimisticMap}
+              revisionMap={revisionMap}
+              onToggle={onToggle}
+              onRename={onRename}
+              onDelete={onDelete}
+              onRevisionChange={onRevisionChange}
+              onAddSubTopic={onAddSubTopic}
+              isDragging={false}
+              isDropTarget={false}
+              onDragStart={() => {}}
+              onDragOver={() => {}}
+              onDrop={() => {}}
+              onDragEnd={() => {}}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -253,6 +421,7 @@ function ChapterAccordion({
   onToggle,
   onRevisionChange,
   onAddTopic,
+  onAddSubTopic,
   onRenameChapter,
   onDeleteChapter,
   onRenameTopic,
@@ -274,9 +443,10 @@ function ChapterAccordion({
   optimisticMap: Record<string, boolean>;
   revisionMap: Record<string, number>;
   chapterIndex: number;
-  onToggle: (id: string, checked: boolean) => void;
+  onToggle: (ids: string[], checked: boolean) => void;
   onRevisionChange: (id: string, delta: number) => void;
   onAddTopic: (chapterId: string, title: string) => Promise<void>;
+  onAddSubTopic: (topicId: string, title: string) => Promise<void>;
   onRenameChapter: (id: string, title: string) => Promise<void>;
   onDeleteChapter: (id: string) => Promise<void>;
   onRenameTopic: (id: string, title: string) => Promise<void>;
@@ -305,7 +475,7 @@ function ChapterAccordion({
       ? chapter.children
       : [{ id: chapter.id, title: chapter.title, overview: chapter.overview, topicProgress: chapter.topicProgress }];
 
-  const allIds = topics.map((topic) => topic.id);
+  const allIds = collectLeafIds(topics);
   const doneCount = allIds.filter((id) => optimisticMap[id] ?? false).length;
   const pct = allIds.length ? Math.round((doneCount / allIds.length) * 100) : 0;
   const accentColor = pct === 100 ? "var(--gold)" : pct >= 50 ? "var(--botany)" : "var(--physics)";
@@ -439,17 +609,12 @@ function ChapterAccordion({
             <TopicRow
               key={topic.id}
               topic={topic}
+              pathname={pathname}
               optimisticMap={optimisticMap}
               revisionMap={revisionMap}
-              onToggle={async (id, checked) => {
-                onToggle(id, checked);
-                await fetch("/api/topic-progress", {
-                  method: "POST",
-                  body: JSON.stringify({ studyNodeId: id, checked, pathname }),
-                  headers: { "Content-Type": "application/json" },
-                });
-              }}
+              onToggle={onToggle}
               onRevisionChange={onRevisionChange}
+              onAddSubTopic={onAddSubTopic}
               onRename={async (id, title) => {
                 await onRenameTopic(id, title);
               }}
@@ -490,21 +655,19 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const [dropState, setDropState] = useState<DragState>(null);
   const [optimisticMap, setOptimisticMap] = useState<Record<string, boolean>>(() => {
     const next: Record<string, boolean> = {};
+    const revisions: Record<string, number> = {};
     for (const chapter of initialChapters) {
       if (chapter.topicProgress) next[chapter.id] = chapter.topicProgress.checked;
-      for (const topic of chapter.children) {
-        if (topic.topicProgress) next[topic.id] = topic.topicProgress.checked;
-      }
+      addProgressFromTopics(chapter.children, next, revisions);
     }
     return next;
   });
   const [revisionMap, setRevisionMap] = useState<Record<string, number>>(() => {
     const next: Record<string, number> = {};
+    const progress: Record<string, boolean> = {};
     for (const chapter of initialChapters) {
       if (chapter.topicProgress) next[chapter.id] = chapter.topicProgress.revisionCount;
-      for (const topic of chapter.children) {
-        if (topic.topicProgress) next[topic.id] = topic.topicProgress.revisionCount;
-      }
+      addProgressFromTopics(chapter.children, progress, next);
     }
     return next;
   });
@@ -519,12 +682,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
         nextProgress[chapter.id] = chapter.topicProgress.checked;
         nextRevisions[chapter.id] = chapter.topicProgress.revisionCount;
       }
-      for (const topic of chapter.children) {
-        if (topic.topicProgress) {
-          nextProgress[topic.id] = topic.topicProgress.checked;
-          nextRevisions[topic.id] = topic.topicProgress.revisionCount;
-        }
-      }
+      addProgressFromTopics(chapter.children, nextProgress, nextRevisions);
     }
 
     setOptimisticMap((current) => ({ ...current, ...nextProgress }));
@@ -554,8 +712,14 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
     });
   };
 
-  const handleToggle = (id: string, checked: boolean) => {
-    setOptimisticMap((current) => ({ ...current, [id]: checked }));
+  const handleToggle = (ids: string[], checked: boolean) => {
+    setOptimisticMap((current) => {
+      const next = { ...current };
+      for (const id of ids) {
+        next[id] = checked;
+      }
+      return next;
+    });
   };
 
   const handleRevisionChange = async (id: string, delta: number) => {
@@ -603,7 +767,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
         chapter.id === chapterId
           ? {
               ...chapter,
-              children: [...chapter.children, { id: tempId, title: cleanTitle, overview: null, topicProgress: null }],
+              children: [...chapter.children, { id: tempId, title: cleanTitle, overview: null, topicProgress: null, children: [] }],
             }
           : chapter,
       ),
@@ -636,9 +800,64 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
 
         return {
           ...chapter,
-          children: alreadyPresent ? withoutTemp : [...withoutTemp, { id: created.id, title: created.title, overview: null, topicProgress: null }],
+          children: alreadyPresent ? withoutTemp : [...withoutTemp, { id: created.id, title: created.title, overview: null, topicProgress: null, children: [] }],
         };
       }),
+    );
+  };
+
+  const handleAddSubTopic = async (topicId: string, title: string) => {
+    const cleanTitle = normalizeTitle(title);
+    if (!cleanTitle) return;
+
+    const tempId = `temp-${Date.now()}`;
+    setChapters((current) =>
+      current.map((chapter) => ({
+        ...chapter,
+        children: updateTopicTree(chapter.children, topicId, (topic) => ({
+          ...topic,
+          children: [...nodeChildren(topic), { id: tempId, title: cleanTitle, overview: null, topicProgress: null, children: [] }],
+        })),
+      })),
+    );
+
+    const formData = new FormData();
+    formData.set("parentId", topicId);
+    formData.set("title", cleanTitle);
+    formData.set("overview", "");
+    formData.set("pathname", pathname);
+
+    const response = await fetch("/api/study-node", { method: "POST", body: formData });
+    if (!response.ok) {
+      setChapters((current) =>
+        current.map((chapter) => ({
+          ...chapter,
+          children: updateTopicTree(chapter.children, topicId, (topic) => ({
+            ...topic,
+            children: nodeChildren(topic).filter((child) => child.id !== tempId),
+          })),
+        })),
+      );
+      return;
+    }
+
+    const created: { id: string; title: string; created?: boolean } = await response.json();
+
+    setChapters((current) =>
+      current.map((chapter) => ({
+        ...chapter,
+        children: updateTopicTree(chapter.children, topicId, (topic) => {
+          const withoutTemp = nodeChildren(topic).filter((child) => child.id !== tempId);
+          const alreadyPresent = withoutTemp.some((child) => child.id === created.id);
+
+          return {
+            ...topic,
+            children: alreadyPresent
+              ? withoutTemp
+              : [...withoutTemp, { id: created.id, title: created.title, overview: null, topicProgress: null, children: [] }],
+          };
+        }),
+      })),
     );
   };
 
@@ -662,7 +881,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
     setChapters((current) =>
       current.map((chapter) => ({
         ...chapter,
-        children: chapter.children.map((topic) => (topic.id === id ? { ...topic, title } : topic)),
+        children: updateTopicTree(chapter.children, id, (topic) => ({ ...topic, title })),
       })),
     );
     const formData = new FormData();
@@ -675,20 +894,25 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   };
 
   const handleDeleteTopic = async (id: string) => {
+    const deletedIds = chapters.flatMap((chapter) => {
+      const node = findTopicTreeNode(chapter.children, id);
+      return node ? collectNodeIds(node) : [];
+    });
+
     setChapters((current) =>
       current.map((chapter) => ({
         ...chapter,
-        children: chapter.children.filter((topic) => topic.id !== id),
+        children: removeTopicTreeNode(chapter.children, id),
       })),
     );
     setOptimisticMap((current) => {
       const next = { ...current };
-      delete next[id];
+      for (const deletedId of deletedIds) delete next[deletedId];
       return next;
     });
     setRevisionMap((current) => {
       const next = { ...current };
-      delete next[id];
+      for (const deletedId of deletedIds) delete next[deletedId];
       return next;
     });
     await fetch(`/api/study-node?id=${encodeURIComponent(id)}&pathname=${encodeURIComponent(pathname)}`, { method: "DELETE" });
@@ -699,7 +923,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const allTopicIds: string[] = [];
   for (const chapter of chapters) {
     if (chapter.children.length > 0) {
-      for (const topic of chapter.children) allTopicIds.push(topic.id);
+      allTopicIds.push(...collectLeafIds(chapter.children));
     } else {
       allTopicIds.push(chapter.id);
     }
@@ -720,7 +944,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
           <CircularProgress pct={overallPct} size={68} stroke={6} color="var(--gold)" />
           <div>
             <div className="eyebrow">Study Flow</div>
-            <div className="display study-control-title">{totalDone} / {allTopicIds.length} topics completed</div>
+            <div className="display study-control-title">{totalDone} / {allTopicIds.length} leaf topics completed</div>
             <div className="muted study-control-copy">Current completion and revision state.</div>
           </div>
         </div>
@@ -755,6 +979,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
             onToggle={handleToggle}
             onRevisionChange={handleRevisionChange}
             onAddTopic={handleAddTopic}
+            onAddSubTopic={handleAddSubTopic}
             onRenameChapter={handleRenameChapter}
             onDeleteChapter={handleDeleteChapter}
             onRenameTopic={handleRenameTopic}

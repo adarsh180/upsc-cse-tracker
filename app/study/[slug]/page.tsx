@@ -141,7 +141,7 @@ export default async function StudyNodePage({
             <div>
               <div className="eyebrow">Live Progress</div>
               <div className="display study-route-title">
-                {progressSummary.done} of {progressSummary.total} topics done
+                {progressSummary.done} of {progressSummary.total} leaf topics done
               </div>
               <p className="muted study-route-copy">
                 Latest syllabus signal across this lane.
@@ -152,7 +152,7 @@ export default async function StudyNodePage({
           <div className="study-route-stat-grid">
             {[
               { label: isPaper ? "Subjects" : "Chapters", value: children.length, icon: Layers3 },
-              { label: "Leaf topics", value: progressSummary.total, icon: BookOpen },
+              { label: "Topics / sub-topics", value: progressSummary.total, icon: BookOpen },
               { label: "Revisions", value: progressSummary.revisions, icon: Clock3 },
             ].map((item) => (
               <div key={item.label} className="study-route-stat">
@@ -218,6 +218,13 @@ export default async function StudyNodePage({
                   title: topic.title,
                   overview: topic.overview,
                   topicProgress: topic.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["children"][number]["topicProgress"],
+                  children: (topic.children ?? []).map((subTopic) => ({
+                    id: subTopic.id,
+                    title: subTopic.title,
+                    overview: subTopic.overview,
+                    topicProgress: subTopic.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["children"][number]["topicProgress"],
+                    children: [],
+                  })),
                 })),
               }))
             }

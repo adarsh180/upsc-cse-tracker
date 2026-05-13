@@ -10,20 +10,16 @@ type StudyNodeRecord = {
   details: string | null;
   parentId: string | null;
   sortOrder: number;
-  parent: {
-    id: string;
-    title: string;
-    slug: string;
-    type: string;
-    parentId: string | null;
-    parent: {
-      id: string;
-      title: string;
-      slug: string;
-      type: string;
-      parentId: string | null;
-    } | null;
-  } | null;
+  parent: StudyNodeAncestor | null;
+};
+
+type StudyNodeAncestor = {
+  id: string;
+  title: string;
+  slug: string;
+  type: string;
+  parentId: string | null;
+  parent: StudyNodeAncestor | null;
 };
 
 type StudyNodeReference = {
@@ -31,30 +27,69 @@ type StudyNodeReference = {
   subjectTitle?: string;
   chapterTitle?: string;
   topicTitle?: string;
+  subTopicTitle?: string;
   nodeTitle?: string;
   nodeSlug?: string;
 };
 
+const studyNodeParentInclude = {
+  parent: {
+    include: {
+      parent: {
+        include: {
+          parent: {
+            include: {
+              parent: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+function getPathRootFirst(node: StudyNodeRecord) {
+  const path: StudyNodeAncestor[] = [];
+  let current: StudyNodeAncestor | null = node;
+
+  while (current) {
+    path.unshift(current);
+    current = current.parent;
+  }
+
+  return path;
+}
+
+function getNodeAfterSubject(node: StudyNodeRecord, moduleOffset: number) {
+  const path = getPathRootFirst(node);
+  const subjectIndex = path.findIndex((item) => item.type === "SUBJECT");
+  if (subjectIndex === -1) return null;
+
+  const candidate = path
+    .slice(subjectIndex + 1)
+    .filter((item) => item.type === "MODULE")[moduleOffset];
+
+  return candidate ?? null;
+}
+
 function getChapterNode(node: StudyNodeRecord) {
-  if (node.type !== "MODULE") return null;
-  if (node.parent?.type === "SUBJECT") return node;
-  if (node.parent?.type === "MODULE") return node.parent as StudyNodeRecord;
-  return null;
+  return getNodeAfterSubject(node, 0);
+}
+
+function getTopicNode(node: StudyNodeRecord) {
+  return getNodeAfterSubject(node, 1);
+}
+
+function getSubTopicNode(node: StudyNodeRecord) {
+  return getNodeAfterSubject(node, 2);
 }
 
 function getSubjectNode(node: StudyNodeRecord) {
-  if (node.type === "SUBJECT") return node;
-  if (node.parent?.type === "SUBJECT") return node.parent as StudyNodeRecord;
-  if (node.parent?.parent?.type === "SUBJECT") return node.parent.parent as StudyNodeRecord;
-  return null;
+  return getPathRootFirst(node).find((item) => item.type === "SUBJECT") ?? null;
 }
 
 function getPaperNode(node: StudyNodeRecord) {
-  if (node.type === "PAPER") return node;
-  const subjectNode = getSubjectNode(node);
-  if (subjectNode?.parent?.type === "PAPER") return subjectNode.parent as StudyNodeRecord;
-  if (node.parent?.type === "PAPER") return node.parent as StudyNodeRecord;
-  return null;
+  return getPathRootFirst(node).find((item) => item.type === "PAPER") ?? null;
 }
 
 function normalizeTitleInput(value: string | null | undefined) {
@@ -110,41 +145,14 @@ async function uniqueStudySlug(base: string) {
   return candidate;
 }
 
-async function findSimilarSibling(input: { parentId: string; title: string }) {
-  const normalizedTitle = normalizeKey(input.title);
-  const siblings = await db.studyNode.findMany({
-    where: { parentId: input.parentId },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  return (
-    siblings.find((node) => {
-      const candidateTitle = normalizeKey(node.title);
-      const candidateSlug = normalizeKey(node.slug);
-      return (
-        candidateTitle === normalizedTitle ||
-        candidateSlug === normalizedTitle ||
-        isFuzzyMatch(candidateTitle, normalizedTitle) ||
-        isFuzzyMatch(candidateSlug, normalizedTitle)
-      );
-    }) ?? null
-  );
-}
-
 async function getNodeForMutation(id: string) {
   return db.studyNode.findUnique({
     where: { id },
-    include: {
-      parent: {
-        include: {
-          parent: true,
-        },
-      },
-    },
+    include: studyNodeParentInclude,
   });
 }
 
-function matchesNode(node: StudyNodeRecord, titleOrSlug: string) {
+function matchesNode(node: Pick<StudyNodeAncestor, "title" | "slug">, titleOrSlug: string) {
   const normalized = normalizeKey(titleOrSlug);
   const title = normalizeKey(node.title);
   const slug = normalizeKey(node.slug);
@@ -154,7 +162,7 @@ function matchesNode(node: StudyNodeRecord, titleOrSlug: string) {
 function scoreNodeMatch(node: StudyNodeRecord, reference: StudyNodeReference) {
   let score = 0;
 
-  const scoreField = (target: StudyNodeRecord | null, value: string | undefined, exactPoints: number, fuzzyPoints: number) => {
+  const scoreField = (target: Pick<StudyNodeAncestor, "title" | "slug"> | null, value: string | undefined, exactPoints: number, fuzzyPoints: number) => {
     if (!target || !value) return Number.NEGATIVE_INFINITY;
     const normalized = normalizeKey(value);
     const title = normalizeKey(target.title);
@@ -177,9 +185,15 @@ function scoreNodeMatch(node: StudyNodeRecord, reference: StudyNodeReference) {
   }
 
   if (reference.topicTitle) {
-    const topicScore = scoreField(node, reference.topicTitle, 75, 30);
+    const topicScore = scoreField(getTopicNode(node), reference.topicTitle, 75, 30);
     if (topicScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
     score += topicScore;
+  }
+
+  if (reference.subTopicTitle) {
+    const subTopicScore = scoreField(getSubTopicNode(node), reference.subTopicTitle, 80, 32);
+    if (subTopicScore === Number.NEGATIVE_INFINITY) return Number.NEGATIVE_INFINITY;
+    score += subTopicScore;
   }
 
   if (reference.chapterTitle) {
@@ -212,8 +226,18 @@ function matchesChain(node: StudyNodeRecord, reference: StudyNodeReference) {
     return false;
   }
 
-  if (reference.topicTitle && !matchesNode(node, reference.topicTitle)) {
-    return false;
+  if (reference.topicTitle) {
+    const topicNode = getTopicNode(node);
+    if (!topicNode || !matchesNode(topicNode as StudyNodeRecord, reference.topicTitle)) {
+      return false;
+    }
+  }
+
+  if (reference.subTopicTitle) {
+    const subTopicNode = getSubTopicNode(node);
+    if (!subTopicNode || !matchesNode(subTopicNode as StudyNodeRecord, reference.subTopicTitle)) {
+      return false;
+    }
   }
 
   if (reference.chapterTitle) {
@@ -254,13 +278,7 @@ export async function resolveStudyNode(reference: StudyNodeReference) {
   }
 
   const candidates = await db.studyNode.findMany({
-    include: {
-      parent: {
-        include: {
-          parent: true,
-        },
-      },
-    },
+    include: studyNodeParentInclude,
   });
 
   const matched = candidates.filter((node) => matchesChain(node as StudyNodeRecord, reference));
@@ -305,15 +323,6 @@ export async function createStudyNode(input: {
 
   if (!parent) {
     throw new Error("Parent study node not found.");
-  }
-
-  const existing = await findSimilarSibling({
-    parentId: input.parentId,
-    title: cleanTitle,
-  });
-
-  if (existing) {
-    return { node: existing, created: false as const };
   }
 
   const nextType = parent.type === "PAPER" ? "SUBJECT" : "MODULE";
@@ -458,12 +467,24 @@ export async function resolveNodeForCreate(input: {
   paperTitle?: string;
   subjectTitle?: string;
   chapterTitle?: string;
+  topicTitle?: string;
 }) {
+  if (input.topicTitle) {
+    return resolveStudyNode({
+      paperTitle: input.paperTitle,
+      subjectTitle: input.subjectTitle,
+      chapterTitle: input.chapterTitle,
+      topicTitle: input.topicTitle,
+      nodeTitle: input.topicTitle,
+    });
+  }
+
   if (input.chapterTitle) {
     return resolveStudyNode({
       paperTitle: input.paperTitle,
       subjectTitle: input.subjectTitle,
       chapterTitle: input.chapterTitle,
+      nodeTitle: input.chapterTitle,
     });
   }
 
@@ -471,6 +492,7 @@ export async function resolveNodeForCreate(input: {
     return resolveStudyNode({
       paperTitle: input.paperTitle,
       subjectTitle: input.subjectTitle,
+      nodeTitle: input.subjectTitle,
     });
   }
 

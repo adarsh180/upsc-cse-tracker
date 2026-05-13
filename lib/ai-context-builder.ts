@@ -1,7 +1,7 @@
 import { differenceInDays } from "date-fns";
 
 import { db } from "@/lib/db";
-import { getDashboardSummary } from "@/lib/dashboard";
+import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
 
 type GuruMode = "guru" | "deep-analytics" | "essay-checker";
 
@@ -441,7 +441,7 @@ function deriveMemoryPayload(
       "Mood tracker entries",
       "Test records and negative marking data",
       "Essay submissions and score history",
-      "Paper-wise completion derived from study logs",
+      "Paper-wise completion derived from leaf topic and sub-topic status",
       "Mission history and todo execution",
       "Conversation history",
       "Uploaded PDF text",
@@ -462,25 +462,34 @@ async function buildBaseUPSCContext() {
   const moods = summary.moods;
 
   // ── Revision data ──────────────────────────────────
-  const allTopicProgress = await db.topicProgress.findMany({
-    include: { studyNode: { select: { title: true, parentId: true, parent: { select: { title: true } } } } },
-    orderBy: { revisionCount: "desc" },
+  const revisionNodes = await db.studyNode.findMany({
+    select: {
+      id: true,
+      title: true,
+      parent: { select: { title: true } },
+      children: { select: { id: true } },
+      topicProgress: { select: { revisionCount: true } },
+    },
   });
 
-  const totalTopics = allTopicProgress.length;
-  const totalRevisions = allTopicProgress.reduce((sum, r) => sum + r.revisionCount, 0);
+  const leafRevisionNodes = revisionNodes.filter((node) => node.children.length === 0);
+  const totalTopics = leafRevisionNodes.length;
+  const totalRevisions = leafRevisionNodes.reduce((sum, node) => sum + (node.topicProgress?.revisionCount ?? 0), 0);
   const avgRevisionPerTopic = totalTopics > 0 ? Number((totalRevisions / totalTopics).toFixed(1)) : 0;
-  const unrevisedTopics = allTopicProgress.filter((r) => r.revisionCount === 0).length;
-  const wellRevisedTopics = allTopicProgress.filter((r) => r.revisionCount >= 5).length;
-  const topRevised = allTopicProgress.slice(0, 5).map((r) => ({
-    topic: r.studyNode.title,
-    chapter: r.studyNode.parent?.title ?? null,
-    count: r.revisionCount,
-  }));
-  const leastRevised = [...allTopicProgress]
-    .sort((a, b) => a.revisionCount - b.revisionCount)
+  const unrevisedTopics = leafRevisionNodes.filter((node) => (node.topicProgress?.revisionCount ?? 0) === 0).length;
+  const wellRevisedTopics = leafRevisionNodes.filter((node) => (node.topicProgress?.revisionCount ?? 0) >= 5).length;
+  const topRevised = [...leafRevisionNodes]
+    .sort((a, b) => (b.topicProgress?.revisionCount ?? 0) - (a.topicProgress?.revisionCount ?? 0))
     .slice(0, 5)
-    .map((r) => ({ topic: r.studyNode.title, chapter: r.studyNode.parent?.title ?? null, count: r.revisionCount }));
+    .map((node) => ({
+      topic: node.title,
+      chapter: node.parent?.title ?? null,
+      count: node.topicProgress?.revisionCount ?? 0,
+  }));
+  const leastRevised = [...leafRevisionNodes]
+    .sort((a, b) => (a.topicProgress?.revisionCount ?? 0) - (b.topicProgress?.revisionCount ?? 0))
+    .slice(0, 5)
+    .map((node) => ({ topic: node.title, chapter: node.parent?.title ?? null, count: node.topicProgress?.revisionCount ?? 0 }));
 
   const revisionSummary = {
     totalRevisions,
@@ -555,6 +564,8 @@ async function buildBaseUPSCContext() {
       ? Number(((totalCorrect / (totalCorrect + totalIncorrect)) * 100).toFixed(1))
       : 0;
 
+  const paperCompletionMap = await getPaperCompletionMap(summary.papers);
+
   const paperContext = summary.papers.map((paper) => {
     const paperNodeIds = [paper.id, ...paper.children.map((child) => child.id)];
     const relevantLogs = studyLogs.filter(
@@ -565,7 +576,7 @@ async function buildBaseUPSCContext() {
       title: paper.title,
       slug: paper.slug,
       childCount: paper.children.length,
-      completionPct: average(relevantLogs.map((log) => log.completion)),
+      completionPct: paperCompletionMap[paper.id] ?? 0,
       totalHours: Number(relevantLogs.reduce((sum, log) => sum + log.hours, 0).toFixed(1)),
       recentTopics: relevantLogs.slice(0, 5).map((log) => log.title),
     };
