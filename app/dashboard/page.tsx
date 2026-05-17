@@ -32,10 +32,39 @@ function scorePct(score: number, totalMarks: number) {
   return totalMarks > 0 ? (score / totalMarks) * 100 : 0;
 }
 
+type PrepConfidence = {
+  exam: string;
+  score: number;
+  label: string;
+  reliability: number;
+  updatedAt: string;
+  signals: string[];
+};
+
+async function getConnectedNeetConfidence(): Promise<PrepConfidence | null> {
+  const url = process.env.NEET_CONFIDENCE_URL ?? "https://neet-tracker-misti.vercel.app/api/prep-confidence";
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { accept: "application/json" },
+    });
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error("[connected-neet-confidence]", error);
+    return null;
+  }
+}
+
 export default async function DashboardPage() {
   await requireSession();
 
-  const summary = await getDashboardSummary();
+  const [summary, neetConfidence] = await Promise.all([
+    getDashboardSummary(),
+    getConnectedNeetConfidence(),
+  ]);
 
   const recentLog = summary.dailyLogs[0];
   const recentTest = summary.tests[0];
@@ -96,6 +125,7 @@ export default async function DashboardPage() {
       ],
     },
   };
+  const neetConfidenceScore = clampPct(neetConfidence?.score ?? 0);
 
   return (
     <main className="page-shell">
@@ -448,12 +478,13 @@ export default async function DashboardPage() {
           style={{
             gridColumn: "span 12",
             borderRadius: 36,
+            overflow: "hidden",
             background:
-              "radial-gradient(circle at 18% 20%, hsla(38,92%,62%,0.14), transparent 26%), radial-gradient(circle at 82% 18%, hsla(352,52%,54%,0.08), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
+              "radial-gradient(circle at 18% 20%, hsla(142,60%,48%,0.14), transparent 26%), radial-gradient(circle at 82% 18%, hsla(218,84%,62%,0.11), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035))",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 22 }}>
-            <div style={{ maxWidth: 640 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(320px, 0.85fr)", gap: 24, alignItems: "center" }}>
+            <div style={{ maxWidth: 680 }}>
               <div className="pill" style={{ marginBottom: 18 }}>
                 <Sparkles size={13} />
                 Connected Instance
@@ -466,15 +497,65 @@ export default async function DashboardPage() {
                 architecture and deep analytics layer as this UPSC command center.
               </p>
             </div>
-            <a
-              href="https://neet-tracker-misti.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="button"
-              style={{ whiteSpace: "nowrap" }}
+            <div
+              className="glass"
+              style={{
+                borderRadius: 26,
+                padding: 18,
+                display: "grid",
+                gap: 14,
+                background: "linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028))",
+              }}
             >
-              Open NEET Tracker <ArrowRight size={15} />
-            </a>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+                <div>
+                  <div className="eyebrow" style={{ color: "var(--botany)" }}>Prep Confidence</div>
+                  <div className="display" style={{ fontSize: "2.4rem", lineHeight: 1, marginTop: 8, color: "var(--botany)" }}>
+                    {neetConfidence ? neetConfidenceScore : "Live"}
+                    {neetConfidence ? <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/100</span> : null}
+                  </div>
+                </div>
+                <div className="pill" style={{ color: "var(--text-secondary)" }}>
+                  {neetConfidence ? `${neetConfidence.reliability}% reliability` : "Syncing"}
+                </div>
+              </div>
+
+              <div
+                aria-label={neetConfidence ? `${neetConfidence.exam} confidence ${neetConfidenceScore} out of 100` : "NEET confidence syncing"}
+                style={{
+                  height: 12,
+                  borderRadius: 999,
+                  overflow: "hidden",
+                  background: "rgba(255,255,255,0.08)",
+                  boxShadow: "inset 0 1px 8px rgba(0,0,0,0.25)",
+                }}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    width: neetConfidence ? `${neetConfidenceScore}%` : "38%",
+                    height: "100%",
+                    borderRadius: "inherit",
+                    background: "linear-gradient(90deg, var(--botany), var(--physics), var(--gold-bright))",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", color: "var(--text-secondary)", fontSize: 12, fontWeight: 700 }}>
+                <span>{neetConfidence?.label ?? "Waiting for live NEET endpoint"}</span>
+                <span>{neetConfidence?.signals?.[0] ?? "No mock percentage used"}</span>
+              </div>
+
+              <a
+                href="https://neet-tracker-misti.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button"
+                style={{ whiteSpace: "nowrap", justifyContent: "space-between" }}
+              >
+                Open NEET Tracker <ArrowRight size={15} />
+              </a>
+            </div>
           </div>
         </article>
       </section>
