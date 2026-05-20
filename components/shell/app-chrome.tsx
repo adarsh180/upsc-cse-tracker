@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Sparkles, ChevronRight } from "lucide-react";
 
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 import { navGroups } from "@/components/shell/nav-config";
 import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icons";
 import { cn } from "@/lib/utils";
@@ -154,6 +155,8 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Floating top-right menu trigger */}
+      <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" />
+
       <div className="shell-float-bar-minimal">
         <button
           type="button"

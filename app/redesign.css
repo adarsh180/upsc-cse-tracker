@@ -2214,7 +2214,7 @@ body::-webkit-scrollbar-thumb,
 /* --- Minimal Premium Chrome --- */
 .shell-float-bar-minimal {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
   right: 24px;
   z-index: 9999;
   display: flex;
@@ -2419,7 +2419,7 @@ body::-webkit-scrollbar-thumb,
 
 .nav-drawer {
   position: fixed;
-  bottom: 96px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
   right: 24px;
   width: 320px;
   max-width: calc(100vw - 48px);
@@ -3024,6 +3024,20 @@ body::-webkit-scrollbar-thumb,
 
 .study-topic-stack {
   padding: 0 16px 16px 16px;
+}
+
+@media (max-width: 600px) {
+  .shell-float-bar-minimal {
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .nav-drawer {
+    right: 16px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    max-height: calc(100svh - 112px - env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
 }
 
 .study-subtopic-stack {
@@ -8093,5 +8107,638 @@ body::after {
 
   .exam-countdown-meta > div:nth-last-child(-n + 2) {
     grid-column: 1 / -1;
+  }
+}
+
+/* ==========================================================================
+   MOBILE PARITY LAYER
+   Keeps the desktop composition recognizable on phones without overlap.
+   ========================================================================== */
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+:where(.page-shell, .panel, .glass, .glass-strong, .card-link, .metric-card, .spotlight-card, .countdown-card) {
+  min-width: 0;
+}
+
+:where(.grid, .hero-grid, .command-grid, .ai-hub-grid, .ai-split, .mission-hero-grid, .todo-hero-layout, .mission-hero-shell, .tests-top-grid, .tests-client-grid, .tests-analysis-grid, .tests-intelligence-grid, .error-analysis-grid, .error-analysis-command-grid, .exam-countdown-grid, .exam-countdown-body) > * {
+  min-width: 0;
+}
+
+:where(.panel-title-row, .mission-ops-head, .tests-panel-head, .tests-record-title-row, .exam-countdown-head, .exam-countdown-card-top, .shell-float-bar-minimal) {
+  min-width: 0;
+}
+
+:where(.panel-title-row, .mission-ops-head, .tests-panel-head, .tests-record-title-row, .exam-countdown-head, .exam-countdown-card-top) > * {
+  min-width: 0;
+}
+
+:where(.field, .textarea, .select, .input, .button, .button-secondary, .tests-submit-button, .mission-launch-actions > *, .hero-actions > *) {
+  max-width: 100%;
+}
+
+:where(.metric-value, .tests-metric-card strong, .tests-trend-panel strong, .exam-chronograph-core strong, .exam-readiness-panel strong, .countdown-number strong) {
+  overflow-wrap: anywhere;
+}
+
+:where(.table-wrap, .gurux-table-wrap, .tests-table-wrap, .error-analysis-table-wrap, .tests-record-stack, .chapter-accord-body) {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1180px) {
+  .page-shell {
+    width: min(1500px, calc(100vw - 28px));
+  }
+
+  .hero-grid,
+  .mission-hero-grid,
+  .todo-hero-layout,
+  .mission-hero-shell {
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  }
+
+  .ai-hub-grid,
+  .ai-hub-grid-4,
+  .tests-metric-grid,
+  .tests-analysis-grid,
+  .mood-v2-hero-grid,
+  .error-analysis-metrics,
+  .error-analysis-comparison-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  }
+
+  .tests-top-grid,
+  .tests-client-grid,
+  .tests-intelligence-grid,
+  .error-analysis-grid,
+  .error-analysis-pattern-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --float-bar-h: 64px;
+  }
+
+  .page-shell {
+    width: min(100% - 22px, 1500px);
+    padding-top: calc(var(--float-bar-h) + 14px);
+    padding-bottom: 72px;
+  }
+
+  .panel,
+  .dashboard-hero,
+  .mission-launch-card,
+  .todo-summary-card-hero,
+  .tests-chart-panel,
+  .tests-diagnostic-panel,
+  .tests-form-panel,
+  .tests-ledger-panel,
+  .tests-section-panel,
+  .error-analysis-hero,
+  .error-analysis-history-panel,
+  .error-analysis-test-form-panel,
+  .error-analysis-memory-panel,
+  .error-analysis-chart-panel,
+  .error-analysis-form-panel,
+  .error-analysis-ai-panel,
+  .error-analysis-table-panel,
+  .exam-countdown-matrix {
+    border-radius: 24px;
+    padding: clamp(16px, 4vw, 22px);
+  }
+
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .command-grid,
+  .countdown-grid,
+  .ai-hub-grid,
+  .ai-hub-grid-4,
+  .mission-value-strip,
+  .mission-stat-grid,
+  .tests-metric-grid,
+  .tests-analysis-grid,
+  .tests-diagnostic-score,
+  .tests-section-grid,
+  .error-analysis-metrics,
+  .error-analysis-comparison-grid,
+  .exam-countdown-units,
+  .exam-countdown-meta {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)) !important;
+  }
+
+  .hero-grid,
+  .mission-hero-grid,
+  .todo-hero-layout,
+  .mission-hero-shell,
+  .tests-top-grid,
+  .tests-client-grid,
+  .tests-intelligence-grid,
+  .error-analysis-grid,
+  .error-analysis-command-grid,
+  .error-analysis-pattern-grid,
+  .error-analysis-ai-panel,
+  .exam-countdown-grid,
+  .exam-countdown-body {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)) !important;
+  }
+
+  .tests-field-grid,
+  .tests-field-grid.compact,
+  .tests-form-pair,
+  .tests-form-triplet,
+  .error-analysis-test-form > .tests-form-triplet,
+  .error-question-form > .tests-form-pair,
+  .error-question-form > .tests-form-triplet,
+  .error-analysis-answer-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr)) !important;
+  }
+
+  .panel-title-row,
+  .mission-ops-head,
+  .tests-panel-head,
+  .tests-record-title-row,
+  .tests-record-meta,
+  .tests-record-actions,
+  .exam-countdown-head,
+  .exam-countdown-card-top,
+  .hero-actions,
+  .mission-launch-actions,
+  .error-analysis-hero-tags,
+  .error-analysis-hero-stats,
+  .error-analysis-mode-actions,
+  .error-analysis-checks {
+    flex-wrap: wrap;
+  }
+
+  .mission-launch-form-hero {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .mission-hero-title,
+  .tests-panel-title,
+  .exam-countdown-title,
+  .exam-countdown-card-title,
+  .gurux-empty-title {
+    max-width: 100%;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .mission-hero-title {
+    font-size: clamp(2.1rem, 13vw, 3.35rem);
+  }
+
+  .shell-menu-btn-premium,
+  .shell-menu-btn,
+  .shell-guru-pill,
+  .shell-brand-pill {
+    max-width: calc(100vw - 24px);
+  }
+
+  .shell-menu-btn-label,
+  .sacred-brand-subtitle {
+    display: none;
+  }
+
+  .tests-record-card {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .tests-record-side {
+    min-width: 92px;
+    justify-items: end;
+  }
+
+  .gurux-composer-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .page-shell {
+    width: min(100% - 16px, 1500px);
+  }
+
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .command-grid,
+  .countdown-grid,
+  .ai-hub-grid,
+  .ai-hub-grid-4,
+  .tests-metric-grid,
+  .tests-analysis-grid,
+  .error-analysis-metrics,
+  .error-analysis-comparison-grid,
+  .exam-countdown-units,
+  .exam-countdown-meta {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 142px), 1fr)) !important;
+  }
+
+  .hero-grid,
+  .mission-hero-grid,
+  .todo-hero-layout,
+  .mission-hero-shell,
+  .tests-top-grid,
+  .tests-client-grid,
+  .tests-intelligence-grid,
+  .error-analysis-grid,
+  .error-analysis-command-grid,
+  .exam-countdown-grid,
+  .exam-countdown-body {
+    grid-template-columns: 1fr !important;
+  }
+
+  .panel,
+  .dashboard-hero,
+  .mission-launch-card,
+  .todo-summary-card-hero,
+  .exam-countdown-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+}
+
+/* ==========================================================================
+   UPSC PHONE COMPOSITION PASS
+   Page-by-page mobile polish that preserves dashboard-like composition without
+   crushed columns, overlap, or endless one-item lists.
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:where(.page-shell, .page-intro-shell, .dashboard-hero, .goals-page, .study-route-page, .tests-redesign-stack, .mood-v2-stack, .mission-control-redesign, .todo-workspace, .gurux-shell) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .page-intro-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.32fr) !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+
+  .page-intro-aside {
+    padding: 16px !important;
+  }
+
+  .page-intro-mark {
+    min-height: 74px;
+  }
+
+  .dashboard-hero > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .dashboard-hero > div > div {
+    padding: clamp(20px, 5vw, 34px) !important;
+  }
+
+  .dashboard-hero .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-hero [style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-hero [style*="minmax(0, 1.15fr)"] {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.5fr) !important;
+  }
+
+  .goals-hero-console,
+  .goals-analysis-grid,
+  .study-route-overview,
+  .tests-top-grid,
+  .tests-client-grid,
+  .tests-intelligence-grid,
+  .mood-v2-layout,
+  .mission-control-top,
+  .mission-control-active-grid,
+  .error-analysis-grid,
+  .error-analysis-command-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .goals-metric-input-grid,
+  .goals-snapshot-grid,
+  .study-route-stat-grid,
+  .tests-metric-grid,
+  .tests-analysis-grid,
+  .tests-section-grid,
+  .mood-v2-hero-grid,
+  .mood-v2-options,
+  .mission-control-metrics,
+  .mission-control-task-grid,
+  .mission-control-why-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .heatmap-head,
+  .heatmap-stats,
+  .goals-panel-head,
+  .tests-panel-head,
+  .mood-v2-card-head,
+  .mission-control-pulse-head,
+  .mission-control-history-head {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .heatmap-scroll {
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+
+  .study-card-shell {
+    min-height: 250px;
+  }
+
+  .study-card-title {
+    font-size: clamp(1.25rem, 5vw, 1.65rem) !important;
+  }
+
+  .gurux-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gurux-main,
+  .gurux-content {
+    height: 100svh !important;
+  }
+
+  .gurux-scroll-area {
+    padding: 16px 14px 128px !important;
+  }
+
+  .gurux-main-hero {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gurux-empty-meta,
+  .gurux-cue-grid,
+  .gurux-suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .gurux-dock-wrap {
+    padding: 8px 12px calc(14px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .gurux-composer-card {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    border-radius: 22px !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .page-shell {
+    width: min(100% - 18px, 1500px) !important;
+    padding-top: calc(var(--float-bar-h) + 10px) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .page-intro-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 18px !important;
+    border-radius: 24px !important;
+  }
+
+  .page-intro-aside {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+  }
+
+  .page-intro-mark {
+    min-height: 0;
+    width: 74px;
+  }
+
+  .page-intro-title {
+    font-size: clamp(2rem, 10vw, 3.15rem) !important;
+    line-height: 1.02 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .page-intro-description,
+  .muted {
+    line-height: 1.7;
+  }
+
+  .dashboard-hero {
+    border-radius: 24px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .dashboard-hero .display[style*="5.6rem"] {
+    font-size: clamp(2.25rem, 11vw, 3.5rem) !important;
+    max-width: 13ch !important;
+  }
+
+  .dashboard-hero .grid-3,
+  .dashboard-hero [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .dashboard-hero [style*="minmax(0, 1.15fr)"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-hero .grid-3 > :last-child,
+  .dashboard-hero [style*="grid-template-columns: 1fr 1fr 1fr"] > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .grid-4,
+  .command-grid,
+  .ai-hub-grid,
+  .ai-hub-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .spotlight-card.span-12,
+  .span-12 {
+    grid-column: 1 / -1 !important;
+  }
+
+  .goals-entry-panel,
+  .goals-snapshot-panel,
+  .goals-chart-panel,
+  .goals-reflection-panel,
+  .goals-history-panel,
+  .goals-signal-column .heatmap-panel,
+  .tests-chart-panel,
+  .tests-diagnostic-panel,
+  .tests-form-panel,
+  .tests-ledger-panel,
+  .tests-section-panel,
+  .mood-v2-current,
+  .mood-v2-date-panel,
+  .mood-v2-card,
+  .mission-control-launch,
+  .mission-control-pulse,
+  .mission-control-active,
+  .mission-control-history,
+  .mission-control-empty,
+  .todo-summary-card,
+  .todo-composer-card,
+  .todo-column-card {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .goals-panel-head,
+  .tests-panel-head,
+  .mood-v2-current-top,
+  .mood-v2-card-head,
+  .mission-control-active-top,
+  .mission-control-tasks-head,
+  .todo-summary-top,
+  .todo-composer-head {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+  }
+
+  .goals-panel-title,
+  .tests-panel-title,
+  .mood-v2-panel-title,
+  .mission-control-hero-title,
+  .mission-control-active-title,
+  .todo-summary-title,
+  .todo-composer-title {
+    font-size: clamp(1.45rem, 7vw, 2.15rem) !important;
+    line-height: 1.05 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .goals-metric-input-grid,
+  .tests-field-grid,
+  .tests-field-grid.compact,
+  .tests-form-pair,
+  .tests-form-triplet,
+  .mood-v2-options,
+  .error-analysis-answer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .tests-record-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .tests-record-side {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0 !important;
+    justify-items: start !important;
+  }
+
+  .mood-v2-score-ring {
+    width: 128px !important;
+    height: 128px !important;
+  }
+
+  .mood-v2-calendar {
+    grid-template-columns: repeat(7, minmax(32px, 1fr)) !important;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .study-route-ring {
+    width: 132px !important;
+    height: 132px !important;
+  }
+
+  .chapter-accord-title,
+  .topic-label {
+    overflow-wrap: anywhere;
+  }
+
+  .topic-row,
+  .topic-actions,
+  .study-inline-edit {
+    flex-wrap: wrap;
+  }
+
+  .error-analysis-test-form,
+  .error-question-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .error-analysis-grid-scroll {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .page-shell {
+    width: min(100% - 12px, 1500px) !important;
+  }
+
+  .grid-3,
+  .grid-4,
+  .command-grid,
+  .ai-hub-grid,
+  .ai-hub-grid-4,
+  .goals-snapshot-grid,
+  .tests-metric-grid,
+  .tests-analysis-grid,
+  .tests-section-grid,
+  .mood-v2-hero-grid,
+  .mission-control-metrics,
+  .mission-control-task-grid,
+  .mission-control-why-grid,
+  .gurux-empty-meta,
+  .gurux-cue-grid,
+  .gurux-suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-hero .grid-3,
+  .dashboard-hero [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .goals-metric-input-grid,
+  .tests-field-grid,
+  .tests-field-grid.compact,
+  .tests-form-pair,
+  .tests-form-triplet,
+  .error-analysis-test-form,
+  .error-question-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-hero .grid-3 > :last-child,
+  .dashboard-hero [style*="grid-template-columns: 1fr 1fr 1fr"] > :last-child {
+    grid-column: auto;
+  }
+
+  .heatmap-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .heatmap-scroll {
+    margin-inline: -8px;
+    padding-inline: 8px;
+  }
+
+  .gurux-composer-card {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .gurux-composer-card .gurux-send-button {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .shell-float-bar-minimal {
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
   }
 }
