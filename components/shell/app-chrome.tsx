@@ -155,7 +155,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Floating top-right menu trigger */}
-      <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" />
+      <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
 
       <div className="shell-float-bar-minimal">
         <button

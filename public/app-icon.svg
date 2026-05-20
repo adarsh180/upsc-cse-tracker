@@ -1,22 +1,20 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="112" fill="#03050D"/>
-  <circle cx="256" cy="256" r="206" fill="url(#halo)" opacity="0.72"/>
-  <path d="M92 366C136 252 190 156 256 78C322 156 376 252 420 366" stroke="url(#gold)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M151 374H361" stroke="#F8E9C6" stroke-width="30" stroke-linecap="round"/>
-  <path d="M192 292H320" stroke="#7CB6FF" stroke-width="24" stroke-linecap="round"/>
-  <path d="M222 230H290" stroke="#F57A94" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="256" cy="154" r="31" fill="#F5C966"/>
-  <circle cx="256" cy="154" r="54" stroke="#F5C966" stroke-width="4" opacity="0.28"/>
+  <circle cx="256" cy="256" r="224" fill="url(#halo)"/>
+  <circle cx="256" cy="238" r="86" fill="#10131A" stroke="#7CB6FF" stroke-width="16"/>
+  <path d="M256 152V324M170 238H342M195 177L317 299M317 177L195 299" stroke="#F5C966" stroke-width="8" stroke-linecap="round"/>
+  <path d="M256 172L284 228L344 238L284 248L256 304L228 248L168 238L228 228L256 172Z" fill="#F8E9C6"/>
+  <path d="M256 209L270 235L298 238L270 242L256 268L242 242L214 238L242 235L256 209Z" fill="#03050D"/>
+  <path d="M160 386H352" stroke="#F8E9C6" stroke-width="24" stroke-linecap="round"/>
+  <path d="M185 356H327" stroke="#F1B64F" stroke-width="20" stroke-linecap="round"/>
+  <path d="M204 356V316M256 356V316M308 356V316" stroke="#F8E9C6" stroke-width="18" stroke-linecap="round"/>
+  <path d="M185 316H327L256 278L185 316Z" fill="#F8E9C6"/>
+  <path d="M218 324H294" stroke="#03050D" stroke-width="10" stroke-linecap="round" opacity="0.72"/>
   <defs>
-    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 238) rotate(90) scale(246)">
-      <stop stop-color="#F5C966" stop-opacity="0.36"/>
-      <stop offset="0.52" stop-color="#7CB6FF" stop-opacity="0.18"/>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 218) rotate(90) scale(260)">
+      <stop stop-color="#F5C966" stop-opacity="0.38"/>
+      <stop offset="0.52" stop-color="#7CB6FF" stop-opacity="0.2"/>
       <stop offset="1" stop-color="#03050D" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="gold" x1="92" y1="78" x2="420" y2="366" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE8A8"/>
-      <stop offset="0.48" stop-color="#F1B64F"/>
-      <stop offset="1" stop-color="#F57A94"/>
-    </linearGradient>
   </defs>
 </svg>

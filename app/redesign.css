@@ -502,10 +502,18 @@ body::-webkit-scrollbar-thumb,
 .sacred-logo-core {
   position: relative;
   z-index: 3;
+  display: grid;
+  place-items: center;
   font-weight: 700;
   color: var(--gold-bright);
   text-shadow: 0 0 16px hsla(42,95%,74%,0.52), 0 0 4px hsla(42,95%,74%,0.26);
   animation: sacredOmPulse 3s ease-in-out infinite alternate;
+}
+.sacred-logo-core svg {
+  width: 68%;
+  height: 68%;
+  display: block;
+  overflow: visible;
 }
 .sacred-logo-sm .sacred-logo-core { font-size: 1.1rem; }
 .sacred-logo-md .sacred-logo-core { font-size: 1.4rem; }
