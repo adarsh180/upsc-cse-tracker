@@ -19,7 +19,9 @@ export function PwaRegister() {
   const [queueCount, setQueueCount] = useState(0);
   const [online, setOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [installState, setInstallState] = useState<"idle" | "installing" | "installed">("idle");
   const refreshingRef = useRef(false);
+  const shouldRefreshOnControllerChangeRef = useRef(false);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -37,11 +39,18 @@ export function PwaRegister() {
     const handleInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
+      setInstallState("idle");
+    };
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setInstallState("installed");
+      window.setTimeout(() => setInstallState("idle"), 4200);
     };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       cleanupQueue();
@@ -49,6 +58,7 @@ export function PwaRegister() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
@@ -57,6 +67,7 @@ export function PwaRegister() {
     if (!window.isSecureContext && window.location.hostname !== "localhost") return;
 
     const handleControllerChange = () => {
+      if (!shouldRefreshOnControllerChangeRef.current) return;
       if (refreshingRef.current) return;
       refreshingRef.current = true;
       window.location.reload();
@@ -79,6 +90,7 @@ export function PwaRegister() {
           if (!worker) return;
           worker.addEventListener("statechange", () => {
             if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              shouldRefreshOnControllerChangeRef.current = true;
               worker.postMessage({ type: "SKIP_WAITING" });
             }
           });
@@ -111,7 +123,7 @@ export function PwaRegister() {
     };
   }, []);
 
-  const showStatus = queueCount > 0 || !online || syncing || installPrompt;
+  const showStatus = queueCount > 0 || !online || syncing || installPrompt || installState !== "idle";
   if (!showStatus) return null;
 
   return (
@@ -125,15 +137,30 @@ export function PwaRegister() {
           className="pwa-install"
           type="button"
           onClick={async () => {
+            setInstallState("installing");
             await installPrompt.prompt();
-            await installPrompt.userChoice;
+            const choice = await installPrompt.userChoice;
             setInstallPrompt(null);
+            if (choice.outcome === "dismissed") {
+              setInstallState("idle");
+            } else {
+              window.setTimeout(() => {
+                setInstallState((current) => (current === "installing" ? "installed" : current));
+                window.setTimeout(() => setInstallState("idle"), 4200);
+              }, 1200);
+            }
           }}
         >
           <Download size={14} />
-          Install
+          {installState === "installing" ? "Installing" : "Install"}
         </button>
       )}
+      {!installPrompt && installState === "installed" ? (
+        <div className="pwa-pill installed">
+          <Download size={14} />
+          <span>Installed</span>
+        </div>
+      ) : null}
 
       <style jsx>{`
         .pwa-status {
@@ -167,6 +194,7 @@ export function PwaRegister() {
 
         .pwa-pill { padding: 0 12px; }
         .pwa-pill.offline { border-color: rgba(251,191,36,0.24); color: #d4a853; }
+        .pwa-pill.installed { border-color: rgba(80,220,155,0.24); color: #6ee7b7; }
 
         .pwa-install {
           padding: 0 13px;
