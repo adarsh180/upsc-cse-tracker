@@ -120,7 +120,7 @@ function AnimatedNumber({ value, suffix = "" }: { value: number; suffix?: string
 // ─── Loading Skeleton ────────────────────────────────────
 function LoadingSkeleton() {
   return (
-    <div style={{ display: "grid", gap: 22, marginTop: 4, animation: "pulse 2s ease infinite" }}>
+    <div className="rank-prediction-loading" style={{ display: "grid", gap: 22, marginTop: 4, animation: "pulse 2s ease infinite" }}>
       {[1, 2, 3].map((i) => (
         <div key={i} style={{ height: 220, borderRadius: 28, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
       ))}
@@ -166,7 +166,7 @@ export function RankPredictionClient() {
 
   if (!prediction && !isPending) {
     return (
-      <div className="glass panel" style={{ textAlign: "center", padding: "60px 40px" }}>
+      <div className="glass panel rank-prediction-empty" style={{ textAlign: "center", padding: "60px 40px" }}>
         <div style={{ marginBottom: 20 }}>
           <div style={{
             width: 80, height: 80, margin: "0 auto 20px",
@@ -205,7 +205,7 @@ export function RankPredictionClient() {
   if (isPending) {
     return (
       <div>
-        <div className="glass panel" style={{ textAlign: "center", padding: "32px", marginBottom: 22 }}>
+        <div className="glass panel rank-prediction-status" style={{ textAlign: "center", padding: "32px", marginBottom: 22 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.1)", borderTopColor: "var(--gold)", animation: "spin 1s linear infinite" }} />
             <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>Analysing your preparation profile…</div>
@@ -222,7 +222,7 @@ export function RankPredictionClient() {
   const p = prediction;
 
   return (
-    <div style={{ display: "grid", gap: 24 }}>
+    <div className="rank-prediction-result" style={{ display: "grid", gap: 24 }}>
       {/* ── Overall Verdict Banner ── */}
       <div className="glass panel glass-strong" style={{
         background: `radial-gradient(circle at 20% 50%, ${verdictColor(p.finalList.overallVerdict)}22, transparent 40%), radial-gradient(circle at 80% 20%, hsla(38 72% 58% / 0.1), transparent 40%), rgba(255,255,255,0.04)`,

@@ -21,7 +21,7 @@ export default async function RankPredictionPage() {
         }
       />
 
-      <section className="section-stack">
+      <section className="section-stack rank-prediction-workspace">
         {/* Context cards */}
         <div className="grid grid-3">
           {[

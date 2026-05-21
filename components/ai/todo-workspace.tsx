@@ -203,7 +203,7 @@ export function TodoWorkspace({
   }
 
   return (
-    <section className="section-stack">
+    <section className="section-stack todo-workspace">
       <div className="todo-hero-layout">
         <article className="glass panel glass-strong">
           <div className="todo-summary-top">
