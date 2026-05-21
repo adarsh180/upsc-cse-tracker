@@ -136,22 +136,9 @@ export default async function LandingPage() {
               "radial-gradient(circle at 82% 16%, hsla(38,92%,62%,0.22), transparent 32%), radial-gradient(circle at 18% 88%, hsla(216,88%,68%,0.16), transparent 34%), linear-gradient(155deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))",
           }}
         >
-          {/* OM mark */}
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{ position: "relative" }}>
-              <SacredLogoMark size="lg" />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: -20,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle, hsla(38,92%,62%,0.22), transparent 68%)",
-                  filter: "blur(20px)",
-                  zIndex: -1,
-                  animation: "divineGlow 4s ease-in-out infinite alternate",
-                }}
-              />
-            </div>
+          {/* Brand mark */}
+          <div className="landing-brand-lockup" style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <img className="landing-brand-logo" src="/upsc-brand-header.png" alt="UPSC CSE Tracker crest" />
             <div>
               <div style={{ fontFamily: "var(--font-display), serif", fontSize: "1.4rem", fontWeight: 700 }}>
                 Sacred Attempt

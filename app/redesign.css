@@ -499,6 +499,20 @@ body::-webkit-scrollbar-thumb,
 .sacred-logo-md { width: 54px; height: 54px; }
 .sacred-logo-lg { width: 76px; height: 76px; }
 
+.sacred-logo-image {
+  overflow: hidden;
+  padding: 4px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)), rgba(4,9,18,0.76);
+}
+
+.sacred-logo-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
 .sacred-logo-core {
   position: relative;
   z-index: 3;
@@ -8748,5 +8762,260 @@ video {
   .shell-float-bar-minimal {
     right: 16px;
     bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Final mobile polish layer: keeps desktop composition readable on phone widths. */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  overscroll-behavior-y: contain;
+}
+
+.landing-brand-logo {
+  width: clamp(72px, 15vw, 112px);
+  aspect-ratio: 1;
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 28%;
+  object-fit: contain;
+  padding: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.34), 0 0 24px rgba(212,168,83,0.12);
+}
+
+@media (max-width: 700px) {
+  .page-shell {
+    width: min(100% - 18px, 1500px) !important;
+    padding-top: calc(var(--float-bar-h, 64px) + 12px) !important;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+    overflow-x: clip;
+  }
+
+  .landing-hero {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-height: auto !important;
+    border-radius: 28px !important;
+  }
+
+  .landing-hero > div {
+    min-width: 0 !important;
+    padding: clamp(20px, 6vw, 30px) !important;
+  }
+
+  .landing-hero h1 {
+    max-width: 12ch !important;
+    font-size: clamp(2.25rem, 11vw, 3.55rem) !important;
+    line-height: 1.02 !important;
+    letter-spacing: 0 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .landing-hero .muted {
+    max-width: 100% !important;
+    font-size: 0.96rem !important;
+    line-height: 1.72 !important;
+  }
+
+  .landing-hero .button {
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  .landing-brand-lockup {
+    align-items: center !important;
+    gap: 14px !important;
+  }
+
+  .landing-brand-logo {
+    width: 72px;
+    border-radius: 24%;
+  }
+
+  .page-intro-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-height: auto !important;
+    padding: 18px !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+  }
+
+  .page-intro-copy,
+  .page-intro-aside {
+    min-width: 0 !important;
+  }
+
+  .page-intro-aside {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 14px !important;
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .page-intro-mark {
+    width: 68px !important;
+    min-height: 0 !important;
+  }
+
+  .page-intro-aside-title {
+    margin-top: 0 !important;
+    font-size: clamp(1.22rem, 5.8vw, 1.65rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    hyphens: none !important;
+  }
+
+  .page-intro-aside-copy {
+    grid-column: 1 / -1;
+    margin-top: 0 !important;
+  }
+
+  .page-intro-actions {
+    grid-column: 1 / -1;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+  }
+
+  .study-subject-grid,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .study-card-shell {
+    min-height: 214px !important;
+    padding: 14px !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    gap: 10px !important;
+  }
+
+  .study-card-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .study-card-shell .motion-glyph {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 14px !important;
+  }
+
+  .study-card-shell .circ-wrap {
+    display: none !important;
+  }
+
+  .study-card-label-row {
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .study-card-tag,
+  .tag {
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+  }
+
+  .study-card-title {
+    margin-bottom: 4px !important;
+    font-size: clamp(1.03rem, 4.55vw, 1.28rem) !important;
+    line-height: 1.12 !important;
+    letter-spacing: 0 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    hyphens: none !important;
+  }
+
+  .study-card-overview {
+    min-height: 0 !important;
+    font-size: 0.86rem !important;
+    line-height: 1.48 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .study-card-cta {
+    margin-top: auto !important;
+    font-size: 0.88rem !important;
+  }
+
+  .circ-wrap {
+    width: 48px !important;
+    height: 48px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .study-ops-grid,
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .study-route-page .grid-2,
+  .study-route-page [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .study-route-page input,
+  .study-route-page select,
+  .study-route-page textarea {
+    min-height: 48px !important;
+    font-size: 16px !important;
+  }
+
+  .study-route-page textarea {
+    min-height: 112px !important;
+  }
+
+  .study-route-page table {
+    min-width: 560px;
+  }
+
+  .study-route-page .table-wrap,
+  .study-route-page [style*="overflow"] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .landing-hero h1 {
+    font-size: clamp(2.05rem, 12vw, 3rem) !important;
+    max-width: 11ch !important;
+  }
+
+  .study-subject-grid,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .study-card-shell {
+    min-height: 226px !important;
+    padding: 12px !important;
+  }
+
+  .study-card-title {
+    font-size: 1rem !important;
+  }
+
+  .study-card-overview {
+    -webkit-line-clamp: 4;
   }
 }
