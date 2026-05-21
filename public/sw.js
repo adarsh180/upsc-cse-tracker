@@ -83,6 +83,7 @@ self.addEventListener("push", (event) => {
   }
 
   const title = payload.title || "UPSC Tracker";
+  const urgent = payload.urgent || payload.data?.urgent || payload.data?.tone === "urgent";
   const options = {
     body: payload.body || "Open your tracker for the latest update.",
     icon: payload.icon || "/icon-192.png",
@@ -90,9 +91,16 @@ self.addEventListener("push", (event) => {
     tag: payload.tag || "upsc-tracker-notification",
     data: payload.data || { url: "/dashboard" },
     timestamp: Date.now(),
-    vibrate: [80, 40, 80],
-    renotify: false,
+    vibrate: payload.vibrate || (urgent ? [160, 70, 160, 70, 240] : [80, 40, 80]),
+    renotify: Boolean(payload.renotify ?? urgent),
+    requireInteraction: Boolean(payload.requireInteraction ?? urgent),
     silent: false,
+    actions: [
+      {
+        action: "open",
+        title: "Open tracker",
+      },
+    ],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

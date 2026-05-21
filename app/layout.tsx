@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Noto_Serif_Devanagari, Playfair_Display } from "next/font/google";
 
+import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
 import { AppChrome } from "@/components/shell/app-chrome";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${bodyFont.variable} ${displayFont.variable} ${devanagariFont.variable}`}>
+        <LaunchSplash />
         <PwaRegister />
         <AppChrome>{children}</AppChrome>
       </body>
