@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
 
   const push = await sendWebPushNotification(notification, senderClientId);
 
-  // Send Discord Notification in background
+  // Await the Discord dispatch so Vercel doesn't freeze the execution thread before it completes
   const baseUrl = request.nextUrl.origin;
-  sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
+  await sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
     console.error("[cross-app-notifications] Discord background dispatch error:", err);
   });
 

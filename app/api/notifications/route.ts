@@ -109,9 +109,9 @@ export async function POST(request: NextRequest) {
     });
     push = await sendWebPushNotification(notification, senderClientId);
 
-    // Fire Discord Notification in the background so it doesn't block the API response
+    // Await the Discord dispatch so Vercel doesn't freeze or terminate the serverless function before the webhook completes
     const baseUrl = request.nextUrl.origin;
-    sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
+    await sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
       console.error("[notifications] Discord background dispatch error:", err);
     });
   }
