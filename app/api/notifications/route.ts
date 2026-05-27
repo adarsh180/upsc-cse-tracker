@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notificationRetentionCutoff, pruneExpiredNotifications } from "@/lib/notification-retention";
+import { sendTelegramNotification } from "@/lib/telegram";
 import { sendWebPushNotification } from "@/lib/web-push";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,12 @@ export async function POST(request: NextRequest) {
       },
     });
     push = await sendWebPushNotification(notification, senderClientId);
+
+    // Fire Telegram Notification in the background so it doesn't block the API response
+    const baseUrl = request.nextUrl.origin;
+    sendTelegramNotification({ title, body, senderLabel }, baseUrl).catch((err) => {
+      console.error("[notifications] Telegram background dispatch error:", err);
+    });
   }
 
   const partner = target === "partner" || target === "both"
