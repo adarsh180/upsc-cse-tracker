@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { pruneExpiredNotifications } from "@/lib/notification-retention";
-import { sendTelegramNotification } from "@/lib/telegram";
+import { sendDiscordNotification } from "@/lib/discord";
 import { sendWebPushNotification } from "@/lib/web-push";
 
 export const dynamic = "force-dynamic";
@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
 
   const push = await sendWebPushNotification(notification, senderClientId);
 
-  // Send Telegram Notification in background
+  // Send Discord Notification in background
   const baseUrl = request.nextUrl.origin;
-  sendTelegramNotification({ title, body, senderLabel }, baseUrl).catch((err) => {
-    console.error("[cross-app-notifications] Telegram background dispatch error:", err);
+  sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
+    console.error("[cross-app-notifications] Discord background dispatch error:", err);
   });
 
   return NextResponse.json({ notification, push }, { status: 201 });
