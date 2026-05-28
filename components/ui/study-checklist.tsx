@@ -235,6 +235,7 @@ function TopicRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newSubTopic, setNewSubTopic] = useState("");
+  const [subtopicsOpen, setSubtopicsOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
   const subTopics = nodeChildren(topic);
   const leafIds = collectLeafIds([topic]);
@@ -360,6 +361,16 @@ function TopicRow({
             >
               {confirmDelete ? "Sure?" : <Trash2 size={12} />}
             </button>
+            {isContainer ? (
+              <button
+                type="button"
+                className="study-chevron-btn"
+                onClick={() => setSubtopicsOpen((current) => !current)}
+                title={subtopicsOpen ? "Collapse sub-topics" : "Expand sub-topics"}
+              >
+                <ChevronDown size={12} className={`chapter-accord-chevron${subtopicsOpen ? " open" : ""}`} />
+              </button>
+            ) : null}
           </div>
         )}
       </div>
@@ -383,7 +394,7 @@ function TopicRow({
         </div>
       ) : null}
 
-      {subTopics.length ? (
+      {subTopics.length && subtopicsOpen ? (
         <div className="study-subtopic-stack">
           {subTopics.map((subTopic) => (
             <TopicRow

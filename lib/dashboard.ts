@@ -1,10 +1,72 @@
+import { syllabusTree } from "@/data/syllabus";
 import { db } from "@/lib/db";
+import { isRetryableDbError, withDbRetry } from "@/lib/db-retry";
 import { ensureSeeded, percent } from "@/lib/seed";
 
 type PaperWithChildren = {
   id: string;
+  slug?: string;
+  title?: string;
+  overview?: string | null;
+  accent?: string | null;
   children: Array<{ id: string }>;
 };
+
+type CompletionNode = {
+  id: string;
+  parentId: string | null;
+  topicProgress: { checked: boolean } | null;
+};
+
+function getStaticPapers() {
+  return syllabusTree.map((node, index) => ({
+    id: node.slug,
+    title: node.title,
+    slug: node.slug,
+    type: node.type.toUpperCase(),
+    overview: node.overview,
+    details: node.details ?? null,
+    accent: node.accent ?? null,
+    parentId: null,
+    sortOrder: index,
+    children: (node.children ?? []).map((child, childIndex) => ({
+      id: child.slug,
+      title: child.title,
+      slug: child.slug,
+      type: child.type.toUpperCase(),
+      overview: child.overview,
+      details: child.details ?? null,
+      accent: child.accent ?? null,
+      parentId: node.slug,
+      sortOrder: childIndex,
+    })),
+  }));
+}
+
+function emptyMetrics() {
+  return [
+    {
+      label: "Tracked study hours",
+      value: "0.0h",
+      hint: "Last 30 study entries",
+    },
+    {
+      label: "Average test score",
+      value: "0%",
+      hint: "Log your first test",
+    },
+    {
+      label: "Discipline pulse",
+      value: "0/100",
+      hint: "Last 30 daily goal logs",
+    },
+    {
+      label: "Focus trend",
+      value: "0/10",
+      hint: "Last 14 mood entries",
+    },
+  ];
+}
 
 export async function getPaperCompletionMap(papers: PaperWithChildren[]) {
   const rootIds = papers.map((paper) => paper.id);
@@ -16,17 +78,30 @@ export async function getPaperCompletionMap(papers: PaperWithChildren[]) {
     return completionMap;
   }
 
-  const nodes = await db.studyNode.findMany({
-    select: {
-      id: true,
-      parentId: true,
-      topicProgress: {
+  let nodes: CompletionNode[];
+
+  try {
+    nodes = await withDbRetry(() =>
+      db.studyNode.findMany({
         select: {
-          checked: true,
+          id: true,
+          parentId: true,
+          topicProgress: {
+            select: {
+              checked: true,
+            },
+          },
         },
-      },
-    },
-  });
+      }),
+    );
+  } catch (error) {
+    if (!isRetryableDbError(error)) {
+      throw error;
+    }
+
+    console.error("[paper-completion-map]", error);
+    return completionMap;
+  }
 
   const childrenByParent = new Map<string, typeof nodes>();
   for (const node of nodes) {
@@ -68,15 +143,17 @@ export async function getPaperCompletionMap(papers: PaperWithChildren[]) {
 export async function getStudyTree() {
   await ensureSeeded();
 
-  return db.studyNode.findMany({
-    where: { parentId: null },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      children: {
-        orderBy: { sortOrder: "asc" },
+  return withDbRetry(() =>
+    db.studyNode.findMany({
+      where: { parentId: null },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        children: {
+          orderBy: { sortOrder: "asc" },
+        },
       },
-    },
-  });
+    }),
+  );
 }
 
 export async function getStudyNodeBySlug(slug: string) {
@@ -118,36 +195,63 @@ export async function getStudyNodeBySlug(slug: string) {
 
 
 export async function getDashboardSummary() {
-  await ensureSeeded();
+  let papers;
+  let studyLogs;
+  let dailyLogs;
+  let tests;
+  let moods;
+  let latestEssay;
 
-  const [papers, studyLogs, dailyLogs, tests, moods, latestEssay] = await Promise.all([
-    db.studyNode.findMany({
-      where: { parentId: null },
-      orderBy: { sortOrder: "asc" },
-      include: { children: true },
-    }),
-    db.studyLog.findMany({
-      orderBy: { logDate: "desc" },
-      take: 30,
-      include: { studyNode: true },
-    }),
-    db.dailyLog.findMany({
-      orderBy: { logDate: "desc" },
-      take: 30,
-    }),
-    db.testRecord.findMany({
-      orderBy: { testDate: "desc" },
-      take: 20,
-      include: { studyNode: true },
-    }),
-    db.moodEntry.findMany({
-      orderBy: { moodDate: "desc" },
-      take: 14,
-    }),
-    db.essaySubmission.findFirst({
-      orderBy: { submittedAt: "desc" },
-    }),
-  ]);
+  try {
+    await ensureSeeded();
+
+    [papers, studyLogs, dailyLogs, tests, moods, latestEssay] = await withDbRetry(() =>
+      Promise.all([
+        db.studyNode.findMany({
+          where: { parentId: null },
+          orderBy: { sortOrder: "asc" },
+          include: { children: true },
+        }),
+        db.studyLog.findMany({
+          orderBy: { logDate: "desc" },
+          take: 30,
+          include: { studyNode: true },
+        }),
+        db.dailyLog.findMany({
+          orderBy: { logDate: "desc" },
+          take: 30,
+        }),
+        db.testRecord.findMany({
+          orderBy: { testDate: "desc" },
+          take: 20,
+          include: { studyNode: true },
+        }),
+        db.moodEntry.findMany({
+          orderBy: { moodDate: "desc" },
+          take: 14,
+        }),
+        db.essaySubmission.findFirst({
+          orderBy: { submittedAt: "desc" },
+        }),
+      ]),
+    );
+  } catch (error) {
+    if (!isRetryableDbError(error)) {
+      throw error;
+    }
+
+    console.error("[dashboard-summary]", error);
+
+    return {
+      papers: getStaticPapers(),
+      studyLogs: [],
+      dailyLogs: [],
+      tests: [],
+      moods: [],
+      latestEssay: null,
+      metrics: emptyMetrics(),
+    };
+  }
 
   const totalHours = studyLogs.reduce((sum, item) => sum + item.hours, 0);
   const totalTests = tests.length;
@@ -194,41 +298,58 @@ export async function getDashboardSummary() {
 }
 
 export async function getPerformanceSummary() {
-  await ensureSeeded();
+  try {
+    await ensureSeeded();
 
-  const [tests, moods, dailyLogs, studyLogs] = await Promise.all([
-    db.testRecord.findMany({
-      orderBy: { testDate: "asc" },
-      select: { id: true, testDate: true, score: true, totalMarks: true },
-    }),
-    db.moodEntry.findMany({
-      orderBy: { moodDate: "asc" },
-      select: { id: true, moodDate: true, focus: true, stress: true },
-    }),
-    db.dailyLog.findMany({
-      orderBy: { logDate: "asc" },
-      select: { id: true, logDate: true, disciplineScore: true, completion: true },
-    }),
-    db.studyLog.findMany({
-      orderBy: { logDate: "asc" },
-      select: {
-        id: true,
-        logDate: true,
-        hours: true,
-        studyNode: {
+    const [tests, moods, dailyLogs, studyLogs] = await withDbRetry(() =>
+      Promise.all([
+        db.testRecord.findMany({
+          orderBy: { testDate: "asc" },
+          select: { id: true, testDate: true, score: true, totalMarks: true },
+        }),
+        db.moodEntry.findMany({
+          orderBy: { moodDate: "asc" },
+          select: { id: true, moodDate: true, focus: true, stress: true },
+        }),
+        db.dailyLog.findMany({
+          orderBy: { logDate: "asc" },
+          select: { id: true, logDate: true, disciplineScore: true, completion: true },
+        }),
+        db.studyLog.findMany({
+          orderBy: { logDate: "asc" },
           select: {
             id: true,
-            title: true,
+            logDate: true,
+            hours: true,
+            studyNode: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
           },
-        },
-      },
-    }),
-  ]);
+        }),
+      ]),
+    );
 
-  return {
-    tests,
-    moods,
-    dailyLogs,
-    studyLogs,
-  };
+    return {
+      tests,
+      moods,
+      dailyLogs,
+      studyLogs,
+    };
+  } catch (error) {
+    if (!isRetryableDbError(error)) {
+      throw error;
+    }
+
+    console.error("[performance-summary]", error);
+
+    return {
+      tests: [],
+      moods: [],
+      dailyLogs: [],
+      studyLogs: [],
+    };
+  }
 }

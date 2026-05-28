@@ -1,17 +1,13 @@
 const RETRYABLE_CODES = new Set(["ECONNRESET", "UND_ERR_CONNECT_TIMEOUT", "ETIMEDOUT"]);
 
-function getErrorCode(error: unknown) {
+function getErrorCode(error: unknown): string | null {
   if (!error || typeof error !== "object") return null;
 
   const directCode = "code" in error ? error.code : null;
   if (typeof directCode === "string") return directCode;
 
   const cause = "cause" in error ? error.cause : null;
-  if (cause && typeof cause === "object" && "code" in cause && typeof cause.code === "string") {
-    return cause.code;
-  }
-
-  return null;
+  return getErrorCode(cause);
 }
 
 function getErrorMessage(error: unknown) {
@@ -19,14 +15,15 @@ function getErrorMessage(error: unknown) {
   return String(error ?? "");
 }
 
-function isRetryableDbError(error: unknown) {
+export function isRetryableDbError(error: unknown) {
   const code = getErrorCode(error);
   const message = getErrorMessage(error).toLowerCase();
 
   return (
     (code !== null && RETRYABLE_CODES.has(code)) ||
     message.includes("fetch failed") ||
-    message.includes("econnreset")
+    message.includes("econnreset") ||
+    message.includes("connect timeout")
   );
 }
 

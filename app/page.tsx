@@ -11,18 +11,73 @@ import {
   BookOpen,
 } from "lucide-react";
 
+import { syllabusTree } from "@/data/syllabus";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { CountdownCard, StudyCard } from "@/components/ui/sections";
 import { getSession } from "@/lib/auth";
+import { isRetryableDbError } from "@/lib/db-retry";
 import { getPaperCompletionMap, getStudyTree } from "@/lib/dashboard";
 import { examCountdown } from "@/lib/utils";
 
+type LandingStudyNode = {
+  id: string;
+  slug: string;
+  title: string;
+  overview: string | null;
+  accent: string | null;
+  children: Array<{ id: string }>;
+};
+
+function getStaticStudyTree(): LandingStudyNode[] {
+  return syllabusTree.map((node) => ({
+    id: node.slug,
+    slug: node.slug,
+    title: node.title,
+    overview: node.overview,
+    accent: node.accent ?? null,
+    children: (node.children ?? []).map((child) => ({ id: child.slug })),
+  }));
+}
+
+async function getLandingStudyData(session: Awaited<ReturnType<typeof getSession>>) {
+  const staticTree = getStaticStudyTree();
+  const staticCompletionMap = Object.fromEntries(staticTree.map((node) => [node.id, 0]));
+
+  if (!session) {
+    return {
+      tree: staticTree,
+      paperPctMap: staticCompletionMap,
+      hasLiveStudyData: false,
+    };
+  }
+
+  try {
+    const tree = await getStudyTree();
+    return {
+      tree,
+      paperPctMap: await getPaperCompletionMap(tree),
+      hasLiveStudyData: true,
+    };
+  } catch (error) {
+    if (!isRetryableDbError(error)) {
+      throw error;
+    }
+
+    console.error("[landing-study-data]", error);
+
+    return {
+      tree: staticTree,
+      paperPctMap: staticCompletionMap,
+      hasLiveStudyData: false,
+    };
+  }
+}
+
 export default async function LandingPage() {
-  const [session, tree] = await Promise.all([getSession(), getStudyTree()]);
+  const session = await getSession();
+  const { tree, paperPctMap, hasLiveStudyData } = await getLandingStudyData(session);
   const prelims = examCountdown(process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30");
   const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
-
-  const paperPctMap = await getPaperCompletionMap(tree);
 
   const features = [
     {
@@ -119,7 +174,7 @@ export default async function LandingPage() {
             </Link>
             <div className="pill">
               <ShieldCheck size={14} />
-              Real database, no mock data
+              {hasLiveStudyData ? "Real database, no mock data" : "Syllabus map available offline"}
             </div>
           </div>
         </div>

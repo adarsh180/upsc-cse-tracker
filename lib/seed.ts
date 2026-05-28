@@ -1,5 +1,6 @@
 import { syllabusTree, type SyllabusNode } from "@/data/syllabus";
 import { db } from "@/lib/db";
+import { withDbRetry } from "@/lib/db-retry";
 
 async function upsertNode(
   node: SyllabusNode,
@@ -36,13 +37,11 @@ async function upsertNode(
   return record.id;
 }
 
-let seedPromise: Promise<void> | null = null;
-
 export async function ensureSeeded() {
   const globalAny = global as any;
   if (globalAny.__seedPromise__) return globalAny.__seedPromise__;
 
-  globalAny.__seedPromise__ = (async () => {
+  globalAny.__seedPromise__ = withDbRetry(async () => {
     await db.userProfile.upsert({
       where: { email: process.env.AUTH_EMAIL ?? "tiwariadarsh0704@gmail.com" },
       update: {},
@@ -60,9 +59,14 @@ export async function ensureSeeded() {
     for (const [index, node] of syllabusTree.entries()) {
       await upsertNode(node, null, index);
     }
-  })();
+  });
 
-  return globalAny.__seedPromise__;
+  try {
+    return await globalAny.__seedPromise__;
+  } catch (error) {
+    globalAny.__seedPromise__ = null;
+    throw error;
+  }
 }
 
 export function percent(value: number, total: number) {
