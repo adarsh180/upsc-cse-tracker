@@ -25,6 +25,19 @@ const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
+function normalizeSubjectsCovered(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== "string") return null;
+  const tags = Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 24);
+  return tags.length ? tags.join(", ") : null;
+}
+
 async function uniqueSlug(base: string) {
   const normalized = slugify(base);
   let candidate = normalized;
@@ -154,6 +167,8 @@ export async function saveDailyGoalAction(formData: FormData) {
   await requireSession();
   const logDate = new Date(String(formData.get("logDate") ?? new Date().toISOString()));
 
+  const subjectsCovered = normalizeSubjectsCovered(formData.get("subjectsCovered"));
+
   await db.dailyLog.upsert({
     where: { logDate },
     update: {
@@ -161,6 +176,7 @@ export async function saveDailyGoalAction(formData: FormData) {
       totalHours: Number(formData.get("totalHours") ?? 0),
       questionsSolved: Number(formData.get("questionsSolved") ?? 0),
       topicsStudied: Number(formData.get("topicsStudied") ?? 0),
+      subjectsCovered,
       wins: String(formData.get("wins") ?? ""),
       blockers: String(formData.get("blockers") ?? ""),
       tomorrowPlan: String(formData.get("tomorrowPlan") ?? ""),
@@ -173,12 +189,48 @@ export async function saveDailyGoalAction(formData: FormData) {
       totalHours: Number(formData.get("totalHours") ?? 0),
       questionsSolved: Number(formData.get("questionsSolved") ?? 0),
       topicsStudied: Number(formData.get("topicsStudied") ?? 0),
+      subjectsCovered,
       wins: String(formData.get("wins") ?? ""),
       blockers: String(formData.get("blockers") ?? ""),
       tomorrowPlan: String(formData.get("tomorrowPlan") ?? ""),
       disciplineScore: Number(formData.get("disciplineScore") ?? 0),
       completion: Number(formData.get("completion") ?? 0),
     },
+  });
+
+  refreshCorePages("/goals");
+}
+
+const SCREEN_TIME_KEYS = [
+  "instagram",
+  "whatsapp",
+  "youtube",
+  "youtubeStudy",
+  "facebook",
+  "netflix",
+  "hotstar",
+  "mxPlayer",
+  "google",
+  "other",
+] as const;
+
+export async function saveScreenTimeAction(formData: FormData) {
+  await requireSession();
+  const logDate = new Date(String(formData.get("logDate") ?? new Date().toISOString()));
+
+  const hours = Object.fromEntries(
+    SCREEN_TIME_KEYS.map((key) => {
+      const value = Math.max(0, Math.min(24, Number(formData.get(key) ?? 0) || 0));
+      return [key, value];
+    }),
+  ) as Record<(typeof SCREEN_TIME_KEYS)[number], number>;
+
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  await db.screenTimeLog.upsert({
+    where: { logDate },
+    update: { ...hours, note },
+    create: { logDate, ...hours, note },
   });
 
   refreshCorePages("/goals");
