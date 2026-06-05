@@ -1,13 +1,13 @@
-import { BookOpenCheck, CalendarDays, CheckCircle2, Flame, ListChecks, Save, ShieldCheck, Target } from "lucide-react";
+import { Flame, Target } from "lucide-react";
 
-import { saveDailyGoalAction } from "@/app/actions";
+import { DailyLogForm, type DailyLogDefaults } from "@/components/goals/daily-log-form";
 import { GoalsAnalytics } from "@/components/goals/goals-analytics";
 import { GoalsHistoryTable, type GoalsHistoryRow } from "@/components/goals/goals-history-table";
 import { GoalsSuggestionPanel } from "@/components/goals/goals-suggestion-panel";
 import { MomentumHeatmap } from "@/components/goals/momentum-heatmap";
 import { ScreenTimeAnalytics } from "@/components/goals/screen-time-analytics";
 import { ScreenTimePanel } from "@/components/goals/screen-time-panel";
-import { SubjectTagPicker, type SubjectGroup } from "@/components/goals/subject-tag-picker";
+import { type SubjectGroup } from "@/components/goals/subject-tag-picker";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -102,6 +102,19 @@ export default async function GoalsPage() {
   const todayLog = logs.find((log) => formatIstDateKey(log.logDate) === todayKey);
   const todaySelectedSubjects = parseTags(todayLog?.subjectsCovered);
   const latestSubjects = parseTags(latestLog?.subjectsCovered);
+
+  const dailyLogDefaults: DailyLogDefaults = {
+    logDate: todayKey,
+    primaryFocus: todayLog?.primaryFocus ?? "",
+    totalHours: todayLog?.totalHours ?? 0,
+    completion: todayLog?.completion ?? 0,
+    disciplineScore: todayLog?.disciplineScore ?? 0,
+    questionsSolved: todayLog?.questionsSolved ?? 0,
+    topicsStudied: todayLog?.topicsStudied ?? 0,
+    wins: todayLog?.wins ?? "",
+    blockers: todayLog?.blockers ?? "",
+    tomorrowPlan: todayLog?.tomorrowPlan ?? "",
+  };
   const sevenDayHours = recentLogs.reduce((sum, log) => sum + log.totalHours, 0);
   const sevenDayQuestions = recentLogs.reduce((sum, log) => sum + log.questionsSolved, 0);
   const goodDays7 = recentLogs.filter((log) => log.totalHours >= 8).length;
@@ -179,101 +192,14 @@ export default async function GoalsPage() {
 
       <section className="section-stack goals-v2-stack">
         <section className="goals-v2-top">
-          <article className="glass panel goals-entry-panel">
-            <div className="goals-panel-head">
-              <div>
-                <div className="eyebrow">Today</div>
-                <div className="display goals-panel-title">Execution console</div>
-              </div>
-              <div className="goals-date-chip">
-                <CalendarDays size={14} />
-                {todayLabel}
-              </div>
-            </div>
-
-            <form action={saveDailyGoalAction} className="goals-entry-form">
-              <div className="goals-entry-rubric">
-                <div className="goals-rubric-card weak">
-                  <span>Below bar</span>
-                  <strong>&lt; 8h</strong>
-                  <em>needs correction</em>
-                </div>
-                <div className="goals-rubric-card good">
-                  <span>Good day</span>
-                  <strong>8h+</strong>
-                  <em>minimum UPSC depth</em>
-                </div>
-                <div className="goals-rubric-card peak">
-                  <span>Excellent</span>
-                  <strong>12h+</strong>
-                  <em>peak attempt mode</em>
-                </div>
-              </div>
-
-              <div className="goals-field-group">
-                <label className="goals-field">
-                  <span>Log date</span>
-                  <input className="field" type="date" name="logDate" defaultValue={todayKey} required />
-                </label>
-                <label className="goals-field goals-field-wide">
-                  <span>Mission objective</span>
-                  <input className="field" name="primaryFocus" placeholder="e.g. Polity: DPSP revision + 40 PYQs" required />
-                </label>
-              </div>
-
-              {subjectGroups.length > 0 && (
-                <SubjectTagPicker groups={subjectGroups} defaultSelected={todaySelectedSubjects} />
-              )}
-
-              <div className="goals-metric-fields">
-                <label className="goals-field goals-metric-field hours">
-                  <i><Flame size={15} /></i>
-                  <span>Hours <em>8h good / 12h peak</em></span>
-                  <input className="field" type="number" step="0.25" min="0" max="24" name="totalHours" placeholder="0" required />
-                </label>
-                <label className="goals-field goals-metric-field completion">
-                  <i><CheckCircle2 size={15} /></i>
-                  <span>Done %</span>
-                  <input className="field" type="number" min="0" max="100" name="completion" placeholder="0" required />
-                </label>
-                <label className="goals-field goals-metric-field discipline">
-                  <i><ShieldCheck size={15} /></i>
-                  <span>Discipline</span>
-                  <input className="field" type="number" min="0" max="100" name="disciplineScore" placeholder="0" required />
-                </label>
-                <label className="goals-field goals-metric-field questions">
-                  <i><BookOpenCheck size={15} /></i>
-                  <span>Questions</span>
-                  <input className="field" type="number" min="0" name="questionsSolved" placeholder="0" required />
-                </label>
-                <label className="goals-field goals-metric-field topics">
-                  <i><ListChecks size={15} /></i>
-                  <span>Topics</span>
-                  <input className="field" type="number" min="0" name="topicsStudied" placeholder="0" required />
-                </label>
-              </div>
-
-              <div className="goals-reflection-fields">
-                <label className="goals-field">
-                  <span>Wins</span>
-                  <textarea className="textarea" name="wins" placeholder="What actually moved forward today?" />
-                </label>
-                <label className="goals-field">
-                  <span>Blockers / drift</span>
-                  <textarea className="textarea" name="blockers" placeholder="Where did time leak? What stalled?" />
-                </label>
-                <label className="goals-field">
-                  <span>Tomorrow's first action</span>
-                  <textarea className="textarea" name="tomorrowPlan" placeholder="The one clear move to open tomorrow." />
-                </label>
-              </div>
-
-              <button className="button goals-save-button" type="submit">
-                <Save size={16} />
-                Save execution log
-              </button>
-            </form>
-          </article>
+          <DailyLogForm
+            todayKey={todayKey}
+            todayLabel={todayLabel}
+            subjectGroups={subjectGroups}
+            defaultSubjects={todaySelectedSubjects}
+            defaults={dailyLogDefaults}
+            hasTodayLog={Boolean(todayLog)}
+          />
 
           <div className="goals-snapshot-column">
             <article className="glass panel goals-snapshot-panel">
