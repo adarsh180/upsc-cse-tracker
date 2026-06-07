@@ -12287,6 +12287,137 @@ html[data-theme="light"] .subject-chip {
 .dlf-reflect-field.block .dlf-field-label svg { color: var(--danger); }
 .dlf-reflect-field.next .dlf-field-label svg { color: var(--physics); }
 
+/* Exam-specific test logging */
+.exam-stage-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.exam-stage-switch button,
+.exam-paper-strip button {
+  border: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.exam-stage-switch button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.exam-stage-switch button.active,
+.exam-paper-strip button.active {
+  border-color: hsla(38, 92%, 62%, 0.5);
+  background: linear-gradient(135deg, hsla(38,92%,62%,0.16), hsla(184,64%,54%,0.09));
+  box-shadow: inset 0 0 0 1px hsla(38,92%,62%,0.1), 0 16px 34px rgba(0,0,0,0.16);
+}
+
+.exam-stage-switch button:hover,
+.exam-paper-strip button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.exam-paper-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 9px;
+  max-height: 182px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.exam-paper-strip button {
+  min-height: 72px;
+  padding: 12px;
+  text-align: left;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.exam-paper-strip strong {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.exam-paper-strip span,
+.mains-paper-note em,
+.mains-evaluation-rubric span {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.mains-paper-note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid hsla(184, 64%, 54%, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, hsla(184,64%,54%,0.08), hsla(38,92%,62%,0.05));
+}
+
+.mains-paper-note svg {
+  grid-row: span 2;
+  color: var(--physics);
+}
+
+.mains-paper-note span {
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--text);
+}
+
+.mains-question-lab {
+  display: grid;
+  gap: 12px;
+}
+
+.mains-evaluation-rubric {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mains-evaluation-rubric label {
+  display: grid;
+  gap: 6px;
+}
+
+.error-analysis-grid-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(54px, 1fr));
+  gap: 6px;
+  min-width: 128px;
+}
+
+.error-analysis-grid-duo .field {
+  padding-inline: 8px;
+}
+
+@media (max-width: 720px) {
+  .exam-paper-strip,
+  .mains-evaluation-rubric {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* error + actions */
 .dlf-error {
   padding: 10px 14px;

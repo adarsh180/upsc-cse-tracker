@@ -118,10 +118,15 @@ model TestRecord {
   title              String
   examStage          String
   testType           String
+  paperCode          String?
+  paperName          String?
+  optionalSubject    String?
   testDate           DateTime
   totalQuestions     Int        @default(0)
   totalMarks         Float
   score              Float
+  negativeMarks      Float?
+  cutoffTarget       Float?
   correctQuestions   Int?
   incorrectQuestions Int?
   attemptedQuestions Int?
@@ -139,15 +144,25 @@ model TestQuestionLog {
   id                  String     @id @default(cuid())
   testRecordId        String
   questionNumber      Int
+  questionType        String     @default("OBJECTIVE")
   questionSummary     String     @db.Text
+  selectedAnswer      String?    @db.Text
   correctAnswer       String?    @db.Text
   correctExplanation  String?    @db.Text
   mainsApproach       String?    @db.Text
   mainsExamples       String?    @db.Text
+  valueAddedPoints    String?    @db.Text
   subject             String?
   topic               String?
   sourceType          String     @default("PRACTICE_TEST")
   outcome             String     @default("SKIPPED")
+  marksAwarded        Float?
+  maxMarks            Float?
+  wordLimit           Int?
+  wordCount           Int?
+  structureScore      Int?
+  contentScore        Int?
+  presentationScore   Int?
   studiedTopic        Boolean    @default(false)
   resourceCovered     String     @default("UNKNOWN")
   currentAffairsLinked Boolean   @default(false)

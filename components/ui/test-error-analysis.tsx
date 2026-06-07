@@ -7,13 +7,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   ArrowLeft,
+  BookMarked,
   BrainCircuit,
   CheckCircle2,
   FileSpreadsheet,
   History,
+  Languages,
   LineChart,
   Loader2,
   Pencil,
+  PenLine,
   Plus,
   Sparkles,
   Trash2,
@@ -31,10 +34,15 @@ type TestOption = {
   title: string;
   examStage: string;
   testType: string;
+  paperCode?: string | null;
+  paperName?: string | null;
+  optionalSubject?: string | null;
   testDate: string | Date;
   totalQuestions: number;
   totalMarks: number;
   score: number;
+  negativeMarks?: number | null;
+  cutoffTarget?: number | null;
   correctQuestions: number | null;
   incorrectQuestions: number | null;
   attemptedQuestions: number | null;
@@ -58,15 +66,25 @@ type QuestionLog = {
   id: string;
   testRecordId: string;
   questionNumber: number;
+  questionType: string;
   questionSummary: string;
+  selectedAnswer: string | null;
   correctAnswer: string | null;
   correctExplanation: string | null;
   mainsApproach: string | null;
   mainsExamples: string | null;
+  valueAddedPoints: string | null;
   subject: string | null;
   topic: string | null;
   sourceType: string;
   outcome: string;
+  marksAwarded: number | null;
+  maxMarks: number | null;
+  wordLimit: number | null;
+  wordCount: number | null;
+  structureScore: number | null;
+  contentScore: number | null;
+  presentationScore: number | null;
   studiedTopic: boolean;
   resourceCovered: string;
   currentAffairsLinked: boolean;
@@ -126,6 +144,17 @@ type QuestionAnalytics = {
     low: number;
     byQuestion: SeverityQuestion[];
     top: SeverityQuestion[];
+  };
+  mainsScoring?: {
+    markedRows: number;
+    marksAwarded: number;
+    maxMarks: number;
+    scorePct: number;
+    wordTrackedRows: number;
+    wordBreachRate: number;
+    avgStructureScore: number;
+    avgContentScore: number;
+    avgPresentationScore: number;
   };
   timeline: Array<{
     question: number;
@@ -194,10 +223,15 @@ type DraftTest = {
   title: string;
   examStage: string;
   testType: string;
+  paperCode: string;
+  paperName: string;
+  optionalSubject: string;
   testDate: string;
   totalQuestions: string;
   totalMarks: string;
   score: string;
+  negativeMarks: string;
+  cutoffTarget: string;
   correctQuestions: string;
   incorrectQuestions: string;
   attemptedQuestions: string;
@@ -210,15 +244,25 @@ type DraftTest = {
 type DraftQuestion = {
   id?: string;
   questionNumber: number;
+  questionType: string;
   questionSummary: string;
+  selectedAnswer: string;
   correctAnswer: string;
   correctExplanation: string;
   mainsApproach: string;
   mainsExamples: string;
+  valueAddedPoints: string;
   subject: string;
   topic: string;
   sourceType: string;
   outcome: string;
+  marksAwarded: string;
+  maxMarks: string;
+  wordLimit: string;
+  wordCount: string;
+  structureScore: string;
+  contentScore: string;
+  presentationScore: string;
   studiedTopic: boolean;
   resourceCovered: string;
   currentAffairsLinked: boolean;
@@ -234,11 +278,16 @@ type DraftQuestion = {
 const emptyTestDraft: DraftTest = {
   title: "",
   examStage: "PRELIMS",
-  testType: "SECTIONAL",
+  testType: "GS_PAPER_1",
+  paperCode: "PRELIMS_GS1",
+  paperName: "Prelims GS Paper I",
+  optionalSubject: "",
   testDate: format(new Date(), "yyyy-MM-dd"),
-  totalQuestions: "",
-  totalMarks: "",
+  totalQuestions: "100",
+  totalMarks: "200",
   score: "",
+  negativeMarks: "",
+  cutoffTarget: "",
   correctQuestions: "",
   incorrectQuestions: "",
   attemptedQuestions: "",
@@ -250,15 +299,25 @@ const emptyTestDraft: DraftTest = {
 
 const emptyQuestionDraft: DraftQuestion = {
   questionNumber: 1,
+  questionType: "OBJECTIVE",
   questionSummary: "",
+  selectedAnswer: "",
   correctAnswer: "",
   correctExplanation: "",
   mainsApproach: "",
   mainsExamples: "",
+  valueAddedPoints: "",
   subject: "",
   topic: "",
   sourceType: "PRACTICE_TEST",
   outcome: "SKIPPED",
+  marksAwarded: "",
+  maxMarks: "",
+  wordLimit: "",
+  wordCount: "",
+  structureScore: "",
+  contentScore: "",
+  presentationScore: "",
   studiedTopic: false,
   resourceCovered: "UNKNOWN",
   currentAffairsLinked: false,
@@ -270,6 +329,36 @@ const emptyQuestionDraft: DraftQuestion = {
   actionFix: "",
   notes: "",
 };
+
+const prelimsPaperOptions = [
+  { code: "PRELIMS_GS1", name: "Prelims GS Paper I", type: "GS_PAPER_1", questions: "100", marks: "200", minutes: "120" },
+  { code: "PRELIMS_CSAT", name: "Prelims CSAT Paper II", type: "CSAT", questions: "80", marks: "200", minutes: "120" },
+  { code: "PRELIMS_SECTIONAL", name: "Prelims sectional test", type: "SECTIONAL", questions: "50", marks: "100", minutes: "60" },
+  { code: "PRELIMS_PYQ", name: "Prelims PYQ paper", type: "PYQ", questions: "100", marks: "200", minutes: "120" },
+];
+
+const mainsPaperOptions = [
+  { code: "ESSAY", name: "Essay Paper", type: "ESSAY", questions: "2", marks: "250", minutes: "180" },
+  { code: "GS1", name: "GS Paper I", type: "GS_PAPER", questions: "20", marks: "250", minutes: "180" },
+  { code: "GS2", name: "GS Paper II", type: "GS_PAPER", questions: "20", marks: "250", minutes: "180" },
+  { code: "GS3", name: "GS Paper III", type: "GS_PAPER", questions: "20", marks: "250", minutes: "180" },
+  { code: "GS4", name: "GS Paper IV Ethics", type: "ETHICS_CASE_STUDY", questions: "12", marks: "250", minutes: "180" },
+  { code: "OPTIONAL_1", name: "Optional Paper I", type: "OPTIONAL", questions: "8", marks: "250", minutes: "180" },
+  { code: "OPTIONAL_2", name: "Optional Paper II", type: "OPTIONAL", questions: "8", marks: "250", minutes: "180" },
+  { code: "COMPULSORY_ENGLISH", name: "Compulsory English", type: "LANGUAGE", questions: "5", marks: "300", minutes: "180" },
+  { code: "COMPULSORY_HINDI", name: "Compulsory Hindi", type: "LANGUAGE", questions: "5", marks: "300", minutes: "180" },
+];
+
+const mainsSpecialSubjects = [
+  "Essay",
+  "Compulsory English",
+  "Compulsory Hindi",
+  "General Studies I",
+  "General Studies II",
+  "General Studies III",
+  "General Studies IV Ethics",
+  "Optional Paper",
+];
 
 const outcomeLabels: Record<string, string> = {
   CORRECT: "Correct",
@@ -288,7 +377,20 @@ const errorTypeLabels: Record<string, string> = {
   TIME_PRESSURE: "Time pressure",
   RESOURCE_GAP: "Resource gap",
   REVISION_GAP: "Revision gap",
+  ANSWER_STRUCTURE: "Answer structure",
+  CONTENT_DEPTH: "Content depth",
+  INTRO_CONCLUSION: "Intro / conclusion",
+  VALUE_ADDITION: "Value addition",
+  LANGUAGE_EXPRESSION: "Language expression",
+  WORD_LIMIT: "Word limit",
   NONE: "None",
+};
+
+const mainsOutcomeLabels: Record<string, string> = {
+  CORRECT: "High-value answer",
+  INCORRECT: "Poor answer",
+  SKIPPED: "Not attempted",
+  PARTIAL: "Partial answer",
 };
 
 function toDateInput(date: Date | string) {
@@ -305,10 +407,15 @@ function toTestDraft(test: TestOption): DraftTest {
     title: test.title,
     examStage: test.examStage,
     testType: test.testType,
+    paperCode: test.paperCode ?? "",
+    paperName: test.paperName ?? "",
+    optionalSubject: test.optionalSubject ?? "",
     testDate: toDateInput(test.testDate),
     totalQuestions: test.totalQuestions ? String(test.totalQuestions) : "",
     totalMarks: test.totalMarks ? String(test.totalMarks) : "",
     score: test.score ? String(test.score) : "",
+    negativeMarks: test.negativeMarks ? String(test.negativeMarks) : "",
+    cutoffTarget: test.cutoffTarget ? String(test.cutoffTarget) : "",
     correctQuestions: test.correctQuestions ? String(test.correctQuestions) : "",
     incorrectQuestions: test.incorrectQuestions ? String(test.incorrectQuestions) : "",
     attemptedQuestions: test.attemptedQuestions ? String(test.attemptedQuestions) : "",
@@ -323,15 +430,25 @@ function toQuestionDraft(log: QuestionLog): DraftQuestion {
   return {
     id: log.id,
     questionNumber: log.questionNumber,
+    questionType: log.questionType ?? "OBJECTIVE",
     questionSummary: log.questionSummary,
+    selectedAnswer: log.selectedAnswer ?? "",
     correctAnswer: log.correctAnswer ?? "",
     correctExplanation: log.correctExplanation ?? "",
     mainsApproach: log.mainsApproach ?? "",
     mainsExamples: log.mainsExamples ?? "",
+    valueAddedPoints: log.valueAddedPoints ?? "",
     subject: log.subject ?? "",
     topic: log.topic ?? "",
     sourceType: log.sourceType,
     outcome: log.outcome,
+    marksAwarded: log.marksAwarded !== null && log.marksAwarded !== undefined ? String(log.marksAwarded) : "",
+    maxMarks: log.maxMarks !== null && log.maxMarks !== undefined ? String(log.maxMarks) : "",
+    wordLimit: log.wordLimit ? String(log.wordLimit) : "",
+    wordCount: log.wordCount ? String(log.wordCount) : "",
+    structureScore: log.structureScore ? String(log.structureScore) : "",
+    contentScore: log.contentScore ? String(log.contentScore) : "",
+    presentationScore: log.presentationScore ? String(log.presentationScore) : "",
     studiedTopic: log.studiedTopic,
     resourceCovered: log.resourceCovered,
     currentAffairsLinked: log.currentAffairsLinked,
@@ -360,10 +477,12 @@ function hasQuestionGridSignal(row: DraftQuestion) {
   return Boolean(
     row.id ||
       row.questionSummary.trim() ||
+      row.selectedAnswer.trim() ||
       row.correctAnswer.trim() ||
       row.correctExplanation.trim() ||
       row.mainsApproach.trim() ||
       row.mainsExamples.trim() ||
+      row.valueAddedPoints.trim() ||
       row.subject.trim() ||
       row.topic.trim() ||
       row.mistakeReason.trim() ||
@@ -373,6 +492,14 @@ function hasQuestionGridSignal(row: DraftQuestion) {
       row.resourceCovered !== emptyQuestionDraft.resourceCovered ||
       row.errorType !== emptyQuestionDraft.errorType ||
       row.difficulty !== emptyQuestionDraft.difficulty ||
+      row.questionType !== emptyQuestionDraft.questionType ||
+      row.marksAwarded.trim() ||
+      row.maxMarks.trim() ||
+      row.wordLimit.trim() ||
+      row.wordCount.trim() ||
+      row.structureScore.trim() ||
+      row.contentScore.trim() ||
+      row.presentationScore.trim() ||
       row.studiedTopic ||
       row.currentAffairsLinked ||
       row.confidence.trim() ||
@@ -472,6 +599,19 @@ export function TestErrorAnalysisWorkspace({
   const plannedQuestions = snapshot?.test.totalQuestions || selectedTest?.totalQuestions || 0;
   const loggedPct = plannedQuestions ? Math.round((logs.length / plannedQuestions) * 100) : 0;
   const isMainsMode = (snapshot?.test.examStage ?? selectedTest?.examStage ?? testDraft.examStage) === "MAINS";
+  const paperOptions = testDraft.examStage === "MAINS" ? mainsPaperOptions : prelimsPaperOptions;
+  const selectedPaper = paperOptions.find((paper) => paper.code === testDraft.paperCode) ?? paperOptions[0];
+  const questionOutcomeLabels = isMainsMode ? mainsOutcomeLabels : outcomeLabels;
+  const subjectChoices = useMemo(
+    () =>
+      testDraft.examStage === "MAINS"
+        ? [
+            ...mainsSpecialSubjects.map((title) => ({ id: `mains-${title}`, title, children: [] })),
+            ...subjects,
+          ]
+        : subjects,
+    [subjects, testDraft.examStage],
+  );
   const orbDragRef = useRef({ active: false, x: 0, y: 0, moved: false });
   const meetingAngle = useMemo(() => Math.round(Math.random() * 360), []);
 
@@ -549,6 +689,62 @@ export function TestErrorAnalysisWorkspace({
 
   function updateTestDraft<K extends keyof DraftTest>(key: K, value: DraftTest[K]) {
     setTestDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyStagePreset(examStage: string) {
+    const nextPaper = examStage === "MAINS" ? mainsPaperOptions[0] : prelimsPaperOptions[0];
+    setTestDraft((current) => ({
+      ...current,
+      examStage,
+      testType: nextPaper.type,
+      paperCode: nextPaper.code,
+      paperName: nextPaper.name,
+      totalQuestions: current.id ? current.totalQuestions : nextPaper.questions,
+      totalMarks: current.id ? current.totalMarks : nextPaper.marks,
+      timeMinutes: current.id ? current.timeMinutes : nextPaper.minutes,
+      correctQuestions: examStage === "MAINS" ? "" : current.correctQuestions,
+      incorrectQuestions: examStage === "MAINS" ? "" : current.incorrectQuestions,
+      attemptedQuestions: examStage === "MAINS" ? "" : current.attemptedQuestions,
+      percentile: examStage === "MAINS" ? "" : current.percentile,
+      negativeMarks: examStage === "MAINS" ? "" : current.negativeMarks,
+      cutoffTarget: examStage === "MAINS" ? "" : current.cutoffTarget,
+    }));
+    setQuestionDraft((current) => ({
+      ...current,
+      questionType: examStage === "MAINS" ? "DESCRIPTIVE" : "OBJECTIVE",
+      maxMarks: examStage === "MAINS" ? "10" : "",
+      wordLimit: examStage === "MAINS" ? "150" : "",
+    }));
+  }
+
+  function applyPaperPreset(paperCode: string) {
+    const paper = paperOptions.find((item) => item.code === paperCode);
+    if (!paper) return;
+
+    setTestDraft((current) => ({
+      ...current,
+      paperCode: paper.code,
+      paperName: paper.name,
+      testType: paper.type,
+      totalQuestions: paper.questions,
+      totalMarks: paper.marks,
+      timeMinutes: paper.minutes,
+    }));
+    setQuestionDraft((current) => ({
+      ...current,
+      questionType:
+        paper.type === "ESSAY" ? "ESSAY" : paper.type === "LANGUAGE" ? "LANGUAGE" : current.questionType,
+      subject:
+        paper.code === "ESSAY"
+          ? "Essay"
+          : paper.code === "COMPULSORY_ENGLISH"
+            ? "Compulsory English"
+            : paper.code === "COMPULSORY_HINDI"
+              ? "Compulsory Hindi"
+              : current.subject,
+      maxMarks: paper.type === "ESSAY" ? "125" : paper.type === "LANGUAGE" ? "" : current.maxMarks || "10",
+      wordLimit: paper.type === "ESSAY" ? "1200" : paper.type === "LANGUAGE" ? "" : current.wordLimit || "150",
+    }));
   }
 
   function updateQuestionDraft<K extends keyof DraftQuestion>(key: K, value: DraftQuestion[K]) {
@@ -715,6 +911,8 @@ export function TestErrorAnalysisWorkspace({
             totalQuestions: Number(testDraft.totalQuestions || 0),
             totalMarks: Number(testDraft.totalMarks || 0),
             score: Number(testDraft.score || 0),
+            negativeMarks: numericOrNull(testDraft.negativeMarks),
+            cutoffTarget: numericOrNull(testDraft.cutoffTarget),
             correctQuestions: numericOrNull(testDraft.correctQuestions),
             incorrectQuestions: numericOrNull(testDraft.incorrectQuestions),
             attemptedQuestions: numericOrNull(testDraft.attemptedQuestions),
@@ -763,10 +961,20 @@ export function TestErrorAnalysisWorkspace({
           question: {
             ...questionDraft,
             testRecordId: selectedTestId,
+            questionType: isMainsMode ? questionDraft.questionType : "OBJECTIVE",
+            selectedAnswer: isMainsMode ? "" : questionDraft.selectedAnswer,
             correctAnswer: isMainsMode ? "" : questionDraft.correctAnswer,
             correctExplanation: isMainsMode ? "" : questionDraft.correctExplanation,
             mainsApproach: isMainsMode ? questionDraft.mainsApproach : "",
             mainsExamples: isMainsMode ? questionDraft.mainsExamples : "",
+            valueAddedPoints: isMainsMode ? questionDraft.valueAddedPoints : "",
+            marksAwarded: isMainsMode ? numericOrNull(questionDraft.marksAwarded) : null,
+            maxMarks: isMainsMode ? numericOrNull(questionDraft.maxMarks) : null,
+            wordLimit: isMainsMode ? numericOrNull(questionDraft.wordLimit) : null,
+            wordCount: isMainsMode ? numericOrNull(questionDraft.wordCount) : null,
+            structureScore: isMainsMode ? numericOrNull(questionDraft.structureScore) : null,
+            contentScore: isMainsMode ? numericOrNull(questionDraft.contentScore) : null,
+            presentationScore: isMainsMode ? numericOrNull(questionDraft.presentationScore) : null,
             confidence: questionDraft.confidence ? Number(questionDraft.confidence) : null,
             timeSpentSeconds: questionDraft.timeSpentSeconds ? Number(questionDraft.timeSpentSeconds) : null,
           },
@@ -796,10 +1004,20 @@ export function TestErrorAnalysisWorkspace({
           question: {
             ...row,
             testRecordId: selectedTestId,
+            questionType: isMainsMode ? row.questionType : "OBJECTIVE",
+            selectedAnswer: isMainsMode ? "" : row.selectedAnswer,
             correctAnswer: isMainsMode ? "" : row.correctAnswer,
             correctExplanation: isMainsMode ? "" : row.correctExplanation,
             mainsApproach: isMainsMode ? row.mainsApproach : "",
             mainsExamples: isMainsMode ? row.mainsExamples : "",
+            valueAddedPoints: isMainsMode ? row.valueAddedPoints : "",
+            marksAwarded: isMainsMode ? numericOrNull(row.marksAwarded) : null,
+            maxMarks: isMainsMode ? numericOrNull(row.maxMarks) : null,
+            wordLimit: isMainsMode ? numericOrNull(row.wordLimit) : null,
+            wordCount: isMainsMode ? numericOrNull(row.wordCount) : null,
+            structureScore: isMainsMode ? numericOrNull(row.structureScore) : null,
+            contentScore: isMainsMode ? numericOrNull(row.contentScore) : null,
+            presentationScore: isMainsMode ? numericOrNull(row.presentationScore) : null,
             confidence: row.confidence ? Number(row.confidence) : null,
             timeSpentSeconds: row.timeSpentSeconds ? Number(row.timeSpentSeconds) : null,
           },
@@ -834,10 +1052,20 @@ export function TestErrorAnalysisWorkspace({
           questions: rowsToSave.map((row) => ({
             ...row,
             testRecordId: selectedTestId,
+            questionType: isMainsMode ? row.questionType : "OBJECTIVE",
+            selectedAnswer: isMainsMode ? "" : row.selectedAnswer,
             correctAnswer: isMainsMode ? "" : row.correctAnswer,
             correctExplanation: isMainsMode ? "" : row.correctExplanation,
             mainsApproach: isMainsMode ? row.mainsApproach : "",
             mainsExamples: isMainsMode ? row.mainsExamples : "",
+            valueAddedPoints: isMainsMode ? row.valueAddedPoints : "",
+            marksAwarded: isMainsMode ? numericOrNull(row.marksAwarded) : null,
+            maxMarks: isMainsMode ? numericOrNull(row.maxMarks) : null,
+            wordLimit: isMainsMode ? numericOrNull(row.wordLimit) : null,
+            wordCount: isMainsMode ? numericOrNull(row.wordCount) : null,
+            structureScore: isMainsMode ? numericOrNull(row.structureScore) : null,
+            contentScore: isMainsMode ? numericOrNull(row.contentScore) : null,
+            presentationScore: isMainsMode ? numericOrNull(row.presentationScore) : null,
             confidence: row.confidence ? Number(row.confidence) : null,
             timeSpentSeconds: row.timeSpentSeconds ? Number(row.timeSpentSeconds) : null,
           })),
@@ -1171,64 +1399,50 @@ export function TestErrorAnalysisWorkspace({
               onChange={(event) => updateTestDraft("title", event.target.value)}
               placeholder="Test name, e.g. Vision batch test 12 or UPSC Prelims PYQ 2023"
             />
+            <div className="exam-stage-switch" role="tablist" aria-label="Exam stage">
+              {[
+                { value: "PRELIMS", label: "Prelims", icon: BookMarked },
+                { value: "MAINS", label: "Mains", icon: PenLine },
+              ].map((stage) => (
+                <button
+                  key={stage.value}
+                  type="button"
+                  className={testDraft.examStage === stage.value ? "active" : ""}
+                  onClick={() => applyStagePreset(stage.value)}
+                >
+                  <stage.icon size={15} />
+                  <span>{stage.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="exam-paper-strip">
+              {paperOptions.map((paper) => (
+                <button
+                  key={paper.code}
+                  type="button"
+                  className={testDraft.paperCode === paper.code ? "active" : ""}
+                  onClick={() => applyPaperPreset(paper.code)}
+                >
+                  <strong>{paper.name}</strong>
+                  <span>{paper.questions} Q | {paper.marks} marks | {paper.minutes} min</span>
+                </button>
+              ))}
+            </div>
+
             <div className="tests-form-triplet">
-              <select className="select" value={testDraft.examStage} onChange={(event) => updateTestDraft("examStage", event.target.value)}>
-                <option value="PRELIMS">Prelims test</option>
-                <option value="MAINS">Mains test</option>
-              </select>
-              <select className="select" value={testDraft.testType} onChange={(event) => updateTestDraft("testType", event.target.value)}>
-                <option value="SECTIONAL">Sectional</option>
-                <option value="UNIT">Unit</option>
-                <option value="SUBJECT">Subject-wise</option>
-                <option value="FULL">Full length</option>
-                <option value="PYQ">PYQ</option>
-                <option value="REAL_ATTEMPT">Real attempt</option>
-                <option value="ALL_INDIA">All India</option>
-              </select>
               <input
                 className="field"
                 type="date"
                 value={testDraft.testDate}
                 onChange={(event) => updateTestDraft("testDate", event.target.value)}
               />
-            </div>
-
-            <div className="tests-form-triplet">
               <input
                 className="field"
-                type="number"
-                min={0}
-                value={testDraft.totalQuestions}
-                onChange={(event) => updateTestDraft("totalQuestions", event.target.value)}
-                placeholder="Number of questions"
+                value={testDraft.paperName}
+                onChange={(event) => updateTestDraft("paperName", event.target.value)}
+                placeholder={selectedPaper.name}
               />
-              <input
-                className="field"
-                type="number"
-                step="0.01"
-                value={testDraft.totalMarks}
-                onChange={(event) => updateTestDraft("totalMarks", event.target.value)}
-                placeholder="Total marks"
-              />
-              <input
-                className="field"
-                type="number"
-                step="0.01"
-                value={testDraft.score}
-                onChange={(event) => updateTestDraft("score", event.target.value)}
-                placeholder="Score"
-              />
-            </div>
-
-            <div className="tests-form-triplet">
-              <input className="field" type="number" value={testDraft.correctQuestions} onChange={(event) => updateTestDraft("correctQuestions", event.target.value)} placeholder="Correct" />
-              <input className="field" type="number" value={testDraft.incorrectQuestions} onChange={(event) => updateTestDraft("incorrectQuestions", event.target.value)} placeholder="Incorrect" />
-              <input className="field" type="number" value={testDraft.attemptedQuestions} onChange={(event) => updateTestDraft("attemptedQuestions", event.target.value)} placeholder="Attempted" />
-            </div>
-
-            <div className="tests-form-triplet">
-              <input className="field" type="number" step="0.01" value={testDraft.percentile} onChange={(event) => updateTestDraft("percentile", event.target.value)} placeholder="Percentile" />
-              <input className="field" type="number" value={testDraft.timeMinutes} onChange={(event) => updateTestDraft("timeMinutes", event.target.value)} placeholder="Time minutes" />
               <select className="select" value={testDraft.studyNodeId} onChange={(event) => updateTestDraft("studyNodeId", event.target.value)}>
                 <option value="">Subject optional</option>
                 {subjects.map((subject) => (
@@ -1236,6 +1450,49 @@ export function TestErrorAnalysisWorkspace({
                 ))}
               </select>
             </div>
+
+            {testDraft.examStage === "MAINS" ? (
+              <div className="mains-paper-note">
+                <Languages size={16} />
+                <span>{testDraft.paperName || selectedPaper.name}</span>
+                <em>Essay, GS, optional, English and Hindi use marks, word discipline and answer-quality logging.</em>
+              </div>
+            ) : null}
+
+            <div className="tests-form-triplet">
+              <input className="field" type="number" min={0} value={testDraft.totalQuestions} onChange={(event) => updateTestDraft("totalQuestions", event.target.value)} placeholder={testDraft.examStage === "MAINS" ? "Answers / questions" : "Number of questions"} />
+              <input className="field" type="number" step="0.01" value={testDraft.totalMarks} onChange={(event) => updateTestDraft("totalMarks", event.target.value)} placeholder="Total marks" />
+              <input className="field" type="number" step="0.01" value={testDraft.score} onChange={(event) => updateTestDraft("score", event.target.value)} placeholder="Score" />
+            </div>
+
+            {testDraft.examStage === "PRELIMS" ? (
+              <>
+                <div className="tests-form-triplet">
+                  <input className="field" type="number" value={testDraft.correctQuestions} onChange={(event) => updateTestDraft("correctQuestions", event.target.value)} placeholder="Correct" />
+                  <input className="field" type="number" value={testDraft.incorrectQuestions} onChange={(event) => updateTestDraft("incorrectQuestions", event.target.value)} placeholder="Incorrect" />
+                  <input className="field" type="number" value={testDraft.attemptedQuestions} onChange={(event) => updateTestDraft("attemptedQuestions", event.target.value)} placeholder="Attempted" />
+                </div>
+                <div className="tests-form-triplet">
+                  <input className="field" type="number" step="0.01" value={testDraft.negativeMarks} onChange={(event) => updateTestDraft("negativeMarks", event.target.value)} placeholder="Negative marks lost" />
+                  <input className="field" type="number" step="0.01" value={testDraft.cutoffTarget} onChange={(event) => updateTestDraft("cutoffTarget", event.target.value)} placeholder="Cutoff / target score" />
+                  <input className="field" type="number" step="0.01" value={testDraft.percentile} onChange={(event) => updateTestDraft("percentile", event.target.value)} placeholder="Percentile" />
+                </div>
+              </>
+            ) : (
+              <div className="tests-form-triplet">
+                <input className="field" value={testDraft.optionalSubject} onChange={(event) => updateTestDraft("optionalSubject", event.target.value)} placeholder="Optional subject, if relevant" />
+                <input className="field" type="number" value={testDraft.timeMinutes} onChange={(event) => updateTestDraft("timeMinutes", event.target.value)} placeholder="Time minutes" />
+                <input className="field" value={testDraft.testType.replaceAll("_", " ")} onChange={(event) => updateTestDraft("testType", event.target.value.toUpperCase().replace(/\s+/g, "_"))} placeholder="Paper type" />
+              </div>
+            )}
+
+            {testDraft.examStage === "PRELIMS" ? (
+              <div className="tests-form-triplet">
+                <input className="field" type="number" value={testDraft.timeMinutes} onChange={(event) => updateTestDraft("timeMinutes", event.target.value)} placeholder="Time minutes" />
+                <input className="field" value={testDraft.testType.replaceAll("_", " ")} onChange={(event) => updateTestDraft("testType", event.target.value.toUpperCase().replace(/\s+/g, "_"))} placeholder="Test type" />
+                <input className="field" value={testDraft.paperCode} onChange={(event) => updateTestDraft("paperCode", event.target.value)} placeholder="Paper code" />
+              </div>
+            ) : null}
 
             <textarea
               className="textarea"
@@ -1253,14 +1510,23 @@ export function TestErrorAnalysisWorkspace({
       </section>
 
           <section className="error-analysis-metrics">
-            {[
-              { label: "Logged", value: analytics?.total ?? 0, hint: "questions", tone: "var(--physics)" },
-              { label: "Accuracy", value: `${analytics?.accuracy ?? 0}%`, hint: "attempt quality", tone: "var(--botany)" },
-              { label: "Skipped", value: `${analytics?.skipRate ?? 0}%`, hint: "risk avoidance", tone: "var(--gold-bright)" },
-              { label: "Resource gap", value: `${analytics?.resourceGapRate ?? 0}%`, hint: "coverage issue", tone: "var(--rose-bright)" },
-              { label: "Studied but wrong", value: analytics?.studiedButWrong ?? 0, hint: "revision leak", tone: "var(--lotus-bright)" },
-              { label: "Severity", value: analytics?.severity.avgScore ?? 0, hint: "avg risk score", tone: "var(--saffron)" },
-            ].map((metric) => (
+            {(isMainsMode
+              ? [
+                  { label: "Logged", value: analytics?.total ?? 0, hint: "answers", tone: "var(--physics)" },
+                  { label: "Mains score", value: `${analytics?.mainsScoring?.scorePct ?? 0}%`, hint: "logged marks", tone: "var(--botany)" },
+                  { label: "Word breach", value: `${analytics?.mainsScoring?.wordBreachRate ?? 0}%`, hint: "word discipline", tone: "var(--gold-bright)" },
+                  { label: "Structure", value: analytics?.mainsScoring?.avgStructureScore ?? 0, hint: "avg /5", tone: "var(--lotus-bright)" },
+                  { label: "Content", value: analytics?.mainsScoring?.avgContentScore ?? 0, hint: "avg /5", tone: "var(--rose-bright)" },
+                  { label: "Severity", value: analytics?.severity.avgScore ?? 0, hint: "avg risk score", tone: "var(--saffron)" },
+                ]
+              : [
+                  { label: "Logged", value: analytics?.total ?? 0, hint: "questions", tone: "var(--physics)" },
+                  { label: "Accuracy", value: `${analytics?.accuracy ?? 0}%`, hint: "attempt quality", tone: "var(--botany)" },
+                  { label: "Skipped", value: `${analytics?.skipRate ?? 0}%`, hint: "risk avoidance", tone: "var(--gold-bright)" },
+                  { label: "Resource gap", value: `${analytics?.resourceGapRate ?? 0}%`, hint: "coverage issue", tone: "var(--rose-bright)" },
+                  { label: "Studied but wrong", value: analytics?.studiedButWrong ?? 0, hint: "revision leak", tone: "var(--lotus-bright)" },
+                  { label: "Severity", value: analytics?.severity.avgScore ?? 0, hint: "avg risk score", tone: "var(--saffron)" },
+                ]).map((metric) => (
               <article key={metric.label} className="glass panel error-analysis-metric">
                 <span>{metric.label}</span>
                 <strong style={{ color: metric.tone }}>{metric.value}</strong>
@@ -1394,7 +1660,7 @@ export function TestErrorAnalysisWorkspace({
                 <div className="tests-form-pair">
                   <input className="field" type="number" min={1} value={questionDraft.questionNumber} onChange={(event) => updateQuestionDraft("questionNumber", Number(event.target.value))} placeholder="Question number" />
                   <select className="select" value={questionDraft.outcome} onChange={(event) => updateQuestionDraft("outcome", event.target.value)}>
-                    {Object.entries(outcomeLabels).map(([value, label]) => (
+                    {Object.entries(questionOutcomeLabels).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
@@ -1403,22 +1669,56 @@ export function TestErrorAnalysisWorkspace({
                 <textarea className="textarea" value={questionDraft.questionSummary} onChange={(event) => updateQuestionDraft("questionSummary", event.target.value)} placeholder="What was the question about?" />
 
                 {isMainsMode ? (
-                  <div className="error-analysis-answer-grid">
+                  <div className="mains-question-lab">
+                    <div className="tests-form-triplet">
+                      <select className="select" value={questionDraft.questionType} onChange={(event) => updateQuestionDraft("questionType", event.target.value)}>
+                        <option value="DESCRIPTIVE">GS descriptive</option>
+                        <option value="ESSAY">Essay</option>
+                        <option value="LANGUAGE">Language paper</option>
+                        <option value="CASE_STUDY">Ethics case study</option>
+                      </select>
+                      <input className="field" type="number" step="0.01" value={questionDraft.marksAwarded} onChange={(event) => updateQuestionDraft("marksAwarded", event.target.value)} placeholder="Marks awarded" />
+                      <input className="field" type="number" step="0.01" value={questionDraft.maxMarks} onChange={(event) => updateQuestionDraft("maxMarks", event.target.value)} placeholder="Max marks" />
+                    </div>
+                    <div className="tests-form-triplet">
+                      <input className="field" type="number" value={questionDraft.wordCount} onChange={(event) => updateQuestionDraft("wordCount", event.target.value)} placeholder="Words written" />
+                      <input className="field" type="number" value={questionDraft.wordLimit} onChange={(event) => updateQuestionDraft("wordLimit", event.target.value)} placeholder="Word limit" />
+                      <input className="field" value={questionDraft.sourceType} onChange={(event) => updateQuestionDraft("sourceType", event.target.value)} placeholder="Source / paper section" />
+                    </div>
+                    <div className="mains-evaluation-rubric">
+                      <label><span>Structure</span><input className="field" type="number" min={1} max={5} value={questionDraft.structureScore} onChange={(event) => updateQuestionDraft("structureScore", event.target.value)} placeholder="/5" /></label>
+                      <label><span>Content</span><input className="field" type="number" min={1} max={5} value={questionDraft.contentScore} onChange={(event) => updateQuestionDraft("contentScore", event.target.value)} placeholder="/5" /></label>
+                      <label><span>Presentation</span><input className="field" type="number" min={1} max={5} value={questionDraft.presentationScore} onChange={(event) => updateQuestionDraft("presentationScore", event.target.value)} placeholder="/5" /></label>
+                    </div>
+                    <div className="error-analysis-answer-grid">
+                      <textarea
+                        className="textarea"
+                        value={questionDraft.mainsApproach}
+                        onChange={(event) => updateQuestionDraft("mainsApproach", event.target.value)}
+                        placeholder="Demand of the question, answer structure, intro-body-conclusion, dimensions missed"
+                      />
+                      <textarea
+                        className="textarea"
+                        value={questionDraft.mainsExamples}
+                        onChange={(event) => updateQuestionDraft("mainsExamples", event.target.value)}
+                        placeholder="Examples, data, case studies, committees, articles, keywords, diagrams"
+                      />
+                    </div>
                     <textarea
                       className="textarea"
-                      value={questionDraft.mainsApproach}
-                      onChange={(event) => updateQuestionDraft("mainsApproach", event.target.value)}
-                      placeholder="Ideal mains approach: intro, body dimensions, conclusion angle"
-                    />
-                    <textarea
-                      className="textarea"
-                      value={questionDraft.mainsExamples}
-                      onChange={(event) => updateQuestionDraft("mainsExamples", event.target.value)}
-                      placeholder="Examples, data, case studies, committees or keywords I should have used"
+                      value={questionDraft.valueAddedPoints}
+                      onChange={(event) => updateQuestionDraft("valueAddedPoints", event.target.value)}
+                      placeholder="Exact value additions to carry forward: quote, diagram, map, case law, thinker, committee, Hindi/English expression fix"
                     />
                   </div>
                 ) : (
                   <div className="error-analysis-answer-grid">
+                    <textarea
+                      className="textarea"
+                      value={questionDraft.selectedAnswer}
+                      onChange={(event) => updateQuestionDraft("selectedAnswer", event.target.value)}
+                      placeholder="Your selected option / eliminated options"
+                    />
                     <textarea
                       className="textarea"
                       value={questionDraft.correctAnswer}
@@ -1437,7 +1737,7 @@ export function TestErrorAnalysisWorkspace({
                 <div className="tests-form-pair">
                   <select className="select" value={questionDraft.subject} onChange={(event) => updateQuestionSubject(event.target.value)}>
                     <option value="">Select subject</option>
-                    {subjects.map((subject) => (
+                    {subjectChoices.map((subject) => (
                       <option key={subject.id} value={subject.title}>{subject.title}</option>
                     ))}
                   </select>
@@ -1493,7 +1793,11 @@ export function TestErrorAnalysisWorkspace({
                 <div className="tests-form-triplet">
                   <input className="field" type="number" min={1} max={5} value={questionDraft.confidence} onChange={(event) => updateQuestionDraft("confidence", event.target.value)} placeholder="Confidence /5" />
                   <input className="field" type="number" min={0} value={questionDraft.timeSpentSeconds} onChange={(event) => updateQuestionDraft("timeSpentSeconds", event.target.value)} placeholder="Time in seconds" />
-                  <input className="field" value={questionDraft.sourceType} onChange={(event) => updateQuestionDraft("sourceType", event.target.value)} placeholder="Source type" />
+                  {isMainsMode ? (
+                    <input className="field" value={questionDraft.errorType.replaceAll("_", " ")} readOnly aria-label="Selected error type" />
+                  ) : (
+                    <input className="field" value={questionDraft.sourceType} onChange={(event) => updateQuestionDraft("sourceType", event.target.value)} placeholder="Source type" />
+                  )}
                 </div>
 
                 <div className="error-analysis-checks">
@@ -1524,8 +1828,10 @@ export function TestErrorAnalysisWorkspace({
                         <tr>
                           <th>Q</th>
                           <th>Question</th>
-                          <th>{isMainsMode ? "Approach" : "Answer"}</th>
-                          <th>{isMainsMode ? "Examples" : "Why correct"}</th>
+                          <th>{isMainsMode ? "Approach" : "Your answer"}</th>
+                          <th>{isMainsMode ? "Examples" : "Correction"}</th>
+                          {isMainsMode ? <th>Marks</th> : null}
+                          {isMainsMode ? <th>Words</th> : null}
                           <th>Subject</th>
                           <th>Topic <span className="error-analysis-th-note">pick/type</span></th>
                           <th>Outcome</th>
@@ -1549,10 +1855,10 @@ export function TestErrorAnalysisWorkspace({
                             <td>
                               <textarea
                                 className="textarea error-analysis-grid-text"
-                                value={isMainsMode ? row.mainsApproach : row.correctAnswer}
-                                onChange={(event) => updateGridQuestion(index, isMainsMode ? "mainsApproach" : "correctAnswer", event.target.value)}
+                                value={isMainsMode ? row.mainsApproach : row.selectedAnswer}
+                                onChange={(event) => updateGridQuestion(index, isMainsMode ? "mainsApproach" : "selectedAnswer", event.target.value)}
                                 onBlur={() => void saveGridQuestion(gridQuestions[index])}
-                                placeholder={isMainsMode ? "Approach" : "Answer"}
+                                placeholder={isMainsMode ? "Approach" : "Selected option"}
                               />
                             </td>
                             <td>
@@ -1561,13 +1867,29 @@ export function TestErrorAnalysisWorkspace({
                                 value={isMainsMode ? row.mainsExamples : row.correctExplanation}
                                 onChange={(event) => updateGridQuestion(index, isMainsMode ? "mainsExamples" : "correctExplanation", event.target.value)}
                                 onBlur={() => void saveGridQuestion(gridQuestions[index])}
-                                placeholder={isMainsMode ? "Examples" : "Explanation"}
+                                placeholder={isMainsMode ? "Examples" : "Correct answer / explanation"}
                               />
                             </td>
+                            {isMainsMode ? (
+                              <td>
+                                <div className="error-analysis-grid-duo">
+                                  <input className="field error-analysis-grid-input tiny" type="number" step="0.01" value={row.marksAwarded} onChange={(event) => updateGridQuestion(index, "marksAwarded", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="got" />
+                                  <input className="field error-analysis-grid-input tiny" type="number" step="0.01" value={row.maxMarks} onChange={(event) => updateGridQuestion(index, "maxMarks", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="max" />
+                                </div>
+                              </td>
+                            ) : null}
+                            {isMainsMode ? (
+                              <td>
+                                <div className="error-analysis-grid-duo">
+                                  <input className="field error-analysis-grid-input tiny" type="number" value={row.wordCount} onChange={(event) => updateGridQuestion(index, "wordCount", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="used" />
+                                  <input className="field error-analysis-grid-input tiny" type="number" value={row.wordLimit} onChange={(event) => updateGridQuestion(index, "wordLimit", event.target.value)} onBlur={() => void saveGridQuestion(gridQuestions[index])} placeholder="limit" />
+                                </div>
+                              </td>
+                            ) : null}
                             <td>
                               <select className="select error-analysis-grid-input" value={row.subject} onChange={(event) => updateGridQuestionSubject(index, event.target.value)}>
                                 <option value="">Subject</option>
-                                {subjects.map((subject) => (
+                                {subjectChoices.map((subject) => (
                                   <option key={subject.id} value={subject.title}>{subject.title}</option>
                                 ))}
                               </select>
@@ -1714,8 +2036,10 @@ export function TestErrorAnalysisWorkspace({
                   <tr>
                     <th>Q</th>
                     <th>Question</th>
-                    <th>{isMainsMode ? "Approach" : "Correct answer"}</th>
-                    <th>{isMainsMode ? "Examples" : "Why correct"}</th>
+                    <th>{isMainsMode ? "Approach" : "Your answer"}</th>
+                    <th>{isMainsMode ? "Examples" : "Correction"}</th>
+                    {isMainsMode ? <th>Marks</th> : null}
+                    {isMainsMode ? <th>Words</th> : null}
                     <th>Subject</th>
                     <th>Topic</th>
                     <th>Outcome</th>
@@ -1736,8 +2060,10 @@ export function TestErrorAnalysisWorkspace({
                         <tr key={log.id} onClick={() => setQuestionDraft(toQuestionDraft(log))}>
                           <td>{log.questionNumber}</td>
                           <td>{log.questionSummary}</td>
-                          <td>{isMainsMode ? log.mainsApproach ?? "-" : log.correctAnswer ?? "-"}</td>
+                          <td>{isMainsMode ? log.mainsApproach ?? "-" : log.selectedAnswer ?? "-"}</td>
                           <td>{isMainsMode ? log.mainsExamples ?? "-" : log.correctExplanation ?? "-"}</td>
+                          {isMainsMode ? <td>{log.marksAwarded ?? "-"}/{log.maxMarks ?? "-"}</td> : null}
+                          {isMainsMode ? <td>{log.wordCount ?? "-"}/{log.wordLimit ?? "-"}</td> : null}
                           <td>{log.subject ?? "-"}</td>
                           <td>{log.topic ?? "-"}</td>
                           <td><span className={`ea-status ${log.outcome.toLowerCase()}`}>{outcomeLabels[log.outcome] ?? log.outcome}</span></td>
@@ -1776,7 +2102,7 @@ export function TestErrorAnalysisWorkspace({
                     })
                   ) : (
                     <tr>
-                      <td colSpan={14} className="muted">
+                      <td colSpan={isMainsMode ? 16 : 14} className="muted">
                         No question logs yet. Create or select a test, then add Q1.
                       </td>
                     </tr>

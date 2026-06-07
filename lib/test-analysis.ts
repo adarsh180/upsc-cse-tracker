@@ -15,6 +15,7 @@ const google = createGoogleGenerativeAI({
 const OUTCOMES = ["CORRECT", "INCORRECT", "SKIPPED", "PARTIAL"] as const;
 const RESOURCE_STATUSES = ["YES", "NO", "PARTIAL", "UNKNOWN"] as const;
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"] as const;
+const QUESTION_TYPES = ["OBJECTIVE", "DESCRIPTIVE", "ESSAY", "LANGUAGE", "CASE_STUDY"] as const;
 const ERROR_TYPES = [
   "CONCEPT_GAP",
   "FACTUAL_GAP",
@@ -25,27 +26,44 @@ const ERROR_TYPES = [
   "TIME_PRESSURE",
   "RESOURCE_GAP",
   "REVISION_GAP",
+  "ANSWER_STRUCTURE",
+  "CONTENT_DEPTH",
+  "INTRO_CONCLUSION",
+  "VALUE_ADDITION",
+  "LANGUAGE_EXPRESSION",
+  "WORD_LIMIT",
   "NONE",
 ] as const;
 
 export type QuestionOutcome = (typeof OUTCOMES)[number];
 export type ResourceStatus = (typeof RESOURCE_STATUSES)[number];
 export type QuestionDifficulty = (typeof DIFFICULTIES)[number];
+export type QuestionType = (typeof QUESTION_TYPES)[number];
 export type ErrorType = (typeof ERROR_TYPES)[number];
 export type SeverityLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type QuestionLogInput = {
   testRecordId: string;
   questionNumber: number;
+  questionType?: string | null;
   questionSummary: string;
+  selectedAnswer?: string | null;
   correctAnswer?: string | null;
   correctExplanation?: string | null;
   mainsApproach?: string | null;
   mainsExamples?: string | null;
+  valueAddedPoints?: string | null;
   subject?: string | null;
   topic?: string | null;
   sourceType?: string | null;
   outcome?: string | null;
+  marksAwarded?: number | null;
+  maxMarks?: number | null;
+  wordLimit?: number | null;
+  wordCount?: number | null;
+  structureScore?: number | null;
+  contentScore?: number | null;
+  presentationScore?: number | null;
   studiedTopic?: boolean;
   resourceCovered?: string | null;
   currentAffairsLinked?: boolean;
@@ -62,6 +80,12 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number 
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(max, Math.max(min, Math.round(numeric)));
+}
+
+function clampFloat(value: unknown, min: number, max: number, fallback: number | null) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, Number(numeric.toFixed(2))));
 }
 
 function cleanString(value: unknown, max = 4000) {
@@ -83,9 +107,17 @@ function percent(value: number, total: number) {
 
 type AnalyticsQuestion = {
   questionNumber: number;
+  questionType?: string | null;
   subject: string | null;
   topic: string | null;
   outcome: string;
+  marksAwarded?: number | null;
+  maxMarks?: number | null;
+  wordLimit?: number | null;
+  wordCount?: number | null;
+  structureScore?: number | null;
+  contentScore?: number | null;
+  presentationScore?: number | null;
   studiedTopic: boolean;
   resourceCovered: string;
   currentAffairsLinked: boolean;
@@ -99,6 +131,10 @@ export function scoreQuestionSeverity(question: AnalyticsQuestion) {
   let score = 0;
   const reasons: string[] = [];
   const isMiss = ["INCORRECT", "PARTIAL", "SKIPPED"].includes(question.outcome);
+  const maxMarks = question.maxMarks ?? 0;
+  const marksAwarded = question.marksAwarded ?? null;
+  const hasMarks = maxMarks > 0 && marksAwarded !== null;
+  const marksPct = hasMarks ? (marksAwarded / maxMarks) * 100 : null;
 
   if (question.outcome === "INCORRECT") {
     score += 28;
@@ -140,6 +176,31 @@ export function scoreQuestionSeverity(question: AnalyticsQuestion) {
     score += 6;
     reasons.push("low confidence");
   }
+  if (hasMarks && marksPct !== null && marksPct < 35) {
+    score += 24;
+    reasons.push("low mains marks");
+  } else if (hasMarks && marksPct !== null && marksPct < 50) {
+    score += 14;
+    reasons.push("average mains marks");
+  }
+  if (question.wordLimit && question.wordCount && question.wordCount > question.wordLimit * 1.15) {
+    score += 10;
+    reasons.push("word limit breach");
+  }
+  if (question.wordLimit && question.wordCount && question.wordCount < question.wordLimit * 0.55 && question.outcome !== "SKIPPED") {
+    score += 8;
+    reasons.push("underdeveloped answer");
+  }
+  for (const [label, value] of [
+    ["structure", question.structureScore],
+    ["content", question.contentScore],
+    ["presentation", question.presentationScore],
+  ] as const) {
+    if (value !== null && value !== undefined && value <= 2) {
+      score += 8;
+      reasons.push(`${label} weakness`);
+    }
+  }
 
   const capped = Math.min(100, score);
   const severity: SeverityLevel =
@@ -152,15 +213,25 @@ export function normalizeQuestionInput(input: QuestionLogInput) {
   return {
     testRecordId: cleanString(input.testRecordId, 120),
     questionNumber: clampNumber(input.questionNumber, 1, 500, 1) ?? 1,
+    questionType: normalizeOption(input.questionType, QUESTION_TYPES, "OBJECTIVE"),
     questionSummary: cleanLongText(input.questionSummary, 2000) || "Question note",
+    selectedAnswer: cleanLongText(input.selectedAnswer, 2000) || null,
     correctAnswer: cleanLongText(input.correctAnswer, 2000) || null,
     correctExplanation: cleanLongText(input.correctExplanation, 5000) || null,
     mainsApproach: cleanLongText(input.mainsApproach, 5000) || null,
     mainsExamples: cleanLongText(input.mainsExamples, 5000) || null,
+    valueAddedPoints: cleanLongText(input.valueAddedPoints, 5000) || null,
     subject: cleanString(input.subject, 140) || null,
     topic: cleanString(input.topic, 180) || null,
     sourceType: cleanString(input.sourceType, 120) || "PRACTICE_TEST",
     outcome: normalizeOption(input.outcome, OUTCOMES, "SKIPPED"),
+    marksAwarded: clampFloat(input.marksAwarded, 0, 500, null),
+    maxMarks: clampFloat(input.maxMarks, 0, 500, null),
+    wordLimit: clampNumber(input.wordLimit, 0, 5000, null),
+    wordCount: clampNumber(input.wordCount, 0, 5000, null),
+    structureScore: clampNumber(input.structureScore, 1, 5, null),
+    contentScore: clampNumber(input.contentScore, 1, 5, null),
+    presentationScore: clampNumber(input.presentationScore, 1, 5, null),
     studiedTopic: Boolean(input.studiedTopic),
     resourceCovered: normalizeOption(input.resourceCovered, RESOURCE_STATUSES, "UNKNOWN"),
     currentAffairsLinked: Boolean(input.currentAffairsLinked),
@@ -266,6 +337,14 @@ export function buildQuestionAnalytics(
     (item) => item.studiedTopic && (item.outcome === "INCORRECT" || item.outcome === "PARTIAL"),
   ).length;
   const totalSeconds = sorted.reduce((sum, item) => sum + (item.timeSpentSeconds ?? 0), 0);
+  const markedRows = sorted.filter((item) => (item.maxMarks ?? 0) > 0 && item.marksAwarded !== null && item.marksAwarded !== undefined);
+  const mainsMarksAwarded = markedRows.reduce((sum, item) => sum + (item.marksAwarded ?? 0), 0);
+  const mainsMaxMarks = markedRows.reduce((sum, item) => sum + (item.maxMarks ?? 0), 0);
+  const wordTrackedRows = sorted.filter((item) => (item.wordLimit ?? 0) > 0 && (item.wordCount ?? 0) > 0);
+  const wordBreaches = wordTrackedRows.filter((item) => (item.wordCount ?? 0) > (item.wordLimit ?? 0) * 1.15).length;
+  const avgStructureScore = averageScore(sorted.map((item) => item.structureScore).filter((value): value is number => typeof value === "number"));
+  const avgContentScore = averageScore(sorted.map((item) => item.contentScore).filter((value): value is number => typeof value === "number"));
+  const avgPresentationScore = averageScore(sorted.map((item) => item.presentationScore).filter((value): value is number => typeof value === "number"));
 
   const subjectMap = new Map<string, { total: number; correct: number; incorrect: number; skipped: number; partial: number }>();
   for (const item of sorted) {
@@ -339,8 +418,24 @@ export function buildQuestionAnalytics(
       sorted.map((item) => item.difficulty as QuestionDifficulty),
       DIFFICULTIES,
     ),
+    mainsScoring: {
+      markedRows: markedRows.length,
+      marksAwarded: Number(mainsMarksAwarded.toFixed(2)),
+      maxMarks: Number(mainsMaxMarks.toFixed(2)),
+      scorePct: percent(mainsMarksAwarded, mainsMaxMarks),
+      wordTrackedRows: wordTrackedRows.length,
+      wordBreachRate: percent(wordBreaches, wordTrackedRows.length),
+      avgStructureScore,
+      avgContentScore,
+      avgPresentationScore,
+    },
     timeline,
   };
+}
+
+function averageScore(values: number[]) {
+  if (!values.length) return 0;
+  return Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1));
 }
 
 type TestWithLogs = {
@@ -535,6 +630,10 @@ function reportGuardrails() {
   return [
     "Write clean markdown only. Do not use corrupted characters or decorative symbols.",
     "Use UPSC-specific language: prelims elimination, PYQ pattern, static-current linkage, resource coverage, revision gap and attempt discipline.",
+    "If examStage is PRELIMS, diagnose objective-test behavior: negative marking exposure, over-attempting, under-attempting, elimination logic, factual traps, current-affairs linkage and subject-wise MCQ accuracy.",
+    "If examStage is MAINS, diagnose descriptive-answer behavior: paper identity, essay or GS demand, compulsory English/Hindi language paper needs, marks conversion, structure, content depth, examples, diagrams, intro-conclusion quality, word discipline and time-per-answer.",
+    "For essay logs, assess thesis clarity, dimensional coverage, balance, examples, flow and conclusion maturity.",
+    "For compulsory English or Hindi logs, assess comprehension, precis, grammar, translation, expression and answer completeness separately from GS scoring.",
     "Give precise recommendations that can be turned into study actions.",
     "Do not create micro drills.",
     "Do not claim live UPSC trend data unless it is present in the supplied tracker data.",
@@ -562,6 +661,11 @@ ${JSON.stringify(
     totalQuestions: snapshot.test.totalQuestions,
     score: snapshot.test.score,
     totalMarks: snapshot.test.totalMarks,
+    paperCode: snapshot.test.paperCode,
+    paperName: snapshot.test.paperName,
+    optionalSubject: snapshot.test.optionalSubject,
+    negativeMarks: snapshot.test.negativeMarks,
+    cutoffTarget: snapshot.test.cutoffTarget,
     subject: snapshot.test.studyNode?.title ?? null,
     notes: snapshot.test.notes,
   },
@@ -668,6 +772,11 @@ ${JSON.stringify(
     totalQuestions: test.totalQuestions,
     subject: test.studyNode?.title ?? null,
     questionLogs: test.questionLogs,
+    paperCode: test.paperCode,
+    paperName: test.paperName,
+    optionalSubject: test.optionalSubject,
+    negativeMarks: test.negativeMarks,
+    cutoffTarget: test.cutoffTarget,
   })),
   null,
   2,
