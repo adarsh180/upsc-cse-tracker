@@ -15,6 +15,7 @@ import {
 
 import { signOutAction } from "@/app/actions";
 import { ExamCountdownMatrix } from "@/components/ui/live-exam-timer";
+import { RevealGroup, Reveal } from "@/components/ui/reveal";
 import { MetricCard, StudyCard } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
@@ -127,146 +128,75 @@ export default async function DashboardPage() {
   };
   const neetConfidenceScore = clampPct(neetConfidence?.score ?? 0);
 
+  const heroKpis = [
+    { icon: Target, label: "Discipline", value: discipline, color: "var(--gold-bright)" },
+    { icon: Trophy, label: "Avg Score", value: avgScore, color: "var(--physics)" },
+    { icon: Zap, label: "Focus Trend", value: focusTrend, color: "var(--lotus-bright)" },
+  ];
+  const heroStrip = [
+    { icon: Clock, label: "Hours", value: trackedHours, color: "var(--botany)" },
+    { icon: Flame, label: "Mood", value: latestMood ? latestMood.label : "—", color: "var(--saffron)" },
+    {
+      icon: TrendingUp,
+      label: "Tests",
+      value: recentTest ? `${recentTest.score}/${recentTest.totalMarks}` : "None yet",
+      color: "var(--rose-bright)",
+    },
+  ];
+
   return (
-    <main className="page-shell">
+    <RevealGroup as="main" className="page-shell">
 
-      {/* ══════════════════════════════════════
-          HERO SECTION
-          ══════════════════════════════════════ */}
-      <section
-        className="glass panel dashboard-hero"
-        style={{ padding: 0, overflow: "hidden", borderRadius: 46, marginBottom: 28 }}
-      >
-        {/* Inner layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(300px, 0.6fr)" }}>
+      {/* ══════════════════════════════ HERO ══════════════════════════════ */}
+      <Reveal as="section" className="glass panel dash-hero">
+        <span className="prem-orb dash-hero-orb-a" aria-hidden="true" />
+        <span className="prem-orb dash-hero-orb-b" aria-hidden="true" />
 
-          {/* LEFT: Main hero copy */}
-          <div style={{ padding: "44px 44px 44px 48px", display: "grid", gap: 28, alignContent: "start" }}>
-            {/* Header row */}
+        <div className="dash-hero-grid">
+          {/* LEFT */}
+          <div className="dash-hero-left">
             <div>
-              <div className="eyebrow" style={{ marginBottom: 14 }}>Command Center — Active</div>
-              <h1
-                className="display"
-                style={{
-                  fontSize: "clamp(3.2rem, 6vw, 5.6rem)",
-                  margin: "0 0 16px",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.04em",
-                  maxWidth: "12ch",
-                }}
-              >
+              <div className="dash-status">
+                <span className="dash-status-dot" />
+                Command Center — Active
+              </div>
+              <h1 className="display gradient-heading dash-hero-title" style={{ marginTop: 16 }}>
                 Sacred dashboard for a hard attempt.
               </h1>
-              <p className="muted" style={{ maxWidth: 660, fontSize: "1.02rem", lineHeight: 1.88, margin: 0 }}>
+              <p className="muted dash-hero-sub" style={{ marginTop: 16 }}>
                 {recentLog
                   ? `Latest session: ${recentLog.primaryFocus} — ${recentLog.totalHours.toFixed(1)}h logged, ${recentLog.disciplineScore}/100 discipline.`
                   : "Your dashboard sharpens the moment you start logging honest sessions. Everything here is real — no wishful memory."}
               </p>
             </div>
 
-            {/* Metrics Row */}
-            <div className="grid grid-3" style={{ gap: 14 }}>
-              {[
-                { icon: Target, label: "Discipline", value: discipline, color: "var(--gold-bright)" },
-                { icon: Trophy, label: "Avg Score", value: avgScore, color: "var(--physics)" },
-                { icon: Zap, label: "Focus Trend", value: focusTrend, color: "var(--lotus-bright)" },
-              ].map((m) => (
-                <div
-                  key={m.label}
-                  className="glass"
-                  style={{
-                    borderRadius: 24,
-                    padding: "20px 18px",
-                    display: "grid",
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 10,
-                        display: "grid",
-                        placeItems: "center",
-                        background: `color-mix(in srgb, ${m.color} 14%, rgba(255,255,255,0.04))`,
-                        color: m.color,
-                      }}
-                    >
-                      <m.icon size={14} />
-                    </div>
-                    <div className="eyebrow" style={{ color: "var(--text-muted)" }}>{m.label}</div>
+            <div className="dash-kpi-row">
+              {heroKpis.map((m) => (
+                <div key={m.label} className="dash-kpi" style={{ color: m.color }}>
+                  <div className="dash-kpi-head">
+                    <div className="dash-kpi-ico"><m.icon size={15} /></div>
+                    <div className="dash-kpi-label">{m.label}</div>
                   </div>
-                  <div
-                    className="display"
-                    style={{ fontSize: "2.1rem", color: m.color, lineHeight: 1 }}
-                  >
-                    {m.value}
-                  </div>
+                  <div className="dash-kpi-value">{m.value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Hours + Countdown mini strip */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-              <div
-                className="glass"
-                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
-              >
-                <Clock size={16} style={{ color: "var(--botany)", flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
-                    Hours
-                  </div>
-                  <div className="display" style={{ fontSize: "1.5rem", color: "var(--botany)", lineHeight: 1.2 }}>
-                    {trackedHours}
+            <div className="dash-strip">
+              {heroStrip.map((s) => (
+                <div key={s.label} className="dash-strip-item">
+                  <s.icon size={16} style={{ color: s.color, flexShrink: 0 }} />
+                  <div>
+                    <div className="dash-strip-k">{s.label}</div>
+                    <div className="dash-strip-v" style={{ color: s.color }}>{s.value}</div>
                   </div>
                 </div>
-              </div>
-              <div
-                className="glass"
-                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
-              >
-                <Flame size={16} style={{ color: "var(--saffron)", flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
-                    Mood
-                  </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, marginTop: 2, color: "var(--text)" }}>
-                    {latestMood ? latestMood.label : "—"}
-                  </div>
-                </div>
-              </div>
-              <div
-                className="glass"
-                style={{ borderRadius: 22, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}
-              >
-                <TrendingUp size={16} style={{ color: "var(--rose-bright)", flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontWeight: 700 }}>
-                    Tests
-                  </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, marginTop: 2, color: "var(--text)" }}>
-                    {recentTest ? `${recentTest.score}/${recentTest.totalMarks}` : "None yet"}
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* RIGHT: Actions sidebar */}
-          <div
-            className="glass-strong"
-            style={{
-              padding: "36px 32px",
-              display: "grid",
-              gap: 18,
-              alignContent: "start",
-              background:
-                "radial-gradient(circle at 80% 16%, hsla(38,92%,62%,0.20), transparent 28%), radial-gradient(circle at 20% 88%, hsla(216,88%,68%,0.14), transparent 32%), linear-gradient(155deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))",
-            }}
-          >
-            {/* Execution Pulse */}
+          {/* RIGHT RAIL */}
+          <div className="dash-hero-rail">
             <div>
               <div className="eyebrow" style={{ marginBottom: 12 }}>Execution Pulse</div>
               <div className="display" style={{ fontSize: "1.7rem", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
@@ -279,7 +209,6 @@ export default async function DashboardPage() {
               </p>
             </div>
 
-            {/* CTA Buttons */}
             <div style={{ display: "grid", gap: 10 }}>
               <Link href="/ai-insight" className="button" style={{ justifyContent: "center" }}>
                 <Sparkles size={15} />
@@ -296,14 +225,9 @@ export default async function DashboardPage() {
               </Link>
             </div>
 
-            {/* Divider */}
             <div className="divider" />
 
-            {/* Honesty check */}
-            <div
-              className="glass"
-              style={{ borderRadius: 22, padding: 18 }}
-            >
+            <div className="glass" style={{ borderRadius: 22, padding: 18 }}>
               <div className="pill" style={{ marginBottom: 12 }}>
                 <ShieldAlert size={13} />
                 Latest session
@@ -318,56 +242,40 @@ export default async function DashboardPage() {
               </p>
             </div>
 
-            {/* Sign out */}
             <form action={signOutAction}>
-              <button
-                className="button-secondary"
-                type="submit"
-                style={{ width: "100%", justifyContent: "center", fontSize: 13 }}
-              >
+              <button className="button-secondary" type="submit" style={{ width: "100%", justifyContent: "center", fontSize: 13 }}>
                 Sign out
               </button>
             </form>
           </div>
         </div>
-      </section>
+      </Reveal>
 
-      {/* ══════════════════════════════════════
-          METRICS ROW
-          ══════════════════════════════════════ */}
-      <section style={{ marginBottom: 28 }}>
+      {/* ══════════════════════════════ METRICS ROW ══════════════════════════════ */}
+      <Reveal as="section" style={{ marginBottom: 28 }}>
         <div className="grid grid-4" style={{ gap: 18 }}>
           {summary.metrics.map((metric) => (
             <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
           ))}
         </div>
-      </section>
+      </Reveal>
 
-      {/* ══════════════════════════════════════
-          COUNTDOWNS
-          ══════════════════════════════════════ */}
-      <section style={{ marginBottom: 28 }}>
+      {/* ══════════════════════════════ COUNTDOWNS ══════════════════════════════ */}
+      <Reveal as="section" style={{ marginBottom: 28 }}>
         <ExamCountdownMatrix
           prelimsDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
           mainsDate={process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30"}
           initialNow={Date.now()}
           readiness={examReadiness}
         />
-      </section>
+      </Reveal>
 
-      {/* ══════════════════════════════════════
-          LIVE EXAM TIMER
-          ══════════════════════════════════════ */}
-      {/* ══════════════════════════════════════
-          STUDY SPACES
-          ══════════════════════════════════════ */}
-      <section style={{ marginBottom: 28 }}>
-        <div style={{ marginBottom: 22 }}>
+      {/* ══════════════════════════════ STUDY SPACES ══════════════════════════════ */}
+      <Reveal as="section" style={{ marginBottom: 28 }}>
+        <div className="prem-sec-head">
           <div className="eyebrow">Core Study Spaces</div>
-          <h2 className="display" style={{ fontSize: "clamp(2rem, 4vw, 3rem)", margin: "10px 0 8px", letterSpacing: "-0.03em" }}>
-            GS, optional, essays, current affairs.
-          </h2>
-          <p className="muted" style={{ lineHeight: 1.82, maxWidth: 680 }}>
+          <h2 className="display">GS, optional, essays, current affairs.</h2>
+          <p className="muted">
             Each card opens a dedicated workspace with editable chapters and real database updates.
           </p>
         </div>
@@ -384,12 +292,10 @@ export default async function DashboardPage() {
             />
           ))}
         </div>
-      </section>
+      </Reveal>
 
-      {/* ══════════════════════════════════════
-          MISSION + TODO + AI CARDS
-          ══════════════════════════════════════ */}
-      <section className="command-grid" style={{ marginBottom: 28 }}>
+      {/* ══════════════════════════════ MISSION + TODO + AI ══════════════════════════════ */}
+      <Reveal as="section" className="command-grid" style={{ marginBottom: 28 }}>
         {/* Daily Goals */}
         <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
           <div className="pill"><Goal size={13} />Active execution</div>
@@ -558,7 +464,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         </article>
-      </section>
-    </main>
+      </Reveal>
+    </RevealGroup>
   );
 }

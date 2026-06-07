@@ -4,6 +4,7 @@ import { ArrowRight, Award, BrainCircuit, Clock3, Crosshair, FileCheck2, Gauge, 
 
 import { TestMetricTrendChart } from "@/components/charts/analytics-charts";
 import { PageIntro } from "@/components/ui/sections";
+import { RevealGroup, Reveal } from "@/components/ui/reveal";
 import { TestsClient } from "@/components/ui/tests-client";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -177,18 +178,20 @@ export default async function TestsPage() {
   ];
 
   return (
-    <main className="page-shell tests-page">
-      <PageIntro
-        eyebrow="Test Tracker"
-        title="Mock evidence, cleaned up."
-        description="Scores, accuracy, time and subject patterns in one sharp testing cockpit."
-        glyph="tests"
-      />
+    <RevealGroup as="main" className="page-shell tests-page">
+      <Reveal>
+        <PageIntro
+          eyebrow="Test Tracker"
+          title="Mock evidence, cleaned up."
+          description="Scores, accuracy, time and subject patterns in one sharp testing cockpit."
+          glyph="tests"
+        />
+      </Reveal>
 
       <section className="section-stack tests-redesign-stack">
 
         {/* ── KPI metric strip ── */}
-        <section className="tests-metric-grid">
+        <section className="tests-metric-grid" data-reveal="">
           {[
             { label: "Tests logged", value: tests.length, hint: "records", icon: FileCheck2, tone: "var(--physics)" },
             { label: "Average score", value: `${averageScore}%`, hint: "across all mocks", icon: Gauge, tone: "var(--gold)" },
@@ -209,7 +212,7 @@ export default async function TestsPage() {
         </section>
 
         {/* ── Trend analysis cockpit ── */}
-        <section className="tests-analysis-grid">
+        <section className="tests-analysis-grid" data-reveal="">
           {trendCards.map((card) => (
             <article key={card.label} className="glass panel tests-trend-panel" style={{ color: card.color }}>
               <div className="tests-panel-head">
@@ -234,7 +237,7 @@ export default async function TestsPage() {
         </section>
 
         {/* ── Intelligence dock: diagnostic + section lanes ── */}
-        <section className="tests-intelligence-grid">
+        <section className="tests-intelligence-grid" data-reveal="">
           <article className="glass panel tests-diagnostic-panel">
             <div className="tests-panel-head">
               <div>
@@ -315,16 +318,18 @@ export default async function TestsPage() {
         </section>
 
         {/* ── Capture dock: form + ledger ── */}
-        <TestsClient
-          tests={tests.map((test) => ({
-            ...test,
-            studyNode: test.studyNode ? { id: test.studyNode.id, title: test.studyNode.title } : null,
-          }))}
-          subjects={subjects.map((subject) => ({ id: subject.id, title: subject.title }))}
-        />
+        <div data-reveal="">
+          <TestsClient
+            tests={tests.map((test) => ({
+              ...test,
+              studyNode: test.studyNode ? { id: test.studyNode.id, title: test.studyNode.title } : null,
+            }))}
+            subjects={subjects.map((subject) => ({ id: subject.id, title: subject.title }))}
+          />
+        </div>
 
         {/* ── Error lab CTA banner ── */}
-        <Link href="/tests/error-analysis" className="glass panel tests-error-entry-card">
+        <Link href="/tests/error-analysis" className="glass panel tests-error-entry-card" data-reveal="">
           <div>
             <div className="pill"><BrainCircuit size={13} />Method and Error Analysis</div>
             <div className="display tests-error-entry-title">Open question-wise error lab.</div>
@@ -338,6 +343,6 @@ export default async function TestsPage() {
         </Link>
 
       </section>
-    </main>
+    </RevealGroup>
   );
 }

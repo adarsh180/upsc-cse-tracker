@@ -1,0 +1,442 @@
+/* ============================================================================
+   PREMIUM LAYER — 2026-06-07
+   Additive visual + motion uplift on top of globals.css + redesign.css.
+   Pure CSS, GPU-friendly transforms/opacity only. Honors reduced motion.
+   No feature/data/markup-contract changes — purely presentational.
+   ============================================================================ */
+
+/* ---- Motion tokens ---- */
+:root {
+  --prem-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --prem-ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --prem-fast: 0.42s;
+  --prem-slow: 0.72s;
+}
+
+/* ============================================================================
+   1. ENTRANCE / SCROLL REVEAL
+   ============================================================================ */
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0) scale(0.985);
+  transition:
+    opacity var(--prem-slow) var(--prem-ease),
+    transform var(--prem-slow) var(--prem-ease);
+  will-change: opacity, transform;
+}
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+[data-reveal][data-delay="1"] { transition-delay: 0.06s; }
+[data-reveal][data-delay="2"] { transition-delay: 0.12s; }
+[data-reveal][data-delay="3"] { transition-delay: 0.18s; }
+[data-reveal][data-delay="4"] { transition-delay: 0.24s; }
+[data-reveal][data-delay="5"] { transition-delay: 0.30s; }
+[data-reveal][data-delay="6"] { transition-delay: 0.36s; }
+[data-reveal][data-delay="7"] { transition-delay: 0.42s; }
+[data-reveal][data-delay="8"] { transition-delay: 0.48s; }
+[data-reveal][data-delay="9"] { transition-delay: 0.54s; }
+[data-reveal][data-delay="10"] { transition-delay: 0.60s; }
+[data-reveal][data-delay="11"] { transition-delay: 0.66s; }
+[data-reveal][data-delay="12"] { transition-delay: 0.72s; }
+
+/* ============================================================================
+   2. KEYFRAMES
+   ============================================================================ */
+@keyframes premAurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(2%, -3%, 0) rotate(8deg) scale(1.08); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+}
+@keyframes premFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+@keyframes premGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes premSheen {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  100% { transform: translateX(230%) skewX(-18deg); }
+}
+@keyframes premRingPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.18); }
+  100% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+}
+@keyframes premDash {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ============================================================================
+   3. ELEVATED SHARED PRIMITIVES (safe enhancements)
+   ============================================================================ */
+
+/* smoother transitions on every glass panel */
+.glass,
+.panel {
+  transition:
+    transform var(--prem-fast) var(--prem-ease),
+    box-shadow var(--prem-fast) var(--prem-ease),
+    border-color var(--prem-fast) var(--prem-ease);
+}
+
+/* interactive panels lift on hover (transform/shadow only — no pseudo-elements,
+   to avoid clobbering existing ::after decorations on specific cards) */
+.card-link,
+.spotlight-card,
+.metric-card,
+.study-card-shell {
+  will-change: transform;
+}
+.card-link:hover,
+.spotlight-card:hover,
+.metric-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--glass-border-mid);
+  box-shadow: var(--shadow-lg);
+}
+
+/* premium gradient heading utility */
+.gradient-heading {
+  background: linear-gradient(
+    100deg,
+    var(--text) 8%,
+    var(--gold-bright) 42%,
+    var(--lotus-bright) 70%,
+    var(--physics) 96%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: premGradientShift 9s ease-in-out infinite;
+}
+
+/* refined buttons */
+.button,
+.button-secondary {
+  transition:
+    transform 0.2s var(--prem-ease),
+    box-shadow 0.3s var(--prem-ease),
+    background 0.3s var(--prem-ease),
+    border-color 0.3s var(--prem-ease);
+}
+.button:hover { transform: translateY(-2px); }
+.button:active,
+.button-secondary:active { transform: translateY(0) scale(0.985); }
+
+/* utility: subtle hover lift for anything */
+.hover-lift { transition: transform var(--prem-fast) var(--prem-ease), box-shadow var(--prem-fast) var(--prem-ease); }
+.hover-lift:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+
+/* ============================================================================
+   4. AMBIENT ORB (reusable hero backdrop atom)
+   ============================================================================ */
+.prem-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(46px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+  animation: premAurora var(--orb-dur, 18s) ease-in-out infinite;
+}
+
+/* ============================================================================
+   5. RECHARTS POLISH (precise, premium charts)
+   ============================================================================ */
+.recharts-surface { overflow: visible; }
+.recharts-cartesian-grid line {
+  stroke-dasharray: 3 6;
+}
+.recharts-default-tooltip {
+  background: rgba(8, 11, 24, 0.92) !important;
+  border: 1px solid var(--glass-border-mid) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-md) !important;
+  backdrop-filter: blur(12px);
+}
+.recharts-active-dot circle { filter: drop-shadow(0 0 6px currentColor); }
+.recharts-layer.recharts-bar-rectangle path,
+.recharts-rectangle.recharts-tooltip-cursor { transition: opacity 0.2s var(--prem-ease); }
+
+/* shared premium chart frame */
+.prem-chart {
+  position: relative;
+  width: 100%;
+  border-radius: var(--r-lg);
+  padding: 8px 6px 0;
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.05), transparent 60%),
+    rgba(255, 255, 255, 0.012);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+.prem-tooltip {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(8, 11, 24, 0.94);
+  border: 1px solid var(--glass-border-mid);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(14px);
+  font-size: 12px;
+  min-width: 150px;
+}
+.prem-tooltip strong { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+.prem-tooltip span { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-weight: 600; }
+.prem-tooltip span i {
+  width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ============================================================================
+   6. DASHBOARD
+   ============================================================================ */
+.dash-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 44px;
+  margin-bottom: 28px;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018));
+}
+.dash-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+}
+.dash-hero-left { padding: 46px 44px 46px 48px; display: grid; gap: 26px; align-content: start; }
+.dash-hero-orb-a {
+  width: 380px; height: 380px; top: -120px; left: -90px;
+  background: radial-gradient(circle, var(--gold-glow), transparent 70%);
+  --orb-dur: 20s;
+}
+.dash-hero-orb-b {
+  width: 320px; height: 320px; bottom: -130px; right: -60px;
+  background: radial-gradient(circle, hsla(218, 84%, 62%, 0.28), transparent 70%);
+  --orb-dur: 24s;
+}
+.dash-status {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 7px 14px; border-radius: 999px; width: fit-content;
+  background: rgba(101, 240, 181, 0.08);
+  border: 1px solid rgba(101, 240, 181, 0.22);
+  color: var(--success);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.dash-status .dash-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+  box-shadow: 0 0 0 0 rgba(101, 240, 181, 0.5);
+  animation: premRingPulse 1.8s var(--prem-ease) infinite;
+}
+.dash-hero-title {
+  font-size: clamp(3rem, 5.6vw, 5.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+  margin: 0;
+  max-width: 13ch;
+}
+.dash-hero-sub { max-width: 600px; font-size: 1.02rem; line-height: 1.85; margin: 0; }
+
+.dash-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dash-kpi {
+  position: relative; overflow: hidden;
+  border-radius: 22px; padding: 18px 18px;
+  display: grid; gap: 12px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--glass-border);
+  transition: transform var(--prem-fast) var(--prem-ease), border-color var(--prem-fast) var(--prem-ease);
+}
+.dash-kpi:hover { transform: translateY(-4px); border-color: color-mix(in srgb, currentColor 32%, transparent); }
+.dash-kpi::before {
+  content: ""; position: absolute; inset: auto auto -40% -10%;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle, currentColor, transparent 70%);
+  opacity: 0.12; pointer-events: none;
+}
+.dash-kpi-head { display: flex; align-items: center; gap: 10px; }
+.dash-kpi-ico {
+  width: 32px; height: 32px; border-radius: 11px; display: grid; place-items: center;
+  background: color-mix(in srgb, currentColor 15%, rgba(255, 255, 255, 0.04));
+}
+.dash-kpi-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+.dash-kpi-value { font-family: var(--font-display), serif; font-size: 2.15rem; line-height: 1; letter-spacing: -0.02em; }
+
+.dash-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dash-strip-item {
+  border-radius: 18px; padding: 15px 16px; display: flex; align-items: center; gap: 12px;
+  background: rgba(255, 255, 255, 0.035); border: 1px solid var(--glass-border);
+  transition: transform var(--prem-fast) var(--prem-ease);
+}
+.dash-strip-item:hover { transform: translateY(-3px); }
+.dash-strip-item .dash-strip-k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); font-weight: 800; }
+.dash-strip-item .dash-strip-v { font-size: 1.18rem; font-weight: 800; margin-top: 2px; }
+
+.dash-hero-rail {
+  position: relative; z-index: 1;
+  padding: 36px 32px; display: grid; gap: 18px; align-content: start;
+  background:
+    radial-gradient(circle at 82% 14%, hsla(38, 92%, 62%, 0.20), transparent 30%),
+    radial-gradient(circle at 18% 90%, hsla(216, 88%, 68%, 0.16), transparent 34%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03));
+  border-left: 1px solid var(--glass-border);
+}
+
+@media (max-width: 980px) {
+  .dash-hero-grid { grid-template-columns: 1fr; }
+  .dash-hero-left { padding: 32px 26px; }
+  .dash-hero-rail { border-left: none; border-top: 1px solid var(--glass-border); }
+  .dash-kpi-row, .dash-strip { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .dash-kpi-row, .dash-strip { grid-template-columns: 1fr; }
+}
+
+/* every shared PageIntro title gets the premium gradient */
+.page-intro-title {
+  background: linear-gradient(
+    100deg,
+    var(--text) 8%,
+    var(--gold-bright) 42%,
+    var(--lotus-bright) 70%,
+    var(--physics) 96%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: premGradientShift 9s ease-in-out infinite;
+}
+
+/* section heading block reused on every redesigned page */
+.prem-sec-head { margin-bottom: 22px; }
+.prem-sec-head h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 10px 0 8px;
+  letter-spacing: -0.03em;
+}
+.prem-sec-head p { line-height: 1.82; max-width: 680px; }
+
+/* ============================================================================
+   7. PERFORMANCE ANALYTICS
+   ============================================================================ */
+.perf-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.perf-kpi {
+  position: relative; overflow: hidden;
+  border-radius: 24px; padding: 22px;
+  display: grid; gap: 8px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--glass-border);
+}
+.perf-kpi::after {
+  content: ""; position: absolute; right: -30px; top: -30px;
+  width: 110px; height: 110px; border-radius: 50%;
+  background: radial-gradient(circle, currentColor, transparent 70%);
+  opacity: 0.14;
+}
+.perf-kpi-head { display: flex; align-items: center; gap: 10px; }
+.perf-kpi-ico {
+  width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+  background: color-mix(in srgb, currentColor 16%, rgba(255, 255, 255, 0.04));
+}
+.perf-kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800; color: var(--text-muted); }
+.perf-kpi-value { font-family: var(--font-display), serif; font-size: 2.4rem; line-height: 1; letter-spacing: -0.02em; }
+.perf-kpi-hint { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.perf-kpi-spark { margin-top: 6px; height: 38px; width: 100%; }
+
+.perf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.perf-panel { border-radius: 28px; }
+.perf-panel.span-full { grid-column: 1 / -1; }
+.perf-panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  margin-bottom: 6px;
+}
+.perf-panel-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; margin-top: 4px; }
+.perf-panel-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6; }
+.perf-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0 4px; }
+.perf-legend span {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.02em;
+}
+.perf-legend span i {
+  width: 10px; height: 10px; border-radius: 3px;
+  background: var(--series-color, var(--gold)); box-shadow: 0 0 6px var(--series-color, var(--gold));
+}
+.perf-chart-xl { height: 340px; }
+.perf-chart-md { height: 300px; }
+
+/* segmented control (client) */
+.perf-seg {
+  display: inline-flex; gap: 4px; padding: 4px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+}
+.perf-seg button {
+  border: none; background: transparent; color: var(--text-muted);
+  padding: 7px 16px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.02em; transition: color 0.25s var(--prem-ease), background 0.25s var(--prem-ease);
+}
+.perf-seg button:hover { color: var(--text-secondary); }
+.perf-seg button.active {
+  color: var(--bg-void);
+  background: linear-gradient(120deg, var(--gold-bright), var(--gold));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 980px) {
+  .perf-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .perf-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .perf-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================================
+   8. LANDING
+   ============================================================================ */
+.land-hero { position: relative; isolation: isolate; }
+.land-hero > div { position: relative; z-index: 1; }
+.land-hero-orb-a {
+  width: 420px; height: 420px; top: -140px; right: -80px;
+  background: radial-gradient(circle, var(--gold-glow), transparent 70%); --orb-dur: 22s;
+}
+.land-hero-orb-b {
+  width: 360px; height: 360px; bottom: -160px; left: -90px;
+  background: radial-gradient(circle, hsla(284, 50%, 54%, 0.26), transparent 70%); --orb-dur: 26s;
+}
+.land-feat-ico {
+  width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center;
+  background: linear-gradient(135deg, hsla(38, 92%, 62%, 0.20), hsla(216, 88%, 68%, 0.12));
+  border: 1px solid var(--glass-border-mid); color: var(--gold-bright); margin-bottom: 18px;
+  transition: transform var(--prem-fast) var(--prem-spring, var(--prem-ease-spring));
+}
+.card-link:hover .land-feat-ico,
+.spotlight-card:hover .land-feat-ico { transform: scale(1.1) rotate(-6deg); }
+
+/* ============================================================================
+   9. REDUCED MOTION
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .prem-orb,
+  .gradient-heading,
+  .dash-status-dot { animation: none !important; }
+  .card-link:hover,
+  .spotlight-card:hover,
+  .metric-card:hover,
+  .button:hover,
+  .hover-lift:hover { transform: none !important; }
+}

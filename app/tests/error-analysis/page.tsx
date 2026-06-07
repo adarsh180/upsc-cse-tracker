@@ -1,4 +1,5 @@
 import { TestErrorAnalysisWorkspace } from "@/components/ui/test-error-analysis";
+import { RevealGroup, Reveal } from "@/components/ui/reveal";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -41,7 +42,8 @@ export default async function TestErrorAnalysisPage() {
   ]);
 
   return (
-    <main className="page-shell tests-page">
+    <RevealGroup as="main" className="page-shell tests-page">
+      <Reveal>
       <TestErrorAnalysisWorkspace
         tests={tests.map((test) => ({
           id: test.id,
@@ -68,6 +70,7 @@ export default async function TestErrorAnalysisPage() {
         }))}
         subjects={subjects}
       />
-    </main>
+      </Reveal>
+    </RevealGroup>
   );
 }

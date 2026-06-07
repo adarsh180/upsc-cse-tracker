@@ -13,6 +13,7 @@ import {
 
 import { syllabusTree } from "@/data/syllabus";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
+import { RevealGroup, Reveal } from "@/components/ui/reveal";
 import { CountdownCard, StudyCard } from "@/components/ui/sections";
 import { getSession } from "@/lib/auth";
 import { isRetryableDbError } from "@/lib/db-retry";
@@ -113,13 +114,15 @@ export default async function LandingPage() {
   ];
 
   return (
-    <main
+    <RevealGroup
+      as="main"
       className="page-shell"
       style={{ paddingTop: 48, paddingBottom: 96, width: "min(1480px, calc(100vw - 40px))", margin: "0 auto" }}
     >
       {/* ── Hero ── */}
-      <section
-        className="glass panel landing-hero"
+      <Reveal
+        as="section"
+        className="glass panel landing-hero land-hero"
         style={{
           padding: 0,
           overflow: "hidden",
@@ -129,6 +132,8 @@ export default async function LandingPage() {
           borderRadius: 44,
         }}
       >
+        <span className="prem-orb land-hero-orb-a" aria-hidden="true" />
+        <span className="prem-orb land-hero-orb-b" aria-hidden="true" />
         {/* Left: Copy */}
         <div
           style={{
@@ -145,7 +150,7 @@ export default async function LandingPage() {
 
           {/* Title */}
           <h1
-            className="display"
+            className="display gradient-heading"
             style={{
               fontSize: "clamp(3.2rem, 7vw, 6rem)",
               lineHeight: 0.95,
@@ -263,14 +268,14 @@ export default async function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* ── Features Grid ── */}
-      <section style={{ marginTop: 36, display: "grid", gap: 28 }}>
+      <Reveal as="section" style={{ marginTop: 36, display: "grid", gap: 28 }}>
         <div>
           <div className="eyebrow">Why this workspace</div>
           <h2
-            className="display"
+            className="display gradient-heading"
             style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.8rem)", margin: "12px 0 10px", letterSpacing: "-0.03em" }}
           >
             Everything. Connected. Evidence-based.
@@ -282,25 +287,15 @@ export default async function LandingPage() {
         </div>
 
         <div className="grid grid-3">
-          {features.map((feat) => (
+          {features.map((feat, index) => (
             <article
               key={feat.title}
-              className="glass panel"
+              data-reveal=""
+              data-delay={String((index % 3) + 1)}
+              className="glass panel card-link"
               style={{ borderRadius: 28, padding: "24px 24px" }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 16,
-                  display: "grid",
-                  placeItems: "center",
-                  background: "linear-gradient(135deg, hsla(38,92%,62%,0.18), hsla(216,88%,68%,0.12))",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  color: "var(--gold-bright)",
-                  marginBottom: 18,
-                }}
-              >
+              <div className="land-feat-ico">
                 <feat.icon size={18} />
               </div>
               <div style={{ fontWeight: 800, fontSize: "1.05rem", marginBottom: 10 }}>{feat.title}</div>
@@ -308,10 +303,10 @@ export default async function LandingPage() {
             </article>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ── Study Map ── */}
-      <section style={{ marginTop: 36 }}>
+      <Reveal as="section" style={{ marginTop: 36 }}>
         <div style={{ marginBottom: 22 }}>
           <div className="eyebrow">Workspace map</div>
           <h2
@@ -339,10 +334,11 @@ export default async function LandingPage() {
             />
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ── Bottom CTA ── */}
-      <section
+      <Reveal
+        as="section"
         className="glass panel"
         style={{
           marginTop: 36,
@@ -368,7 +364,7 @@ export default async function LandingPage() {
           {session ? "Go to dashboard" : "Start your journey"}
           <ArrowRight size={16} />
         </Link>
-      </section>
-    </main>
+      </Reveal>
+    </RevealGroup>
   );
 }

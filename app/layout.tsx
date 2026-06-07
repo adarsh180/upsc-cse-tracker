@@ -7,6 +7,7 @@ import { AppChrome } from "@/components/shell/app-chrome";
 
 import "./globals.css";
 import "./redesign.css";
+import "./premium.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],
