@@ -13,8 +13,16 @@ type AppNotification = {
   createdAt: string;
 };
 
+type PersistentNotificationOptions = NotificationOptions & {
+  actions?: Array<{ action: string; title: string }>;
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  vibrate?: number[];
+};
+
 const POLL_MS = 5000;
 const DISMISS_LIMIT = 240;
+const DESKTOP_ALERT_QUERY = "(min-width: 900px) and (hover: hover) and (pointer: fine)";
 
 function safeJson<T>(key: string, fallback: T): T {
   try {
@@ -55,6 +63,10 @@ function urlBase64ToUint8Array(base64String: string) {
 
 function pushCountLabel(count: number) {
   return `${count} device${count === 1 ? "" : "s"}`;
+}
+
+function currentNotificationPermission(): NotificationPermission {
+  return "Notification" in window ? Notification.permission : "default";
 }
 
 function NotificationRow({
@@ -204,28 +216,37 @@ export function NotificationCenter({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [, setPermission] = useState<NotificationPermission>("default");
+  const [permission, setPermission] = useState<NotificationPermission>("default");
   const [browserAlertsSupported, setBrowserAlertsSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushStatus, setPushStatus] = useState("");
+  const [desktopAlertMode, setDesktopAlertMode] = useState(false);
+  const [armingPush, setArmingPush] = useState(false);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<AppNotification | null>(null);
   const previousIdsRef = useRef<Set<string>>(new Set());
+  const foregroundAlertedRef = useRef<Set<string>>(new Set());
 
   const visibleNotifications = notifications.filter((item) => !dismissedIds.has(item.id));
   const unread = visibleNotifications.filter((item) => !readIds.has(item.id));
   const isNeetDesk = appLabel.toLowerCase().includes("neet");
-  const copy = {
-    kicker: "Device alerts",
-    compose: isNeetDesk ? "Send a NEET nudge" : "Send a UPSC nudge",
-    titlePlaceholder: isNeetDesk ? "Bio revision sprint" : "Mains answer sprint",
-    bodyPlaceholder: isNeetDesk
-      ? "20 MCQs before dinner, then mark weak chapters."
-      : "Write one GS answer now, then log the gap.",
-    pushReady: isNeetDesk
-      ? "NEET device push is ready. Test notification sent to this device."
-      : "UPSC device push is ready. Test notification sent to this device.",
-  };
+  const copy = useMemo(
+    () => ({
+      kicker: "Device alerts",
+      compose: isNeetDesk ? "Send a NEET nudge" : "Send a UPSC nudge",
+      titlePlaceholder: isNeetDesk ? "Bio revision sprint" : "Mains answer sprint",
+      bodyPlaceholder: isNeetDesk
+        ? "20 MCQs before dinner, then mark weak chapters."
+        : "Write one GS answer now, then log the gap.",
+      pushReady: isNeetDesk
+        ? "NEET device push is ready. Test notification sent to this device."
+        : "UPSC device push is ready. Test notification sent to this device.",
+      laptopReady: "Laptop alerts armed. Notifications can arrive after reconnect.",
+    }),
+    [isNeetDesk],
+  );
+  const showDesktopArm =
+    desktopAlertMode && browserAlertsSupported && (permission !== "granted" || !pushEnabled);
 
   const persistRead = useCallback(
     (next: Set<string>) => {
@@ -251,6 +272,121 @@ export function NotificationCenter({
     [dismissedIds, persistDismissed, persistRead, readIds],
   );
 
+  const ensurePushSubscription = useCallback(
+    async ({
+      requestPermission = false,
+      sendTest = false,
+      showStatus = false,
+    }: {
+      requestPermission?: boolean;
+      sendTest?: boolean;
+      showStatus?: boolean;
+    } = {}) => {
+      if (!clientId || !browserAlertsSupported) {
+        if (showStatus) setPushStatus("Push is not supported in this browser.");
+        return false;
+      }
+
+      let nextPermission = currentNotificationPermission();
+      if (requestPermission && nextPermission !== "granted") {
+        nextPermission = await Notification.requestPermission();
+      }
+      setPermission(nextPermission);
+
+      if (nextPermission !== "granted") {
+        setPushEnabled(false);
+        if (showStatus) setPushStatus("Notifications are blocked until permission is allowed.");
+        return false;
+      }
+
+      const configResponse = await fetch("/api/push-subscriptions", { cache: "no-store" });
+      if (!configResponse.ok) {
+        if (showStatus) setPushStatus("Sign in again to enable push.");
+        return false;
+      }
+
+      const config = (await configResponse.json()) as { publicKey?: string; configured?: boolean };
+      if (!config.configured || !config.publicKey) {
+        if (showStatus) setPushStatus("Push keys are missing on the server.");
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+        });
+      }
+
+      const saveResponse = await fetch("/api/push-subscriptions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subscription: JSON.parse(JSON.stringify(subscription)), senderClientId: clientId }),
+      });
+
+      if (!saveResponse.ok) {
+        setPushEnabled(false);
+        if (showStatus) setPushStatus("Could not save this device for push.");
+        return false;
+      }
+
+      setPushEnabled(true);
+      if (sendTest) {
+        const testResponse = await fetch("/api/push-subscriptions/test", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint, senderClientId: clientId }),
+        });
+        setPushStatus(
+          testResponse.ok
+            ? copy.pushReady
+            : "Push is saved, but the server push test failed. Check VAPID env keys and device notification settings.",
+        );
+      } else if (showStatus) {
+        setPushStatus(copy.laptopReady);
+      }
+
+      return true;
+    },
+    [browserAlertsSupported, clientId, copy.laptopReady, copy.pushReady],
+  );
+
+  const showDesktopSystemAlert = useCallback(
+    async (item: AppNotification) => {
+      if (!desktopAlertMode || !browserAlertsSupported || currentNotificationPermission() !== "granted") return;
+      if (foregroundAlertedRef.current.has(item.id)) return;
+      foregroundAlertedRef.current.add(item.id);
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const options: PersistentNotificationOptions = {
+          body: item.body,
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: item.id,
+          data: {
+            id: item.id,
+            url: "/dashboard",
+            tone: item.tone,
+            createdAt: item.createdAt,
+            urgent: true,
+          },
+          actions: [{ action: "open", title: "Open tracker" }],
+          renotify: true,
+          requireInteraction: true,
+          silent: false,
+          vibrate: [160, 70, 160, 70, 240],
+        };
+        await registration.showNotification(`${item.senderLabel}: ${item.title}`, options);
+      } catch {
+        foregroundAlertedRef.current.delete(item.id);
+      }
+    },
+    [browserAlertsSupported, desktopAlertMode],
+  );
+
   const fetchNotifications = useCallback(async () => {
     const response = await fetch("/api/notifications", { cache: "no-store" });
     if (!response.ok) return;
@@ -268,10 +404,13 @@ export function NotificationCenter({
 
     if (known.size > 0 && fresh.length > 0) {
       setToast(fresh[fresh.length - 1]);
+      fresh.slice(-3).forEach((item) => {
+        void showDesktopSystemAlert(item);
+      });
     }
 
     previousIdsRef.current = new Set(next.map((item) => item.id));
-  }, [clientId, dismissedIds, readIds]);
+  }, [clientId, dismissedIds, readIds, showDesktopSystemAlert]);
 
   useEffect(() => {
     let id = localStorage.getItem(clientIdKey);
@@ -284,15 +423,27 @@ export function NotificationCenter({
     setReadIds(new Set(safeJson<string[]>(readKey, [])));
     setDismissedIds(new Set(safeJson<string[]>(dismissedKey, [])));
     setBrowserAlertsSupported("Notification" in window && "serviceWorker" in navigator && "PushManager" in window);
-    if ("Notification" in window) setPermission(Notification.permission);
+    setPermission(currentNotificationPermission());
   }, [clientIdKey, defaultSender, dismissedKey, readKey, senderKey]);
 
   useEffect(() => {
-    if (!clientId || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const media = window.matchMedia(DESKTOP_ALERT_QUERY);
+    const update = () => setDesktopAlertMode(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
-    navigator.serviceWorker.ready
-      .then((registration) => registration.pushManager.getSubscription())
-      .then(async (subscription) => {
+  useEffect(() => {
+    if (!clientId || !browserAlertsSupported) return;
+    let cancelled = false;
+
+    const refreshDevicePush = async () => {
+      try {
+        setPermission(currentNotificationPermission());
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (cancelled) return;
         setPushEnabled(Boolean(subscription));
         if (subscription) {
           await fetch("/api/push-subscriptions", {
@@ -300,17 +451,55 @@ export function NotificationCenter({
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ subscription: JSON.parse(JSON.stringify(subscription)), senderClientId: clientId }),
           }).catch(() => {});
+        } else if (currentNotificationPermission() === "granted") {
+          await ensurePushSubscription();
         }
-      })
-      .catch(() => {});
-  }, [clientId]);
+      } catch {
+        if (!cancelled) setPushEnabled(false);
+      }
+    };
+
+    void refreshDevicePush();
+    window.addEventListener("online", refreshDevicePush);
+    document.addEventListener("visibilitychange", refreshDevicePush);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", refreshDevicePush);
+      document.removeEventListener("visibilitychange", refreshDevicePush);
+    };
+  }, [browserAlertsSupported, clientId, ensurePushSubscription]);
 
   useEffect(() => {
     if (!clientId) return;
     void fetchNotifications();
     const timer = window.setInterval(fetchNotifications, POLL_MS);
-    return () => window.clearInterval(timer);
+    const handleOnline = () => {
+      void fetchNotifications();
+    };
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") void fetchNotifications();
+    };
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
   }, [clientId, fetchNotifications]);
+
+  useEffect(() => {
+    const nav = navigator as Navigator & {
+      setAppBadge?: (contents?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    if (unread.length > 0) {
+      void nav.setAppBadge?.(unread.length).catch(() => {});
+    } else {
+      void nav.clearAppBadge?.().catch(() => {});
+    }
+  }, [unread.length]);
 
   useEffect(() => {
     if (!toast) return;
@@ -319,61 +508,11 @@ export function NotificationCenter({
   }, [toast]);
 
   async function enablePushAlerts() {
-    if (!browserAlertsSupported) {
-      setPushStatus("Push is not supported in this browser.");
-      return;
-    }
-
-    const next = await Notification.requestPermission();
-    setPermission(next);
-    if (next !== "granted") {
-      setPushStatus("Notifications are blocked until permission is allowed.");
-      return;
-    }
-
-    const configResponse = await fetch("/api/push-subscriptions", { cache: "no-store" });
-    if (!configResponse.ok) {
-      setPushStatus("Sign in again to enable push.");
-      return;
-    }
-
-    const config = (await configResponse.json()) as { publicKey?: string; configured?: boolean };
-    if (!config.configured || !config.publicKey) {
-      setPushStatus("Push keys are missing on the server.");
-      return;
-    }
-
-    const registration = await navigator.serviceWorker.ready;
-    const existing = await registration.pushManager.getSubscription();
-    if (existing) {
-      await fetch("/api/push-subscriptions", {
-        method: "DELETE",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ endpoint: existing.endpoint }),
-      }).catch(() => {});
-      await existing.unsubscribe().catch(() => false);
-    }
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(config.publicKey),
-    });
-
-    const saveResponse = await fetch("/api/push-subscriptions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subscription: JSON.parse(JSON.stringify(subscription)), senderClientId: clientId }),
-    });
-
-    if (saveResponse.ok) {
-      setPushEnabled(true);
-      const testResponse = await fetch("/api/push-subscriptions/test", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ endpoint: subscription.endpoint, senderClientId: clientId }),
-      });
-      setPushStatus(testResponse.ok ? copy.pushReady : "Push is saved, but the server push test failed. Check VAPID env keys and device notification settings.");
-    } else {
-      setPushStatus("Could not save this device for push.");
+    setArmingPush(true);
+    try {
+      await ensurePushSubscription({ requestPermission: true, sendTest: true, showStatus: true });
+    } finally {
+      setArmingPush(false);
     }
   }
 
@@ -444,6 +583,19 @@ export function NotificationCenter({
           {unread.length > 0 ? <span>{Math.min(unread.length, 9)}</span> : null}
         </button>
       </div>
+
+      {showDesktopArm ? (
+        <aside className={`notify-desktop-arm ${isNeetDesk ? "notify-desktop-arm-offset" : ""}`} aria-live="polite">
+          <BellRing size={15} />
+          <span>
+            <strong>Laptop alerts</strong>
+            <small>{permission === "denied" ? "Blocked in browser settings" : "Persistent alerts are off"}</small>
+          </span>
+          <button type="button" onClick={enablePushAlerts} disabled={armingPush || permission === "denied"}>
+            {permission === "denied" ? "Blocked" : armingPush ? "Arming" : "Arm"}
+          </button>
+        </aside>
+      ) : null}
 
       {toast && (
         <button className={`notify-toast tone-${toast.tone} ${isNeetDesk ? "notify-toast-offset" : ""}`} type="button" onClick={() => setOpen(true)}>
@@ -533,7 +685,8 @@ export function NotificationCenter({
       <style jsx>{`
         .notify-dock,
         .notify-panel,
-        .notify-toast {
+        .notify-toast,
+        .notify-desktop-arm {
           --text: var(--text-primary, var(--text));
         }
 
@@ -546,6 +699,86 @@ export function NotificationCenter({
 
         .notify-dock-offset {
           top: calc(70px + env(safe-area-inset-top));
+        }
+
+        .notify-desktop-arm {
+          position: fixed;
+          top: calc(18px + env(safe-area-inset-top));
+          right: 86px;
+          z-index: 9998;
+          max-width: min(354px, calc(100vw - 118px));
+          min-height: 52px;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 9px 8px 13px;
+          border: 1px solid rgba(255,235,190,0.2);
+          border-radius: 999px;
+          background:
+            linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.055) 42%, rgba(255,255,255,0.025)),
+            rgba(8,10,22,0.72);
+          color: var(--text);
+          box-shadow:
+            0 18px 42px rgba(0,0,0,0.38),
+            0 0 30px rgba(212,168,83,0.1),
+            inset 0 1px 0 rgba(255,255,255,0.2);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          animation: notifyIn 240ms var(--ease-out);
+        }
+
+        .notify-desktop-arm-offset {
+          top: calc(70px + env(safe-area-inset-top));
+        }
+
+        .notify-desktop-arm > span {
+          min-width: 0;
+          display: grid;
+          gap: 2px;
+        }
+
+        .notify-desktop-arm strong,
+        .notify-desktop-arm small {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .notify-desktop-arm strong {
+          color: rgba(255,250,238,0.96);
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.1;
+        }
+
+        .notify-desktop-arm small {
+          color: rgba(255,242,218,0.6);
+          font-size: 10px;
+          font-weight: 800;
+          line-height: 1.1;
+        }
+
+        .notify-desktop-arm button {
+          min-width: 54px;
+          min-height: 34px;
+          border: 1px solid rgba(255,235,190,0.26);
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 12px;
+          background: linear-gradient(135deg, rgba(212,168,83,0.94), rgba(232,114,138,0.9));
+          color: #08080b;
+          font-size: 11px;
+          font-weight: 950;
+          cursor: pointer;
+        }
+
+        .notify-desktop-arm button:disabled {
+          opacity: 0.62;
+          cursor: default;
         }
 
         .notify-button,

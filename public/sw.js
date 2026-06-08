@@ -1,4 +1,4 @@
-const CACHE_NAME = "upsc-cse-tracker-pwa-v7";
+const CACHE_NAME = "upsc-cse-tracker-pwa-v8";
 const OFFLINE_URL = "/offline";
 const APP_SHELL_ASSETS = [
   OFFLINE_URL,
@@ -12,6 +12,45 @@ const APP_SHELL_ASSETS = [
   "/upsc-logo-mark.png",
   "/upsc-brand-header.png",
 ];
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+async function refreshPushSubscription() {
+  const response = await fetch("/api/push-subscriptions", {
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  if (!response.ok) return;
+
+  const config = await response.json();
+  if (!config.configured || !config.publicKey) return;
+
+  const existing = await self.registration.pushManager.getSubscription();
+  const subscription =
+    existing ||
+    (await self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+    }));
+
+  await fetch("/api/push-subscriptions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ subscription: subscription.toJSON() }),
+  });
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -105,6 +144,12 @@ self.addEventListener("push", (event) => {
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(refreshPushSubscription().catch((error) => {
+    console.warn("[sw] push subscription refresh failed", error);
+  }));
 });
 
 self.addEventListener("notificationclick", (event) => {
