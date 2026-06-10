@@ -1,7 +1,7 @@
 import { syllabusTree } from "@/data/syllabus";
 import { db } from "@/lib/db";
 import { isRetryableDbError, withDbRetry } from "@/lib/db-retry";
-import { ensureSeeded, percent } from "@/lib/seed";
+import { ensureSeeded, percent, seedBranchForSlug } from "@/lib/seed";
 
 type PaperWithChildren = {
   id: string;
@@ -156,40 +156,58 @@ export async function getStudyTree() {
   );
 }
 
-export async function getStudyNodeBySlug(slug: string) {
-  await ensureSeeded();
-
-  return db.studyNode.findUnique({
-    where: { slug },
+const studyNodeInclude = {
+  parent: true,
+  children: {
+    orderBy: { sortOrder: "asc" as const },
     include: {
-      parent: true,
+      topicProgress: true,
       children: {
-        orderBy: { sortOrder: "asc" },
+        orderBy: { sortOrder: "asc" as const },
         include: {
           topicProgress: true,
           children: {
-            orderBy: { sortOrder: "asc" },
+            orderBy: { sortOrder: "asc" as const },
             include: {
               topicProgress: true,
-              children: {
-                orderBy: { sortOrder: "asc" },
-                include: {
-                  topicProgress: true,
-                },
-              },
             },
           },
         },
       },
-      studyLogs: {
-        orderBy: { logDate: "desc" },
-        take: 10,
-      },
-      testRecords: {
-        orderBy: { testDate: "desc" },
-        take: 10,
-      },
     },
+  },
+  studyLogs: {
+    orderBy: { logDate: "desc" as const },
+    take: 10,
+  },
+  testRecords: {
+    orderBy: { testDate: "desc" as const },
+    take: 10,
+  },
+};
+
+export async function getStudyNodeBySlug(slug: string) {
+  await ensureSeeded();
+
+  const node = await db.studyNode.findUnique({
+    where: { slug },
+    include: studyNodeInclude,
+  });
+
+  if (node) return node;
+
+  // Self-heal: known syllabus slug missing from DB (partial seed) → seed
+  // that paper branch and retry once instead of 404ing.
+  const seeded = await seedBranchForSlug(slug).catch((error) => {
+    console.error("[study-node-self-heal]", error);
+    return false;
+  });
+
+  if (!seeded) return null;
+
+  return db.studyNode.findUnique({
+    where: { slug },
+    include: studyNodeInclude,
   });
 }
 

@@ -2,7 +2,10 @@
 
 import pdfParse from "pdf-parse";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { checkRateLimit, clearRateLimit, timingSafeEqual } from "@/lib/rate-limit";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
@@ -71,14 +74,31 @@ export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
 
-  if (
-    email === (process.env.AUTH_EMAIL ?? "") &&
-    password === (process.env.AUTH_PASSWORD ?? "")
-  ) {
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    "unknown";
+
+  const limit = checkRateLimit(`signin:${ip}`);
+  if (!limit.allowed) {
+    redirect("/sign-in?error=ratelimited");
+  }
+
+  const expectedEmail = process.env.AUTH_EMAIL ?? "";
+  const expectedPassword = process.env.AUTH_PASSWORD ?? "";
+
+  const emailOk = Boolean(expectedEmail) && timingSafeEqual(email, expectedEmail);
+  const passwordOk = Boolean(expectedPassword) && timingSafeEqual(password, expectedPassword);
+
+  if (emailOk && passwordOk) {
+    clearRateLimit(`signin:${ip}`);
     await createSession(email);
     redirect("/dashboard");
   }
 
+  // Uniform small delay on failure to blunt automated guessing
+  await new Promise((resolve) => setTimeout(resolve, 600));
   redirect("/sign-in?error=invalid");
 }
 

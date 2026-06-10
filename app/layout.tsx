@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Inter, Noto_Serif_Devanagari, Playfair_Display } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Noto_Serif_Devanagari } from "next/font/google";
 
 import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
@@ -8,15 +8,11 @@ import { AppChrome } from "@/components/shell/app-chrome";
 import "./globals.css";
 import "./redesign.css";
 import "./premium.css";
+import "./theme.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],
   variable: "--font-body",
-});
-
-const displayFont = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-display",
 });
 
 const devanagariFont = Noto_Serif_Devanagari({
@@ -46,14 +42,35 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0b0d11",
+  // Keyboard resizes the layout, so fixed composers stay visible while typing
+  interactiveWidget: "resizes-content",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${bodyFont.variable} ${displayFont.variable} ${devanagariFont.variable}`}>
+    <html
+      lang="en"
+      data-theme="dark"
+      data-scroll-behavior="smooth"
+      style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
+    >
+      <body className={`${bodyFont.variable} ${devanagariFont.variable}`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t}catch(e){}',
+          }}
+        />
         <LaunchSplash />
         <PwaRegister />
         <AppChrome>{children}</AppChrome>

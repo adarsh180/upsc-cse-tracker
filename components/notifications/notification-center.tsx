@@ -692,20 +692,20 @@ export function NotificationCenter({
 
         .notify-dock {
           position: fixed;
-          top: calc(18px + env(safe-area-inset-top));
-          right: 22px;
-          z-index: 9998;
+          top: calc(var(--topbar-h, 60px) + 12px + env(safe-area-inset-top));
+          right: max(20px, calc((100vw - var(--page-max, 1280px)) / 2 + 20px));
+          z-index: 61;
         }
 
         .notify-dock-offset {
-          top: calc(70px + env(safe-area-inset-top));
+          top: calc(var(--topbar-h, 60px) + 12px + env(safe-area-inset-top));
         }
 
         .notify-desktop-arm {
           position: fixed;
-          top: calc(18px + env(safe-area-inset-top));
-          right: 86px;
-          z-index: 9998;
+          top: calc(var(--topbar-h, 60px) + 12px + env(safe-area-inset-top));
+          right: 78px;
+          z-index: 60;
           max-width: min(354px, calc(100vw - 118px));
           min-height: 52px;
           display: grid;
@@ -1395,12 +1395,12 @@ export function NotificationCenter({
 
         @media (max-width: 560px) {
           .notify-dock {
-            top: calc(12px + env(safe-area-inset-top));
+            top: calc(var(--topbar-h, 60px) + 10px + env(safe-area-inset-top));
             right: 12px;
           }
 
           .notify-dock-offset {
-            top: calc(66px + env(safe-area-inset-top));
+            top: calc(var(--topbar-h, 60px) + 10px + env(safe-area-inset-top));
           }
 
           .notify-button {

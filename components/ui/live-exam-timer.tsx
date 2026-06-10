@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Gauge, Sparkles, TimerReset } from "lucide-react";
+import { Calendar, Compass, Sparkles, TimerReset, TrendingUp, Zap } from "lucide-react";
 
 function getTimeParts(targetDate: string, nowMs = Date.now()) {
   const now = nowMs;
@@ -172,8 +172,11 @@ export function ExamCountdownMatrix({
         key: "prelims",
         label: "UPSC Prelims 2027",
         shortLabel: "Prelims",
+        focus: "Objective edge",
         targetDate: prelimsDate,
-        tone: "var(--gold-bright)",
+        tone: "#f1c75b",
+        gradFrom: "#f1c75b",
+        gradTo: "#e87d5b",
         state: getCountdownState(prelimsDate, nowMs),
         readiness: readiness.prelims,
       },
@@ -181,8 +184,11 @@ export function ExamCountdownMatrix({
         key: "mains",
         label: "UPSC Mains 2027",
         shortLabel: "Mains",
+        focus: "Answer depth",
         targetDate: mainsDate,
-        tone: "var(--physics)",
+        tone: "#75c6f3",
+        gradFrom: "#75c6f3",
+        gradTo: "#9d8cf7",
         state: getCountdownState(mainsDate, nowMs),
         readiness: readiness.mains,
       },
@@ -191,115 +197,110 @@ export function ExamCountdownMatrix({
   );
 
   return (
-    <section className="glass panel exam-countdown-matrix">
-      <div className="exam-countdown-head">
+    <section className="exam-horizon" aria-label="UPSC exam countdowns">
+      <div className="exam-horizon-head">
         <div>
-          <div className="eyebrow">Exam Chronograph</div>
-          <div className="display exam-countdown-title">Time pressure, without noise.</div>
-          <p className="muted exam-countdown-copy">
-            Live Prelims and Mains countdowns with phase, date, weeks, months and second-level movement in one clean instrument.
-          </p>
+          <div className="exam-horizon-kicker">
+            <Sparkles size={14} />
+            Live UPSC timeline
+          </div>
+          <h2>Prelims and mains horizon</h2>
         </div>
-        <div className="pill">
-          <TimerReset size={14} />
-          Live every second
+        <div className="exam-horizon-sync">
+          <span className="exam-horizon-dot" />
+          <span>Second-by-second</span>
         </div>
       </div>
 
-      <div className="exam-countdown-grid">
+      <div className="exam-horizon-grid">
         {exams.map((exam) => {
           const { readiness, state } = exam;
+          const progress = Math.min(100, Math.max(0, state.progress));
+          const readinessPct = Math.min(100, Math.max(0, readiness.score));
           const units = [
-            { label: "Days", value: String(state.days) },
             { label: "Hours", value: pad(state.hours) },
             { label: "Minutes", value: pad(state.minutes) },
-            { label: "Seconds", value: pad(state.seconds) },
+            { label: "Seconds", value: pad(state.seconds), active: true },
           ];
 
           return (
             <article
               key={exam.key}
-              className="exam-countdown-card"
+              className="exam-horizon-card"
               style={
                 {
-                  "--exam-tone": exam.tone,
-                  "--exam-progress": `${state.progress}%`,
-                  "--exam-readiness": `${readiness.score}%`,
-                  "--exam-second": `${state.seconds * 6}deg`,
-                  "--exam-minute": `${state.minutes * 6}deg`,
+                  "--eh-tone": exam.tone,
+                  "--eh-from": exam.gradFrom,
+                  "--eh-to": exam.gradTo,
+                  "--eh-progress": `${progress}%`,
+                  "--eh-readiness": `${readinessPct}%`,
                 } as CSSProperties
               }
             >
-              <div className="exam-countdown-card-top">
-                <div>
-                  <div className="pill exam-countdown-date-pill">
-                    <CalendarClock size={13} />
-                    {state.dateLabel}
+              <div className="exam-horizon-ambient" aria-hidden="true" />
+
+              <div className="exam-horizon-main">
+                <div className="exam-horizon-title-row">
+                  <div>
+                    <span className="exam-horizon-stage">{exam.shortLabel} 2027</span>
+                    <h3>{exam.focus}</h3>
                   </div>
-                  <h3 className="display exam-countdown-card-title">{exam.shortLabel}</h3>
+                  <span className="exam-horizon-phase">{state.phase}</span>
                 </div>
-                <div className="exam-countdown-phase">
-                  <Gauge size={14} />
-                  {state.phase}
+
+                <div className="exam-horizon-days" role="img" aria-label={`${exam.label}: ${state.days} days left`}>
+                  <span>{state.days}</span>
+                  <small>days left</small>
+                </div>
+
+                <div className="exam-horizon-rail" aria-hidden="true">
+                  <span className="exam-horizon-rail-fill" />
+                  <span className="exam-horizon-rail-orbit" />
+                </div>
+
+                <div className="exam-horizon-meta">
+                  <span>
+                    <Calendar size={13} />
+                    {state.dateLabel}
+                  </span>
+                  <span>
+                    <Compass size={13} />
+                    {state.months} months
+                  </span>
+                  <span>
+                    <Zap size={13} />
+                    {state.weeks} weeks
+                  </span>
                 </div>
               </div>
 
-              <div className="exam-countdown-body">
-                <div className="exam-chronograph" aria-hidden="true">
-                  <div className="exam-readiness-arc" />
-                  <div className="exam-chronograph-ring" />
-                  <div className="exam-chronograph-sweep second" />
-                  <div className="exam-chronograph-sweep minute" />
-                  <div className="exam-chronograph-core">
-                    <strong>{state.days}</strong>
-                    <span>days</span>
-                  </div>
+              <div className="exam-horizon-side">
+                <div className="exam-horizon-clock" aria-label="live countdown">
+                  {units.map((unit) => (
+                    <div key={unit.label} className={unit.active ? "exam-horizon-unit is-live" : "exam-horizon-unit"}>
+                      <span>{unit.value}</span>
+                      <small>{unit.label}</small>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="exam-countdown-side">
-                  <div className="exam-readiness-panel">
-                    <span>Live readiness</span>
-                    <strong>{readiness.score}%</strong>
-                    <em>{readiness.label}</em>
+                <div className="exam-horizon-readiness">
+                  <div className="exam-horizon-readiness-top">
+                    <span>
+                      <TrendingUp size={13} />
+                      Readiness
+                    </span>
+                    <strong>{readiness.score}% / {readiness.label}</strong>
                   </div>
-                  <div className="exam-countdown-units">
-                    {units.map((unit) => (
-                      <div key={unit.label} className="exam-countdown-unit">
-                        <strong>{unit.value}</strong>
-                        <span>{unit.label}</span>
-                      </div>
+                  <div className="exam-horizon-readiness-bar" aria-hidden="true">
+                    <span />
+                  </div>
+                  <div className="exam-horizon-signals">
+                    {readiness.signals.slice(0, 3).map((signal, index) => (
+                      <span key={index}>{signal}</span>
                     ))}
                   </div>
                 </div>
-              </div>
-
-              <div className="exam-countdown-meta">
-                <div>
-                  <span>Weeks</span>
-                  <strong>{state.weeks}</strong>
-                </div>
-                <div>
-                  <span>Months</span>
-                  <strong>{state.months}</strong>
-                </div>
-                <div>
-                  <span>Readiness</span>
-                  <strong>{readiness.score}%</strong>
-                </div>
-                <div>
-                  <span>Time used</span>
-                  <strong>{state.progress}%</strong>
-                </div>
-              </div>
-
-              <div className="exam-readiness-signals">
-                {readiness.signals.map((signal) => (
-                  <span key={signal}>{signal}</span>
-                ))}
-              </div>
-
-              <div className="exam-countdown-progress" aria-hidden="true">
-                <span />
               </div>
             </article>
           );

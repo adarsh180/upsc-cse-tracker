@@ -18,29 +18,18 @@ export function PageIntro({
   glyph?: MotionGlyphName;
 }) {
   return (
-    <section className="glass panel page-intro-shell">
-      <div className="page-intro-copy">
-        <div className="page-intro-kicker">
-          <MotionGlyph name={glyph} size={42} />
+    <section className="pi2">
+      <div className="pi2-copy">
+        <div className="pi2-kicker">
+          <span className="pi2-glyph">
+            <MotionGlyph name={glyph} size={26} />
+          </span>
           <span className="eyebrow">{eyebrow}</span>
         </div>
-        <h1 className="display page-intro-title">{title}</h1>
-        <p className="muted page-intro-description">{description}</p>
+        <h1 className="pi2-title">{title}</h1>
+        <p className="pi2-description">{description}</p>
       </div>
-      <div className="glass panel glass-strong page-intro-aside">
-        <div className="page-intro-mark" aria-hidden="true">
-          <MotionGlyph name={glyph} size={72} />
-          <div className="page-intro-mark-glow" />
-        </div>
-        <div>
-          <div className="pill">
-            <Sparkles size={14} />
-            Live tracker
-          </div>
-          <div className="display page-intro-aside-title">Clean signal. Fast action.</div>
-        </div>
-        <div className="page-intro-actions">{actions}</div>
-      </div>
+      {actions ? <div className="pi2-actions">{actions}</div> : null}
     </section>
   );
 }

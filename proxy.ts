@@ -2,9 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const publicPaths = ["/", "/sign-in"];
-const secret = new TextEncoder().encode(
-  process.env.AUTH_PASSWORD ?? "upsc-cse-tracker-secret",
-);
+
+const rawSecret = process.env.AUTH_SECRET ?? process.env.AUTH_PASSWORD;
+
+if (!rawSecret) {
+  throw new Error(
+    "AUTH_SECRET (or AUTH_PASSWORD) must be set. Refusing to start with no session secret.",
+  );
+}
+
+const secret = new TextEncoder().encode(rawSecret);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

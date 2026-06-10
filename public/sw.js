@@ -1,4 +1,4 @@
-const CACHE_NAME = "upsc-cse-tracker-pwa-v8";
+const CACHE_NAME = "upsc-cse-tracker-pwa-v9";
 const OFFLINE_URL = "/offline";
 const APP_SHELL_ASSETS = [
   OFFLINE_URL,

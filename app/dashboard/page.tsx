@@ -2,21 +2,21 @@ import Link from "next/link";
 import {
   ArrowRight,
   BrainCircuit,
+  ClipboardList,
+  Clock,
   Flame,
-  Goal,
-  ShieldAlert,
+  ListTodo,
+  LogOut,
   Sparkles,
   Target,
-  Trophy,
-  Clock,
   TrendingUp,
+  Trophy,
   Zap,
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions";
 import { ExamCountdownMatrix } from "@/components/ui/live-exam-timer";
-import { RevealGroup, Reveal } from "@/components/ui/reveal";
-import { MetricCard, StudyCard } from "@/components/ui/sections";
+import { StudyCard } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
 
@@ -48,7 +48,13 @@ async function getConnectedNeetConfidence(): Promise<PrepConfidence | null> {
   try {
     const response = await fetch(url, {
       cache: "no-store",
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/json",
+        // Sent so the NEET instance can protect its endpoint the same way
+        ...(process.env.CROSS_APP_NOTIFY_SECRET
+          ? { "x-cross-app-secret": process.env.CROSS_APP_NOTIFY_SECRET }
+          : {}),
+      },
     });
 
     if (!response.ok) return null;
@@ -70,10 +76,6 @@ export default async function DashboardPage() {
   const recentLog = summary.dailyLogs[0];
   const recentTest = summary.tests[0];
   const latestMood = summary.moods[0];
-  const discipline = summary.metrics[2]?.value ?? "0/100";
-  const avgScore = summary.metrics[1]?.value ?? "0%";
-  const trackedHours = summary.metrics[0]?.value ?? "0h";
-  const focusTrend = summary.metrics[3]?.value ?? "0/10";
 
   const paperPctMap = await getPaperCompletionMap(summary.papers);
   const syllabusCompletion = average(Object.values(paperPctMap));
@@ -128,156 +130,138 @@ export default async function DashboardPage() {
   };
   const neetConfidenceScore = clampPct(neetConfidence?.score ?? 0);
 
-  const heroKpis = [
-    { icon: Target, label: "Discipline", value: discipline, color: "var(--gold-bright)" },
-    { icon: Trophy, label: "Avg Score", value: avgScore, color: "var(--physics)" },
-    { icon: Zap, label: "Focus Trend", value: focusTrend, color: "var(--lotus-bright)" },
-  ];
-  const heroStrip = [
-    { icon: Clock, label: "Hours", value: trackedHours, color: "var(--botany)" },
-    { icon: Flame, label: "Mood", value: latestMood ? latestMood.label : "—", color: "var(--saffron)" },
+  const statIcons = [Clock, Trophy, Target, Zap];
+  const statColors = ["var(--botany)", "var(--physics)", "var(--gold-bright)", "var(--lotus-bright)"];
+
+  const quickActions = [
     {
+      href: "/goals",
+      icon: Target,
+      color: "var(--gold-bright)",
+      title: "Daily goals",
+      desc: recentLog
+        ? `Last: ${recentLog.primaryFocus} · ${recentLog.totalHours.toFixed(1)}h · ${recentLog.disciplineScore}/100 discipline`
+        : "Log today's hours, subjects and blockers.",
+    },
+    {
+      href: "/tests",
+      icon: ClipboardList,
+      color: "var(--physics)",
+      title: "Log a test",
+      desc: recentTest
+        ? `Last: ${recentTest.title} — ${recentTest.score}/${recentTest.totalMarks}`
+        : "No tests logged yet. Start building the curve.",
+    },
+    {
+      href: "/mood",
+      icon: Flame,
+      color: "var(--saffron)",
+      title: "Track mood",
+      desc: latestMood
+        ? `Latest: ${latestMood.label} · focus ${latestMood.focus}/10`
+        : "Mood and focus feed your readiness signals.",
+    },
+    {
+      href: "/ai-insight/guru",
+      icon: Sparkles,
+      color: "var(--gold-bright)",
+      title: "Ask the Guru",
+      desc: "Strict AI mentor reading your live preparation data.",
+    },
+    {
+      href: "/performance",
       icon: TrendingUp,
-      label: "Tests",
-      value: recentTest ? `${recentTest.score}/${recentTest.totalMarks}` : "None yet",
-      color: "var(--rose-bright)",
+      color: "var(--lotus-bright)",
+      title: "Performance",
+      desc: "Score curves, subject drift and trend analytics.",
+    },
+    {
+      href: "/mission-control",
+      icon: BrainCircuit,
+      color: "var(--physics)",
+      title: "Mission Control",
+      desc: "Launch a planning agent and turn it into todos.",
     },
   ];
 
   return (
-    <RevealGroup as="main" className="page-shell">
-
-      {/* ══════════════════════════════ HERO ══════════════════════════════ */}
-      <Reveal as="section" className="glass panel dash-hero">
-        <span className="prem-orb dash-hero-orb-a" aria-hidden="true" />
-        <span className="prem-orb dash-hero-orb-b" aria-hidden="true" />
-
-        <div className="dash-hero-grid">
-          {/* LEFT */}
-          <div className="dash-hero-left">
-            <div>
-              <div className="dash-status">
-                <span className="dash-status-dot" />
-                Command Center — Active
-              </div>
-              <h1 className="display gradient-heading dash-hero-title" style={{ marginTop: 16 }}>
-                Sacred dashboard for a hard attempt.
-              </h1>
-              <p className="muted dash-hero-sub" style={{ marginTop: 16 }}>
-                {recentLog
-                  ? `Latest session: ${recentLog.primaryFocus} — ${recentLog.totalHours.toFixed(1)}h logged, ${recentLog.disciplineScore}/100 discipline.`
-                  : "Your dashboard sharpens the moment you start logging honest sessions. Everything here is real — no wishful memory."}
-              </p>
-            </div>
-
-            <div className="dash-kpi-row">
-              {heroKpis.map((m) => (
-                <div key={m.label} className="dash-kpi" style={{ color: m.color }}>
-                  <div className="dash-kpi-head">
-                    <div className="dash-kpi-ico"><m.icon size={15} /></div>
-                    <div className="dash-kpi-label">{m.label}</div>
-                  </div>
-                  <div className="dash-kpi-value">{m.value}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="dash-strip">
-              {heroStrip.map((s) => (
-                <div key={s.label} className="dash-strip-item">
-                  <s.icon size={16} style={{ color: s.color, flexShrink: 0 }} />
-                  <div>
-                    <div className="dash-strip-k">{s.label}</div>
-                    <div className="dash-strip-v" style={{ color: s.color }}>{s.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* RIGHT RAIL */}
-          <div className="dash-hero-rail">
-            <div>
-              <div className="eyebrow" style={{ marginBottom: 12 }}>Execution Pulse</div>
-              <div className="display" style={{ fontSize: "1.7rem", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-                {recentTest ? recentTest.title : "No test pressure logged yet"}
-              </div>
-              <p className="muted" style={{ marginTop: 10, lineHeight: 1.82, fontSize: 13.5 }}>
-                {recentTest
-                  ? `Score: ${recentTest.score}/${recentTest.totalMarks}. Open analytics to interrogate this trend before it becomes your baseline.`
-                  : "Start logging tests so this page stops being decorative and starts being brutally useful."}
-              </p>
-            </div>
-
-            <div style={{ display: "grid", gap: 10 }}>
-              <Link href="/ai-insight" className="button" style={{ justifyContent: "center" }}>
-                <Sparkles size={15} />
-                Open AI Insight
-              </Link>
-              <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Log a fresh test <ArrowRight size={15} />
-              </Link>
-              <Link href="/goals" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Update daily goals <ArrowRight size={15} />
-              </Link>
-              <Link href="/mood" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Track mood <ArrowRight size={15} />
-              </Link>
-            </div>
-
-            <div className="divider" />
-
-            <div className="glass" style={{ borderRadius: 22, padding: 18 }}>
-              <div className="pill" style={{ marginBottom: 12 }}>
-                <ShieldAlert size={13} />
-                Latest session
-              </div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, lineHeight: 1.4 }}>
-                {recentLog ? recentLog.primaryFocus : "No session data yet"}
-              </div>
-              <p className="muted" style={{ marginTop: 8, fontSize: 13, lineHeight: 1.78 }}>
-                {recentLog
-                  ? `${recentLog.completion}% completion · ${recentLog.disciplineScore}/100 discipline`
-                  : "Log what you actually did so the system can tell effort from bluffing."}
-              </p>
-            </div>
-
-            <form action={signOutAction}>
-              <button className="button-secondary" type="submit" style={{ width: "100%", justifyContent: "center", fontSize: 13 }}>
-                Sign out
-              </button>
-            </form>
-          </div>
+    <main className="page-shell">
+      {/* Header */}
+      <div className="db-head anim-fade-up">
+        <div>
+          <div className="eyebrow">Command center</div>
+          <h1 className="db-greeting">
+            {recentLog ? "Keep the streak honest, Adarsh." : "Start logging. The system is ready."}
+          </h1>
+          <p className="db-context">
+            {recentLog
+              ? `Latest session: ${recentLog.primaryFocus} — ${recentLog.totalHours.toFixed(1)}h logged, ${recentLog.disciplineScore}/100 discipline.`
+              : "Everything on this page is computed from your real entries — no mock data."}
+          </p>
         </div>
-      </Reveal>
+        <form action={signOutAction}>
+          <button className="button-secondary" type="submit" style={{ minHeight: 38, fontSize: 13 }}>
+            <LogOut size={14} />
+            Sign out
+          </button>
+        </form>
+      </div>
 
-      {/* ══════════════════════════════ METRICS ROW ══════════════════════════════ */}
-      <Reveal as="section" style={{ marginBottom: 28 }}>
-        <div className="grid grid-4" style={{ gap: 18 }}>
-          {summary.metrics.map((metric) => (
-            <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
-          ))}
-        </div>
-      </Reveal>
+      {/* Key stats */}
+      <section className="db-stats-row anim-fade-up">
+        {summary.metrics.map((metric, i) => {
+          const Icon = statIcons[i % statIcons.length];
+          return (
+            <article key={metric.label} className="glass db-stat">
+              <div className="db-stat-label">
+                <Icon size={14} style={{ color: statColors[i % statColors.length] }} />
+                {metric.label}
+              </div>
+              <div className="db-stat-value">{metric.value}</div>
+              <div className="db-stat-hint">{metric.hint}</div>
+            </article>
+          );
+        })}
+      </section>
 
-      {/* ══════════════════════════════ COUNTDOWNS ══════════════════════════════ */}
-      <Reveal as="section" style={{ marginBottom: 28 }}>
+      {/* Countdowns + readiness */}
+      <section className="db-section">
         <ExamCountdownMatrix
           prelimsDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
           mainsDate={process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30"}
           initialNow={Date.now()}
           readiness={examReadiness}
         />
-      </Reveal>
+      </section>
 
-      {/* ══════════════════════════════ STUDY SPACES ══════════════════════════════ */}
-      <Reveal as="section" style={{ marginBottom: 28 }}>
-        <div className="prem-sec-head">
-          <div className="eyebrow">Core Study Spaces</div>
-          <h2 className="display">GS, optional, essays, current affairs.</h2>
-          <p className="muted">
-            Each card opens a dedicated workspace with editable chapters and real database updates.
-          </p>
+      {/* Quick actions */}
+      <section className="db-section">
+        <div className="db-section-title">
+          <h2>Quick actions</h2>
+        </div>
+        <div className="db-actions-row">
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href} className="glass card-link db-action">
+              <div className="db-stat-label">
+                <action.icon size={15} style={{ color: action.color }} />
+                <span style={{ fontSize: 14, fontWeight: 650, color: "var(--text)" }}>{action.title}</span>
+              </div>
+              <p className="db-action-desc">{action.desc}</p>
+              <span className="db-section-link">
+                Open <ArrowRight size={13} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Study spaces */}
+      <section className="db-section">
+        <div className="db-section-title">
+          <h2>Study spaces</h2>
+          <Link href="/todo" className="db-section-link">
+            <ListTodo size={13} /> Todo board <ArrowRight size={13} />
+          </Link>
         </div>
         <div className="grid grid-4">
           {summary.papers.map((paper) => (
@@ -292,179 +276,45 @@ export default async function DashboardPage() {
             />
           ))}
         </div>
-      </Reveal>
+      </section>
 
-      {/* ══════════════════════════════ MISSION + TODO + AI ══════════════════════════════ */}
-      <Reveal as="section" className="command-grid" style={{ marginBottom: 28 }}>
-        {/* Daily Goals */}
-        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
-          <div className="pill"><Goal size={13} />Active execution</div>
-          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Daily Goals</div>
-          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
-            Log subject-wise study output, hours, blockers and completion so your momentum is
-            measured with evidence instead of wishful memory.
-          </p>
-          <div style={{ marginTop: 18 }}>
-            <Link href="/goals" className="button-secondary" style={{ justifyContent: "space-between", width: "100%" }}>
-              Enter goals <ArrowRight size={15} />
-            </Link>
-          </div>
-        </article>
-
-        {/* Tests + Performance */}
-        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
-          <div className="pill"><Trophy size={13} />Competitive edge</div>
-          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Tests and performance</div>
-          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
-            Capture every prelims and mains test, then read the score curve, subject drift and
-            discipline movement together.
-          </p>
-          <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
-            <Link href="/tests" className="button-secondary" style={{ justifyContent: "space-between" }}>
-              Open test tracker <ArrowRight size={15} />
-            </Link>
-            <Link href="/performance" className="button-secondary" style={{ justifyContent: "space-between" }}>
-              Open analytics <ArrowRight size={15} />
-            </Link>
-          </div>
-        </article>
-
-        {/* AI Hub */}
-        <article className="glass panel spotlight-card span-4" style={{ borderRadius: 32 }}>
-          <div className="pill"><BrainCircuit size={13} />AI layer</div>
-          <div className="display" style={{ fontSize: "2rem", marginTop: 16, letterSpacing: "-0.02em" }}>Guru, essays, analytics</div>
-          <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
-            The AI hub has separate pages for coaching, analytics and essay evaluation — each
-            reading from your live preparation data.
-          </p>
-          <div style={{ marginTop: 18 }}>
-            <Link href="/ai-insight" className="button" style={{ justifyContent: "space-between", width: "100%" }}>
-              Enter AI hub <ArrowRight size={15} />
-            </Link>
-          </div>
-        </article>
-
-        {/* Mission Control + Todo — full width */}
-        <article
-          className="glass panel spotlight-card span-12"
-          style={{
-            borderRadius: 36,
-            background:
-              "radial-gradient(circle at 14% 20%, hsla(216,88%,68%,0.14), transparent 26%), radial-gradient(circle at 84% 18%, hsla(38,92%,62%,0.12), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24 }}>
-            <div style={{ maxWidth: 760 }}>
-              <div className="pill" style={{ marginBottom: 18 }}>
-                <BrainCircuit size={13} />
-                Agentic layer
-              </div>
-              <div className="display" style={{ fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "-0.03em" }}>
-                Mission Control and Todo Board
-              </div>
-              <p className="muted" style={{ lineHeight: 1.84, marginTop: 12, fontSize: 14 }}>
-                Launch a planning agent when you need a serious intervention. It reads your live data,
-                builds a strict mission, drafts your daily command, and turns the plan into database-backed todos.
-              </p>
+      {/* Connected NEET instance */}
+      <section className="db-section">
+        <div className="db-section-title">
+          <h2>Connected · NEET Tracker</h2>
+        </div>
+        <article className="glass panel" style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ minWidth: 220, flex: "1 1 260px" }}>
+            <div className="eyebrow" style={{ color: "var(--botany)" }}>Prep confidence</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+              <span style={{ fontSize: "2rem", fontWeight: 680, letterSpacing: "-0.03em", color: "var(--botany)" }}>
+                {neetConfidence ? neetConfidenceScore : "—"}
+              </span>
+              {neetConfidence ? <span style={{ fontSize: 13, color: "var(--text-muted)" }}>/100 · {neetConfidence.reliability}% reliability</span> : <span style={{ fontSize: 13, color: "var(--text-muted)" }}>syncing</span>}
             </div>
-            <div style={{ display: "grid", gap: 12, minWidth: 240 }}>
-              <Link href="/mission-control" className="button" style={{ justifyContent: "space-between" }}>
-                Mission Control <ArrowRight size={15} />
-              </Link>
-              <Link href="/todo" className="button-secondary" style={{ justifyContent: "space-between" }}>
-                Todo Board <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-        </article>
-
-        {/* NEET Tracker */}
-        <article
-          className="glass panel spotlight-card"
-          style={{
-            gridColumn: "span 12",
-            borderRadius: 36,
-            overflow: "hidden",
-            background:
-              "radial-gradient(circle at 18% 20%, hsla(142,60%,48%,0.14), transparent 26%), radial-gradient(circle at 82% 18%, hsla(218,84%,62%,0.11), transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035))",
-          }}
-        >
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(320px, 0.85fr)", gap: 24, alignItems: "center" }}>
-            <div style={{ maxWidth: 680 }}>
-              <div className="pill" style={{ marginBottom: 18 }}>
-                <Sparkles size={13} />
-                Connected Instance
-              </div>
-              <div className="display" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.02em" }}>
-                NEET Tracker Platform
-              </div>
-              <p className="muted" style={{ lineHeight: 1.84, marginTop: 10, fontSize: 14 }}>
-                Switch to your medical preparation workspace. The NEET project shares the same premium
-                architecture and deep analytics layer as this UPSC command center.
-              </p>
-            </div>
-            <div
-              className="glass"
-              style={{
-                borderRadius: 26,
-                padding: 18,
-                display: "grid",
-                gap: 14,
-                background: "linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028))",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-                <div>
-                  <div className="eyebrow" style={{ color: "var(--botany)" }}>Prep Confidence</div>
-                  <div className="display" style={{ fontSize: "2.4rem", lineHeight: 1, marginTop: 8, color: "var(--botany)" }}>
-                    {neetConfidence ? neetConfidenceScore : "Live"}
-                    {neetConfidence ? <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/100</span> : null}
-                  </div>
-                </div>
-                <div className="pill" style={{ color: "var(--text-secondary)" }}>
-                  {neetConfidence ? `${neetConfidence.reliability}% reliability` : "Syncing"}
-                </div>
-              </div>
-
-              <div
-                aria-label={neetConfidence ? `${neetConfidence.exam} confidence ${neetConfidenceScore} out of 100` : "NEET confidence syncing"}
+            <div className="db-bar" style={{ marginTop: 10, maxWidth: 320 }}>
+              <span
                 style={{
-                  height: 12,
-                  borderRadius: 999,
-                  overflow: "hidden",
-                  background: "rgba(255,255,255,0.08)",
-                  boxShadow: "inset 0 1px 8px rgba(0,0,0,0.25)",
+                  width: neetConfidence ? `${neetConfidenceScore}%` : "0%",
+                  background: "linear-gradient(90deg, var(--botany), var(--physics))",
                 }}
-              >
-                <span
-                  style={{
-                    display: "block",
-                    width: neetConfidence ? `${neetConfidenceScore}%` : "38%",
-                    height: "100%",
-                    borderRadius: "inherit",
-                    background: "linear-gradient(90deg, var(--botany), var(--physics), var(--gold-bright))",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", color: "var(--text-secondary)", fontSize: 12, fontWeight: 700 }}>
-                <span>{neetConfidence?.label ?? "Waiting for live NEET endpoint"}</span>
-                <span>{neetConfidence?.signals?.[0] ?? "No mock percentage used"}</span>
-              </div>
-
-              <a
-                href="https://neet-tracker-misti.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="button"
-                style={{ whiteSpace: "nowrap", justifyContent: "space-between" }}
-              >
-                Open NEET Tracker <ArrowRight size={15} />
-              </a>
+              />
             </div>
+            <p className="db-stat-hint" style={{ marginTop: 8 }}>
+              {neetConfidence?.label ?? "Waiting for live NEET endpoint"}
+              {neetConfidence?.signals?.[0] ? ` · ${neetConfidence.signals[0]}` : ""}
+            </p>
           </div>
+          <a
+            href="https://neet-tracker-misti.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button-secondary"
+          >
+            Open NEET Tracker <ArrowRight size={15} />
+          </a>
         </article>
-      </Reveal>
-    </RevealGroup>
+      </section>
+    </main>
   );
 }

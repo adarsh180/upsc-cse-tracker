@@ -69,6 +69,32 @@ export async function ensureSeeded() {
   }
 }
 
+/** Find the top-level static syllabus branch that contains a slug (at any depth). */
+function findBranchContainingSlug(slug: string): SyllabusNode | null {
+  const containsSlug = (node: SyllabusNode): boolean =>
+    node.slug === slug || (node.children ?? []).some((child) => containsSlug(child));
+
+  return syllabusTree.find((paper) => containsSlug(paper)) ?? null;
+}
+
+/**
+ * Self-healing seeder: if a known syllabus slug is missing from the DB
+ * (e.g. partial seeding because roots already existed), upsert just that
+ * paper branch so the page resolves instead of 404ing.
+ */
+export async function seedBranchForSlug(slug: string): Promise<boolean> {
+  const branch = findBranchContainingSlug(slug);
+  if (!branch) return false;
+
+  const sortOrder = syllabusTree.indexOf(branch);
+
+  await withDbRetry(async () => {
+    await upsertNode(branch, null, sortOrder);
+  });
+
+  return true;
+}
+
 export function percent(value: number, total: number) {
   if (!total) {
     return 0;

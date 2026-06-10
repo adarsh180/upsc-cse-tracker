@@ -1,178 +1,219 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X, Sparkles, ChevronRight } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  LayoutGrid,
+  Sparkles,
+  Target,
+  X,
+} from "lucide-react";
 
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { navGroups } from "@/components/shell/nav-config";
-import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icons";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { cn } from "@/lib/utils";
 
-function glyphForHref(href: string): MotionGlyphName {
-  if (href.includes("rank-prediction")) return "rank";
-  if (href.includes("essay-checker")) return "essay";
-  if (href.includes("deep-analytics") || href.includes("performance")) return "analytics";
-  if (href.includes("guru") || href.includes("ai-insight") || href.includes("mission-control")) return "guru";
-  if (href.includes("goals") || href.includes("todo")) return "goals";
-  if (href.includes("tests")) return "tests";
-  if (href.includes("study")) return "study";
-  return "dashboard";
+/* Primary destinations — desktop top nav + mobile bottom tabs */
+const primaryTabs = [
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/tests", label: "Tests", icon: ClipboardList },
+  { href: "/ai-insight/guru", label: "Guru", icon: Sparkles },
+] as const;
+
+const desktopNav = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/goals", label: "Goals" },
+  { href: "/tests", label: "Tests" },
+  { href: "/performance", label: "Performance" },
+  { href: "/ai-insight/guru", label: "Guru" },
+] as const;
+
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/* ─── Nav Drawer Overlay ─────────────────────────────────────── */
-function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+/* ── More sheet: every destination, grouped ─────────────────────── */
+function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Trap scroll when open
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
       document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
+    };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   return (
     <>
-      {/* Backdrop */}
-      {open && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          onClick={onClose}
-          className="nav-backdrop"
-        />
-      )}
-
-      {/* Drawer Panel */}
+      <button
+        type="button"
+        aria-label="Close navigation"
+        tabIndex={open ? 0 : -1}
+        onClick={onClose}
+        className={cn("v2-sheet-backdrop", open && "open")}
+      />
       <div
-        ref={drawerRef}
-        className={cn("nav-drawer", open && "nav-drawer-open")}
+        className={cn("v2-sheet", open && "open")}
         role="dialog"
         aria-modal="true"
-        aria-label="Navigation"
+        aria-label="All pages"
+        aria-hidden={!open}
       >
-        {/* Decorative glow */}
-        <div className="nav-drawer-glow" aria-hidden="true" />
-
-        {/* Header */}
-        <div className="nav-drawer-header">
-          <Link href="/dashboard" className="nav-drawer-brand" onClick={onClose}>
-            <SacredLogoMark size="sm" />
-            <div className="nav-drawer-brand-copy">
-              <span className="nav-drawer-brand-title">Sacred Attempt</span>
-              <span className="nav-drawer-brand-subtitle">UPSC CSE 2027</span>
-            </div>
-          </Link>
-          <button
-            type="button"
-            className="nav-drawer-close"
-            onClick={onClose}
-            aria-label="Close menu"
-          >
+        <div className="v2-sheet-grab" aria-hidden="true" />
+        <div className="v2-sheet-head">
+          <span className="v2-sheet-title">All pages</span>
+          <button type="button" className="v2-iconbtn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
-
-        {/* Guru Link — featured */}
-        <div className="nav-drawer-guru-wrap">
-          <Link
-            href="/ai-insight/guru"
-            className="nav-drawer-guru-link"
-            onClick={onClose}
-          >
-            <Sparkles size={14} />
-            <span>UPSC Guru</span>
-            <ChevronRight size={13} style={{ marginLeft: "auto", opacity: 0.6 }} />
-          </Link>
-        </div>
-
-        {/* Nav Groups */}
-        <nav className="nav-drawer-scroll">
+        <nav className="v2-sheet-scroll">
           {navGroups.map((group) => (
-            <div key={group.label} className="nav-drawer-group">
-              <div className="nav-drawer-group-label">{group.label}</div>
-              <div className="nav-drawer-items">
-                {group.items.map((item) => {
-                  const active =
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className={cn("nav-drawer-link", active && "nav-drawer-link-active")}
-                      style={{ "--nav-accent": item.accent } as React.CSSProperties}
-                    >
-                      <span className="nav-drawer-link-icon">
-                        <MotionGlyph name={glyphForHref(item.href)} size={26} label={item.label} />
-                      </span>
-                      <span className="nav-drawer-link-label">{item.label}</span>
-                      {active && <span className="nav-drawer-link-dot" />}
-                    </Link>
-                  );
-                })}
-              </div>
+            <div key={group.label} className="v2-sheet-group">
+              <div className="v2-sheet-group-label">{group.label}</div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    className={cn("v2-sheet-link", isActive(pathname, item.href) && "active")}
+                    style={{ "--nav-accent": item.accent } as React.CSSProperties}
+                  >
+                    <span className="v2-sheet-link-icon">
+                      <Icon size={15} />
+                    </span>
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </nav>
-
-        {/* Footer */}
-        <div className="nav-drawer-footer">
-          <span className="nav-drawer-status-dot" />
-          <span className="nav-drawer-status-text">Live sync · All systems active</span>
-        </div>
       </div>
     </>
   );
 }
 
-/* ─── Main App Chrome ─────────────────────────────────────────── */
+/* ── App chrome ─────────────────────────────────────────────────── */
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicPage = pathname === "/" || pathname === "/sign-in";
-  const [navOpen, setNavOpen] = useState(false);
-  const closeNav = useCallback(() => setNavOpen(false), []);
+  // Guru is a full-screen chat surface on phones: it brings its own header,
+  // so the global top bar + tab bar step aside below 860px.
+  const isGuruPage = pathname.startsWith("/ai-insight/guru");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
 
-  // Close on route change
-  useEffect(() => { setNavOpen(false); }, [pathname]);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
 
   if (isPublicPage) {
-    return <>{children}</>;
+    return (
+      <>
+        <ThemeToggle className="theme-toggle-public" />
+        {children}
+      </>
+    );
   }
 
   return (
     <>
-      {/* Main content */}
+      {/* Top bar */}
+      <header className={cn("v2-topbar", isGuruPage && "v2-mobile-hidden")}>
+        <div className="v2-topbar-inner">
+          <Link href="/dashboard" className="v2-brand">
+            <SacredLogoMark size="sm" />
+            <span>
+              <span className="v2-brand-title">Sacred Attempt</span>
+              <span className="v2-brand-sub">UPSC CSE 2027</span>
+            </span>
+          </Link>
+
+          <ThemeToggle className="theme-toggle-inline" />
+
+          <nav className="v2-topnav" aria-label="Primary">
+            {desktopNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn("v2-topnav-link", isActive(pathname, item.href) && "active")}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="v2-topbar-actions">
+            <button
+              type="button"
+              className="v2-iconbtn"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-label="All pages"
+              aria-expanded={moreOpen}
+            >
+              <LayoutGrid size={17} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Page content */}
       <div className="app-shell">
         <div className="app-shell-inner">{children}</div>
       </div>
 
-      {/* Floating top-right menu trigger */}
-      <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
-
-      <div className="shell-float-bar-minimal">
-        <button
-          type="button"
-          id="nav-menu-trigger"
-          className="shell-menu-btn-premium"
-          onClick={() => setNavOpen((v) => !v)}
-          aria-label={navOpen ? "Close navigation" : "Open navigation"}
-          aria-expanded={navOpen}
-        >
-          <Menu size={18} />
-          <span className="shell-menu-btn-label">Menu</span>
-        </button>
+      {/* Notifications (renders its own floating UI; hidden on Guru mobile) */}
+      <div className={cn(isGuruPage && "notify-host-guru")}>
+        <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
       </div>
 
-      {/* Nav Drawer */}
-      <NavDrawer open={navOpen} onClose={closeNav} />
+      {/* Bottom tab bar — mobile */}
+      <nav className={cn("v2-tabbar", isGuruPage && "v2-mobile-hidden")} aria-label="Primary">
+        {primaryTabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = isActive(pathname, tab.href);
+          return (
+            <Link key={tab.href} href={tab.href} className={cn("v2-tab", active && "active")}>
+              <span className="v2-tab-icon">
+                <Icon size={19} strokeWidth={active ? 2.4 : 2} />
+              </span>
+              {tab.label}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          className={cn("v2-tab", moreOpen && "active")}
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-label="More pages"
+          aria-expanded={moreOpen}
+        >
+          <span className="v2-tab-icon">
+            <LayoutGrid size={19} strokeWidth={moreOpen ? 2.4 : 2} />
+          </span>
+          More
+        </button>
+      </nav>
+
+      <MoreSheet open={moreOpen} onClose={closeMore} />
     </>
   );
 }

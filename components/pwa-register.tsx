@@ -66,6 +66,26 @@ export function PwaRegister() {
     if (!("serviceWorker" in navigator)) return;
     if (!window.isSecureContext && window.location.hostname !== "localhost") return;
 
+    if (process.env.NODE_ENV !== "production") {
+      const resetKey = "upsc-dev-sw-reset";
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      const clearCaches = "caches" in window
+        ? window.caches.keys().then((keys) => Promise.all(keys.map((key) => window.caches.delete(key))))
+        : Promise.resolve([]);
+
+      Promise.all([navigator.serviceWorker.getRegistrations(), clearCaches])
+        .then(([registrations]) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .then(() => {
+          if (!hadController || sessionStorage.getItem(resetKey)) return;
+          sessionStorage.setItem(resetKey, "1");
+          window.location.reload();
+        })
+        .catch((error) => {
+          console.warn("[pwa] dev service worker reset failed", error);
+        });
+      return;
+    }
+
     const handleControllerChange = () => {
       if (!shouldRefreshOnControllerChangeRef.current) return;
       if (refreshingRef.current) return;

@@ -11,9 +11,11 @@ import rehypeKatex from "rehype-katex";
 import {
   ArrowUp,
   Check,
+  ChevronLeft,
   ChevronRight,
   FileStack,
   GaugeCircle,
+  History,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -763,6 +765,41 @@ export function UpscGuruShell({
       </aside>
 
       <main className="gurux-main">
+        {/* Mobile chat header — native app style */}
+        <header className="gurux-mobile-head">
+          <Link href="/dashboard" className="gurux-mhead-btn" aria-label="Back to dashboard">
+            <ChevronLeft size={20} />
+          </Link>
+          <div className="gurux-mhead-title">
+            <GuruSigil />
+            <div>
+              <span className="gurux-mhead-name">UPSC Guru</span>
+              <span className="gurux-mhead-status">
+                <span className="gurux-mhead-dot" aria-hidden="true" />
+                {streaming ? "thinking…" : "online"}
+              </span>
+            </div>
+          </div>
+          <div className="gurux-mhead-actions">
+            <button
+              type="button"
+              className="gurux-mhead-btn"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Chat history"
+            >
+              <History size={18} />
+            </button>
+            <button
+              type="button"
+              className="gurux-mhead-btn"
+              onClick={startNew}
+              aria-label="New chat"
+            >
+              <PenSquare size={17} />
+            </button>
+          </div>
+        </header>
+
         <button
           type="button"
           className="gurux-sidebar-toggle-floating"

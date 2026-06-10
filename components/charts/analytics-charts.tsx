@@ -26,6 +26,14 @@ import {
   YAxis as ComposedYAxis,
 } from "recharts";
 
+const chartGrid = "var(--chart-grid)";
+const chartAxis = "var(--chart-axis)";
+const chartCursor = "var(--chart-cursor)";
+const chartTooltipBg = "var(--chart-tooltip-bg)";
+const chartTooltipBorder = "var(--chart-tooltip-border)";
+const chartTooltipText = "var(--chart-tooltip-text)";
+const chartDotStroke = "var(--chart-active-dot-stroke)";
+
 type TestPerformancePoint = {
   label: string;
   title: string;
@@ -90,12 +98,12 @@ export function TestPerformanceChart({ data }: { data: TestPerformancePoint[] })
               <stop offset="76%" stopColor="var(--gold-bright)" stopOpacity={0.04} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+          <CartesianGrid stroke={chartGrid} vertical={false} />
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.48)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             minTickGap={18}
           />
@@ -103,12 +111,12 @@ export function TestPerformanceChart({ data }: { data: TestPerformancePoint[] })
             domain={[0, 100]}
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.42)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             tickFormatter={(value) => `${value}%`}
             width={42}
           />
-          <Tooltip content={<TestPerformanceTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+          <Tooltip content={<TestPerformanceTooltip />} cursor={{ fill: "var(--surface-overlay)" }} />
           <ComposedBar
             dataKey="accuracy"
             barSize={18}
@@ -123,7 +131,7 @@ export function TestPerformanceChart({ data }: { data: TestPerformancePoint[] })
             strokeWidth={3.4}
             fill={`url(#${scoreGradientId})`}
             dot={false}
-            activeDot={{ r: 5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+            activeDot={{ r: 5, stroke: chartDotStroke, strokeWidth: 2 }}
             animationDuration={960}
             animationEasing="ease-out"
           />
@@ -223,12 +231,12 @@ export function TestMetricTrendChart({
               <stop offset="72%" stopColor={color} stopOpacity={0.05} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+          <CartesianGrid stroke={chartGrid} vertical={false} />
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.36)"
+            stroke={chartAxis}
             tick={{ fontSize: 10, fontWeight: 800 }}
             minTickGap={18}
           />
@@ -236,7 +244,7 @@ export function TestMetricTrendChart({
             domain={domain}
             hide
           />
-          <Tooltip content={<TestMetricTooltip />} cursor={{ stroke: "rgba(255,255,255,0.14)", strokeWidth: 1 }} />
+          <Tooltip content={<TestMetricTooltip />} cursor={{ stroke: chartCursor, strokeWidth: 1 }} />
           <Area
             type="monotone"
             dataKey={dataKey}
@@ -244,7 +252,7 @@ export function TestMetricTrendChart({
             strokeWidth={3.4}
             fill={`url(#${gradientId})`}
             dot={false}
-            activeDot={{ r: 5.5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+            activeDot={{ r: 5.5, stroke: chartDotStroke, strokeWidth: 2 }}
             strokeLinecap="round"
             animationDuration={900}
             animationEasing="ease-out"
@@ -317,12 +325,12 @@ export function MoodSignalChart({ data }: { data: MoodSignalPoint[] }) {
       <div className="mood-signal-plot">
         <ComposedResponsiveContainer>
           <ComposedLineChart data={points} margin={{ top: 14, right: 18, bottom: 4, left: 0 }}>
-            <ComposedCartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+            <ComposedCartesianGrid stroke={chartGrid} vertical={false} />
             <ComposedXAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              stroke="rgba(238,232,217,0.48)"
+              stroke={chartAxis}
               tick={{ fontSize: 11, fontWeight: 800 }}
               minTickGap={16}
             />
@@ -330,11 +338,11 @@ export function MoodSignalChart({ data }: { data: MoodSignalPoint[] }) {
               domain={[0, 10]}
               tickLine={false}
               axisLine={false}
-              stroke="rgba(238,232,217,0.42)"
+              stroke={chartAxis}
               tick={{ fontSize: 11, fontWeight: 800 }}
               width={28}
             />
-            <ComposedTooltip content={<MoodSignalTooltip />} cursor={{ stroke: "rgba(255,255,255,0.14)", strokeWidth: 1 }} />
+            <ComposedTooltip content={<MoodSignalTooltip />} cursor={{ stroke: chartCursor, strokeWidth: 1 }} />
             {moodSignalSeries.map((series, index) => (
               <ComposedLine
                 key={series.key}
@@ -343,7 +351,7 @@ export function MoodSignalChart({ data }: { data: MoodSignalPoint[] }) {
                 stroke={series.color}
                 strokeWidth={series.key === "focus" ? 3.3 : 2.25}
                 dot={false}
-                activeDot={{ r: 5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+                activeDot={{ r: 5, stroke: chartDotStroke, strokeWidth: 2 }}
                 strokeLinecap="round"
                 animationDuration={820 + index * 90}
                 animationEasing="ease-out"
@@ -455,12 +463,12 @@ export function DailyGoalsSignalChart({ data }: { data: DailyGoalPoint[] }) {
       <div className="daily-xy-chart">
         <ComposedResponsiveContainer>
           <ComposedLineChart data={normalized} margin={{ top: 12, right: 16, bottom: 4, left: 0 }}>
-            <ComposedCartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+            <ComposedCartesianGrid stroke={chartGrid} vertical={false} />
             <ComposedXAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              stroke="rgba(238,232,217,0.48)"
+              stroke={chartAxis}
               tick={{ fontSize: 11, fontWeight: 700 }}
               minTickGap={18}
             />
@@ -468,12 +476,12 @@ export function DailyGoalsSignalChart({ data }: { data: DailyGoalPoint[] }) {
               domain={[0, 100]}
               tickLine={false}
               axisLine={false}
-              stroke="rgba(238,232,217,0.42)"
+              stroke={chartAxis}
               tick={{ fontSize: 11, fontWeight: 700 }}
               tickFormatter={(value) => `${value}`}
               width={34}
             />
-            <ComposedTooltip content={<DailyGoalsTooltip />} cursor={{ stroke: "rgba(255,255,255,0.16)", strokeWidth: 1 }} />
+            <ComposedTooltip content={<DailyGoalsTooltip />} cursor={{ stroke: chartCursor, strokeWidth: 1 }} />
             {dailyGoalSeries.map((series, index) => (
               <ComposedLine
                 key={series.key}
@@ -483,7 +491,7 @@ export function DailyGoalsSignalChart({ data }: { data: DailyGoalPoint[] }) {
                 stroke={series.color}
                 strokeWidth={index === 0 ? 3.6 : 2.7}
                 dot={false}
-                activeDot={{ r: 5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+                activeDot={{ r: 5, stroke: chartDotStroke, strokeWidth: 2 }}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 animationDuration={900 + index * 90}
@@ -533,12 +541,12 @@ export function QuestionErrorTrendChart({ data }: { data: QuestionTrendPoint[] }
     <div className="error-analysis-chart">
       <ComposedResponsiveContainer>
         <ComposedLineChart data={points} margin={{ top: 14, right: 18, bottom: 6, left: 0 }}>
-          <ComposedCartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+          <ComposedCartesianGrid stroke={chartGrid} vertical={false} />
           <ComposedXAxis
             dataKey="question"
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.48)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             minTickGap={12}
           />
@@ -546,19 +554,19 @@ export function QuestionErrorTrendChart({ data }: { data: QuestionTrendPoint[] }
             domain={[0, 100]}
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.42)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             tickFormatter={(value) => `${value}%`}
             width={42}
           />
-          <ComposedTooltip content={<QuestionTrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.16)", strokeWidth: 1 }} />
+          <ComposedTooltip content={<QuestionTrendTooltip />} cursor={{ stroke: chartCursor, strokeWidth: 1 }} />
           <ComposedLine
             type="monotone"
             dataKey="accuracy"
             stroke="var(--gold-bright)"
             strokeWidth={3.4}
             dot={false}
-            activeDot={{ r: 5, stroke: "rgba(5,7,14,0.92)", strokeWidth: 2 }}
+            activeDot={{ r: 5, stroke: chartDotStroke, strokeWidth: 2 }}
             strokeLinecap="round"
             animationDuration={980}
             animationEasing="ease-out"
@@ -615,12 +623,12 @@ export function SubjectErrorBreakdownChart({ data }: { data: SubjectErrorPoint[]
     <div className="error-analysis-chart compact">
       <ResponsiveContainer>
         <RechartsComposedChart data={points} margin={{ top: 14, right: 18, bottom: 6, left: 0 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.065)" vertical={false} />
+          <CartesianGrid stroke={chartGrid} vertical={false} />
           <XAxis
             dataKey="subject"
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.48)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             minTickGap={10}
           />
@@ -628,11 +636,11 @@ export function SubjectErrorBreakdownChart({ data }: { data: SubjectErrorPoint[]
             domain={[0, 100]}
             tickLine={false}
             axisLine={false}
-            stroke="rgba(238,232,217,0.42)"
+            stroke={chartAxis}
             tick={{ fontSize: 11, fontWeight: 800 }}
             width={42}
           />
-          <Tooltip content={<SubjectErrorTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+          <Tooltip content={<SubjectErrorTooltip />} cursor={{ fill: "var(--surface-overlay)" }} />
           <ComposedBar
             dataKey="errorRate"
             barSize={18}
@@ -683,18 +691,18 @@ export function TrendChart({
     <div className="chart-frame" style={{ width: "100%", height: 300 }}>
       <ResponsiveContainer>
         <LineChart data={hasData ? data : [{ label: "No data", value: 0 }]}>
-          <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
-          <XAxis dataKey="label" stroke="rgba(238,232,217,0.5)" tickLine={false} axisLine={false} />
-          <YAxis stroke="rgba(238,232,217,0.5)" tickLine={false} axisLine={false} />
+          <CartesianGrid stroke={chartGrid} vertical={false} />
+          <XAxis dataKey="label" stroke={chartAxis} tickLine={false} axisLine={false} />
+          <YAxis stroke={chartAxis} tickLine={false} axisLine={false} />
           <Tooltip
-            cursor={{ stroke: "rgba(255,255,255,0.12)", strokeWidth: 1 }}
-            labelStyle={{ color: "#fff7e8", fontWeight: 800 }}
-            itemStyle={{ color: "#fff7e8" }}
+            cursor={{ stroke: chartCursor, strokeWidth: 1 }}
+            labelStyle={{ color: chartTooltipText, fontWeight: 800 }}
+            itemStyle={{ color: chartTooltipText }}
             contentStyle={{
-              background: "rgba(8, 11, 24, 0.94)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: chartTooltipBg,
+              border: `1px solid ${chartTooltipBorder}`,
               borderRadius: 16,
-              boxShadow: "0 18px 50px rgba(0,0,0,0.38)",
+              boxShadow: "var(--shadow-md)",
             }}
           />
           <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={false} strokeLinecap="round" />
@@ -745,18 +753,18 @@ export function AreaTrendChart({
               <stop offset="95%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
-          <XAxis dataKey="label" stroke="rgba(238,232,217,0.5)" tickLine={false} axisLine={false} />
-          <YAxis stroke="rgba(238,232,217,0.5)" tickLine={false} axisLine={false} />
+          <CartesianGrid stroke={chartGrid} vertical={false} />
+          <XAxis dataKey="label" stroke={chartAxis} tickLine={false} axisLine={false} />
+          <YAxis stroke={chartAxis} tickLine={false} axisLine={false} />
           <Tooltip
-            cursor={{ stroke: "rgba(255,255,255,0.12)", strokeWidth: 1 }}
-            labelStyle={{ color: "#fff7e8", fontWeight: 800 }}
-            itemStyle={{ color: "#fff7e8" }}
+            cursor={{ stroke: chartCursor, strokeWidth: 1 }}
+            labelStyle={{ color: chartTooltipText, fontWeight: 800 }}
+            itemStyle={{ color: chartTooltipText }}
             contentStyle={{
-              background: "rgba(8, 11, 24, 0.94)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: chartTooltipBg,
+              border: `1px solid ${chartTooltipBorder}`,
               borderRadius: 16,
-              boxShadow: "0 18px 50px rgba(0,0,0,0.38)",
+              boxShadow: "var(--shadow-md)",
             }}
           />
           <Area

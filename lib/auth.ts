@@ -3,9 +3,22 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const cookieName = "upsc-session";
-const secret = new TextEncoder().encode(
-  process.env.AUTH_PASSWORD ?? "upsc-cse-tracker-secret",
-);
+
+/**
+ * Session signing key.
+ * Set AUTH_SECRET on Vercel (any long random string, e.g. `openssl rand -base64 48`).
+ * Falls back to AUTH_PASSWORD only so existing deployments keep working —
+ * there is intentionally NO hardcoded fallback.
+ */
+const rawSecret = process.env.AUTH_SECRET ?? process.env.AUTH_PASSWORD;
+
+if (!rawSecret) {
+  throw new Error(
+    "AUTH_SECRET (or AUTH_PASSWORD) must be set. Refusing to start with no session secret.",
+  );
+}
+
+const secret = new TextEncoder().encode(rawSecret);
 
 type SessionPayload = {
   email: string;

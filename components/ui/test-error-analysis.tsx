@@ -613,7 +613,7 @@ export function TestErrorAnalysisWorkspace({
     [subjects, testDraft.examStage],
   );
   const orbDragRef = useRef({ active: false, x: 0, y: 0, moved: false });
-  const meetingAngle = useMemo(() => Math.round(Math.random() * 360), []);
+  const meetingAngle = 94;
 
   const nextQuestionNumber = useMemo(() => {
     const used = new Set(logs.map((log) => log.questionNumber));

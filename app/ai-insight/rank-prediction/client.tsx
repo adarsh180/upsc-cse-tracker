@@ -18,6 +18,12 @@ import {
 import { Sparkles, TrendingUp, Target, Trophy, AlertTriangle, CheckCircle, XCircle, ChevronRight, Zap, BarChart3, BookOpen, Award } from "lucide-react";
 import { generateRankPredictionAction } from "./actions";
 
+const chartGrid = "var(--chart-grid)";
+const chartAxis = "var(--chart-axis)";
+const chartCursor = "var(--chart-cursor)";
+const chartTooltipBg = "var(--chart-tooltip-bg)";
+const chartTooltipBorder = "var(--chart-tooltip-border)";
+
 // ─── Types ────────────────────────────────────────────────
 type SubjectReadiness = { subject: string; readiness: number };
 type PaperReadiness = { paper: string; score: number; max: number };
@@ -83,7 +89,7 @@ function ChanceRing({ pct, label, color }: { pct: number; label: string; color: 
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
       <div style={{ position: "relative", width: 130, height: 130 }}>
         <svg width={130} height={130} style={{ transform: "rotate(-90deg)", display: "block" }}>
-          <circle cx={65} cy={65} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={10} />
+          <circle cx={65} cy={65} r={r} fill="none" stroke="var(--soft-overlay)" strokeWidth={10} />
           <circle cx={65} cy={65} r={r} fill="none" stroke={color} strokeWidth={10}
             strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
             style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.32,0.72,0,1)" }} />
@@ -106,7 +112,7 @@ function ScoreGauge({ value, max, label, color }: { value: number; max: number; 
         <span style={{ fontSize: "13px", fontWeight: 700 }}>{label}</span>
         <span style={{ fontSize: "13px", fontWeight: 800, color }}>{value}<span style={{ color: "var(--text-muted)", fontWeight: 600 }}>/{max}</span></span>
       </div>
-      <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+      <div style={{ height: 8, borderRadius: 999, background: "var(--soft-overlay)", overflow: "hidden" }}>
         <div style={{ height: "100%", borderRadius: 999, background: color, width: `${pct}%`, transition: "width 1s ease" }} />
       </div>
     </div>
@@ -122,7 +128,7 @@ function LoadingSkeleton() {
   return (
     <div className="rank-prediction-loading" style={{ display: "grid", gap: 22, marginTop: 4, animation: "pulse 2s ease infinite" }}>
       {[1, 2, 3].map((i) => (
-        <div key={i} style={{ height: 220, borderRadius: 28, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
+        <div key={i} style={{ height: 220, borderRadius: 28, background: "var(--surface-overlay)", border: "1px solid var(--glass-border)" }} />
       ))}
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
     </div>
@@ -207,7 +213,7 @@ export function RankPredictionClient() {
       <div>
         <div className="glass panel rank-prediction-status" style={{ textAlign: "center", padding: "32px", marginBottom: 22 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.1)", borderTopColor: "var(--gold)", animation: "spin 1s linear infinite" }} />
+            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid var(--soft-overlay)", borderTopColor: "var(--gold)", animation: "spin 1s linear infinite" }} />
             <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>Analysing your preparation profile…</div>
             <p className="muted" style={{ fontSize: "13px" }}>Reading test data, topic completion, mood patterns and consistency signals</p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -225,7 +231,7 @@ export function RankPredictionClient() {
     <div className="rank-prediction-result" style={{ display: "grid", gap: 24 }}>
       {/* ── Overall Verdict Banner ── */}
       <div className="glass panel glass-strong" style={{
-        background: `radial-gradient(circle at 20% 50%, ${verdictColor(p.finalList.overallVerdict)}22, transparent 40%), radial-gradient(circle at 80% 20%, hsla(38 72% 58% / 0.1), transparent 40%), rgba(255,255,255,0.04)`,
+        background: `radial-gradient(circle at 20% 50%, ${verdictColor(p.finalList.overallVerdict)}22, transparent 40%), radial-gradient(circle at 80% 20%, var(--gold-dim), transparent 40%), var(--surface-overlay)`,
         border: `1px solid ${verdictColor(p.finalList.overallVerdict)}44`,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
@@ -245,7 +251,7 @@ export function RankPredictionClient() {
           </div>
         </div>
         {meta && (
-          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--glass-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>
               Model: {meta.model} · Generated: {new Date(meta.generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
             </div>
@@ -285,8 +291,8 @@ export function RankPredictionClient() {
             <div className="eyebrow" style={{ marginBottom: 14 }}>Subject Readiness Radar</div>
             <ResponsiveContainer width="100%" height={240}>
               <RadarChart data={p.prelims.subjectReadiness}>
-                <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 700 }} />
+                <PolarGrid stroke={chartGrid} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "var(--text-muted)", fontSize: 10, fontWeight: 700 }} />
                 <Radar name="Readiness" dataKey="readiness" stroke="hsl(218 84% 62%)" fill="hsl(218 84% 62%)" fillOpacity={0.18} strokeWidth={2} />
               </RadarChart>
             </ResponsiveContainer>
@@ -300,7 +306,7 @@ export function RankPredictionClient() {
                 <ScoreGauge value={p.prelims.topperComparison.topperAvg} max={200} label="Topper average" color="var(--gold)" />
               </div>
             </div>
-            <div style={{ padding: "12px 16px", borderRadius: 14, border: `1px solid ${p.prelims.negativeMarkingRisk === "HIGH" ? "rgba(255,80,80,0.3)" : "rgba(255,255,255,0.08)"}`, background: p.prelims.negativeMarkingRisk === "HIGH" ? "rgba(255,80,80,0.06)" : "rgba(255,255,255,0.03)" }}>
+            <div style={{ padding: "12px 16px", borderRadius: 14, border: `1px solid ${p.prelims.negativeMarkingRisk === "HIGH" ? "color-mix(in srgb, var(--danger) 30%, transparent)" : "var(--glass-border)"}`, background: p.prelims.negativeMarkingRisk === "HIGH" ? "var(--danger-soft)" : "var(--surface-overlay)" }}>
               <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", marginBottom: 6 }}>Negative Marking Risk</div>
               <div style={{ fontWeight: 800, fontSize: "15px", color: p.prelims.negativeMarkingRisk === "HIGH" ? "var(--danger)" : p.prelims.negativeMarkingRisk === "MEDIUM" ? "var(--gold)" : "var(--botany)" }}>
                 {p.prelims.negativeMarkingRisk}
@@ -320,7 +326,7 @@ export function RankPredictionClient() {
           </div>
         </div>
 
-        <p className="muted" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: "13px", lineHeight: 1.75 }}>
+        <p className="muted" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--glass-border)", fontSize: "13px", lineHeight: 1.75 }}>
           <strong style={{ color: "var(--text)" }}>AI Assessment: </strong>{p.prelims.analysis}
         </p>
       </div>
@@ -355,11 +361,12 @@ export function RankPredictionClient() {
             <div className="eyebrow" style={{ marginBottom: 14 }}>Paper-wise Score Projection</div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={p.mains.paperReadiness} layout="vertical" margin={{ left: 10, right: 20 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
-                <XAxis type="number" stroke="rgba(255,255,255,0.3)" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="paper" stroke="rgba(255,255,255,0.3)" tick={{ fontSize: 10, fontWeight: 700 }} tickLine={false} axisLine={false} width={80} />
+                <CartesianGrid stroke={chartGrid} horizontal={false} />
+                <XAxis type="number" stroke={chartAxis} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="paper" stroke={chartAxis} tick={{ fontSize: 10, fontWeight: 700 }} tickLine={false} axisLine={false} width={80} />
                 <Tooltip
-                  contentStyle={{ background: "rgba(12,18,32,0.96)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, fontSize: 12 }}
+                  cursor={{ fill: chartCursor }}
+                  contentStyle={{ background: chartTooltipBg, border: `1px solid ${chartTooltipBorder}`, borderRadius: 14, fontSize: 12, color: "var(--chart-tooltip-text)" }}
                   formatter={(v: number, _n: string, props) => [`${v}/${props.payload.max}`, "Score"]}
                 />
                 <Bar dataKey="score" radius={[0, 8, 8, 0]}>
@@ -397,7 +404,7 @@ export function RankPredictionClient() {
           </div>
         </div>
 
-        <p className="muted" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: "13px", lineHeight: 1.75 }}>
+        <p className="muted" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--glass-border)", fontSize: "13px", lineHeight: 1.75 }}>
           <strong style={{ color: "var(--text)" }}>AI Assessment: </strong>{p.mains.analysis}
         </p>
       </div>
@@ -434,7 +441,7 @@ export function RankPredictionClient() {
             <div className="eyebrow" style={{ marginBottom: 12 }}>Strengths</div>
             <div style={{ display: "grid", gap: 8 }}>
               {p.finalList.strengths.map((s, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 14px", borderRadius: 12, background: "rgba(101,240,181,0.06)", border: "1px solid rgba(101,240,181,0.14)", fontSize: "13px", lineHeight: 1.55 }}>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 14px", borderRadius: 12, background: "var(--success-soft)", border: "1px solid color-mix(in srgb, var(--success) 20%, transparent)", fontSize: "13px", lineHeight: 1.55 }}>
                   <CheckCircle size={14} style={{ color: "var(--botany)", marginTop: 1, flexShrink: 0 }} />
                   <span>{s}</span>
                 </div>
@@ -445,7 +452,7 @@ export function RankPredictionClient() {
             <div className="eyebrow" style={{ marginBottom: 12 }}>Critical Gaps</div>
             <div style={{ display: "grid", gap: 8 }}>
               {p.finalList.criticalGaps.map((g, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 14px", borderRadius: 12, background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,80,80,0.14)", fontSize: "13px", lineHeight: 1.55 }}>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 14px", borderRadius: 12, background: "var(--danger-soft)", border: "1px solid color-mix(in srgb, var(--danger) 20%, transparent)", fontSize: "13px", lineHeight: 1.55 }}>
                   <AlertTriangle size={14} style={{ color: "var(--danger)", marginTop: 1, flexShrink: 0 }} />
                   <span>{g}</span>
                 </div>
@@ -470,7 +477,7 @@ export function RankPredictionClient() {
           </div>
         )}
 
-        <p className="muted" style={{ paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: "13px", lineHeight: 1.75 }}>
+        <p className="muted" style={{ paddingTop: 16, borderTop: "1px solid var(--glass-border)", fontSize: "13px", lineHeight: 1.75 }}>
           <strong style={{ color: "var(--text)" }}>Final Assessment: </strong>{p.finalList.analysis}
         </p>
       </div>
