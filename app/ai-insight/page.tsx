@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BrainCircuit, ListTodo, PenSquare, ScanSearch, Target, Trophy } from "lucide-react";
+import { ArrowRight, BrainCircuit, ListTodo, Newspaper, PenSquare, ScanSearch, Target, Timer, Trophy } from "lucide-react";
 
 import { MetricCard, PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
@@ -37,6 +37,22 @@ const tools = [
     title: "Essay Checker",
     desc: "Structured evaluation with scores, history and a rewrite plan for every submission.",
     cta: "Review an essay",
+  },
+  {
+    href: "/current-affairs",
+    icon: Newspaper,
+    color: "var(--physics)",
+    title: "Current Affairs",
+    desc: "Auto-generated daily digest from The Hindu and PIB with UPSC angles and a 5-MCQ self-check.",
+    cta: "Read today's digest",
+  },
+  {
+    href: "/simulator",
+    icon: Timer,
+    color: "var(--gold-bright)",
+    title: "Prelims Simulator",
+    desc: "Timed mocks generated from your weak topics and PYQs — scored with real negative marking.",
+    cta: "Start a mock",
   },
   {
     href: "/mission-control",

@@ -15,10 +15,14 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions";
+import { DayPlanCard } from "@/components/ai/day-plan-card";
+import { SundayReviewCard } from "@/components/ai/sunday-review";
 import { ExamCountdownMatrix } from "@/components/ui/live-exam-timer";
 import { StudyCard } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
+import { getTodayPlan } from "@/lib/day-plan";
+import { getSundayReview } from "@/lib/weekly-review";
 
 function clampPct(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -68,10 +72,31 @@ async function getConnectedNeetConfidence(): Promise<PrepConfidence | null> {
 export default async function DashboardPage() {
   await requireSession();
 
-  const [summary, neetConfidence] = await Promise.all([
+  const [summary, neetConfidence, sundayReview, todayPlan] = await Promise.all([
     getDashboardSummary(),
     getConnectedNeetConfidence(),
+    getSundayReview(),
+    getTodayPlan().catch(() => null),
   ]);
+
+  const pendingPlanTasks =
+    todayPlan && todayPlan.status === "PENDING"
+      ? (() => {
+          try {
+            return JSON.parse(todayPlan.proposedTasksJson) as Array<{
+              title: string;
+              detail: string;
+              taskType: string;
+              priority: string;
+              energyBand: string;
+              estimatedMinutes: number;
+              subject?: string;
+            }>;
+          } catch {
+            return [];
+          }
+        })()
+      : [];
 
   const recentLog = summary.dailyLogs[0];
   const recentTest = summary.tests[0];
@@ -206,6 +231,23 @@ export default async function DashboardPage() {
           </button>
         </form>
       </div>
+
+      {/* Morning day-plan proposal — todos are created only after approval */}
+      {todayPlan && todayPlan.status === "PENDING" && pendingPlanTasks.length > 0 ? (
+        <section className="db-section anim-fade-up">
+          <DayPlanCard
+            planId={todayPlan.id}
+            briefingTitle={todayPlan.briefingTitle}
+            briefingText={todayPlan.briefingText}
+            tasks={pendingPlanTasks}
+          />
+        </section>
+      ) : null}
+
+      {/* Sunday self-review (auto-generated weekly) */}
+      {sundayReview ? (
+        <SundayReviewCard weekStart={sundayReview.weekStart} reportText={sundayReview.reportText} />
+      ) : null}
 
       {/* Key stats */}
       <section className="db-stats-row anim-fade-up">

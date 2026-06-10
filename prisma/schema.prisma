@@ -34,6 +34,7 @@ model StudyNode {
   testRecords   TestRecord[]
   topicProgress TopicProgress?
   agentTasks    AgentTask[]
+  pyqQuestions  PyqQuestion[]
 }
 
 model TopicProgress {
@@ -329,4 +330,106 @@ model AgentTask {
   linkedStudyNode   StudyNode?    @relation(fields: [linkedStudyNodeId], references: [id], onDelete: SetNull)
 
   @@index([missionId, status, orderIndex])
+}
+
+model AgentMemory {
+  id             String    @id @default(cuid())
+  kind           String    @default("INSIGHT")
+  content        String    @db.Text
+  sourceNote     String?   @db.VarChar(255)
+  importance     Int       @default(3)
+  status         String    @default("ACTIVE")
+  lastRecalledAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, kind, importance])
+  @@index([updatedAt])
+}
+
+model DayPlan {
+  id                String    @id @default(cuid())
+  planDate          DateTime  @unique
+  briefingTitle     String    @db.VarChar(120)
+  briefingText      String    @db.Text
+  proposedTasksJson String    @db.LongText
+  contextJson       String?   @db.LongText
+  status            String    @default("PENDING")
+  approvedTaskCount Int       @default(0)
+  approvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, planDate])
+}
+
+model CurrentAffairsDigest {
+  id            String   @id @default(cuid())
+  digestDate    DateTime @unique
+  summaryText   String   @db.LongText
+  itemsJson     String   @db.LongText
+  quizJson      String?  @db.LongText
+  sourcesJson   String?  @db.Text
+  model         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([digestDate])
+}
+
+model WeeklyReview {
+  id                  String    @id @default(cuid())
+  weekStart           DateTime  @unique
+  reportText          String    @db.LongText
+  statsJson           String    @db.LongText
+  moodCorrelationJson String?   @db.LongText
+  model               String?
+  seenAt              DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([weekStart])
+}
+
+model PyqQuestion {
+  id            String     @id @default(cuid())
+  year          Int
+  examStage     String     @default("PRELIMS")
+  paper         String?    @db.VarChar(80)
+  subject       String?    @db.VarChar(120)
+  topic         String?    @db.VarChar(255)
+  question      String     @db.Text
+  optionsJson   String?    @db.Text
+  correctAnswer String?    @db.Text
+  explanation   String?    @db.Text
+  studyNodeId   String?
+  askedCount    Int        @default(0)
+  lastAskedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  studyNode     StudyNode? @relation(fields: [studyNodeId], references: [id], onDelete: SetNull)
+
+  @@index([subject, topic])
+  @@index([year, examStage])
+}
+
+model CrossExamEntry {
+  id             String    @id @default(cuid())
+  question       String    @db.Text
+  expectedPoints String?   @db.Text
+  topicLabel     String?   @db.VarChar(255)
+  subjectLabel   String?   @db.VarChar(120)
+  userAnswer     String?   @db.Text
+  verdict        String    @default("PENDING")
+  score          Int?
+  feedback       String?   @db.Text
+  followUpAt     DateTime?
+  askedAt        DateTime  @default(now())
+  answeredAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([verdict, followUpAt])
+  @@index([subjectLabel, topicLabel])
+  @@index([askedAt])
 }

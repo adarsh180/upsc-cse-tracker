@@ -1,4 +1,4 @@
-import { streamText, tool } from "ai";
+import { stepCountIs, streamText, tool } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -9,12 +9,26 @@ import {
   processIncomingAttachments,
 } from "@/lib/ai-attachments";
 import {
+  buildAgentMemoryDigest,
+  getPrepPulse,
+  getWeakAreas,
+  logCrossExamQuestion,
+  MEMORY_KINDS,
+  recallAgentMemories,
+  recordCrossExamAnswer,
+  saveAgentMemory,
+  updateAgentMemory,
+} from "@/lib/agent-memory";
+import {
   buildUPSCContext,
   buildUPSCSystemPrompt,
   refreshGuruMemoryProfile,
 } from "@/lib/ai-context-builder";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
 import { getSession } from "@/lib/auth";
+import { addPyqQuestion, markPyqAsked, searchPyqQuestions } from "@/lib/pyq";
+import { getDueRevisions } from "@/lib/spaced-revision";
+import { computeMoodPerformanceCorrelation } from "@/lib/weekly-review";
 import { db } from "@/lib/db";
 import { createManualTodoTask, deleteAgentTask, updateAgentTaskStatus } from "@/lib/mission-control";
 import {
@@ -26,7 +40,7 @@ import {
   updateStudyNode,
 } from "@/lib/study-tree";
 
-export const runtime = "nodejs";
+export const runtime = "nodejs"; // agentic guru
 
 const google = createGoogleGenerativeAI({
   apiKey:
@@ -394,8 +408,19 @@ export async function POST(request: Request) {
   const attachmentLabel = buildAttachmentDisplayLabel(attachments);
   const shouldForceVisual = shouldForceVisualForMessage(userMessage, mode);
 
-  const context = await buildUPSCContext();
+  const [context, memoryDigest] = await Promise.all([buildUPSCContext(), buildAgentMemoryDigest()]);
   const system = `${buildUPSCSystemPrompt(context, mode)}
+
+LONG-TERM AGENT MEMORY (everything you have personally observed and chosen to remember about him):
+${memoryDigest}
+
+Agentic operating loop (JARVIS protocol):
+- You are a stateful companion, not a stateless chatbot. Before advising, pull live evidence with get_prep_pulse, get_weak_areas, or recall_memories when the answer depends on his actual behavior, and reason over the results in follow-up steps.
+- Memory discipline: whenever he reveals something durable (a personal fact, relationship update, emotional pattern, commitment, recurring mistake, strength, preference, current-affairs habit), persist it with save_memory in the same turn. Correct or retire stale memories with update_memory. Never re-ask things you already remember.
+- Cross-examination: when he claims to have studied or mastered something, or when a weak topic resurfaces, challenge him with one sharp question and log it with ask_cross_exam_question. Prefer real previous-year questions: call search_pyqs first and use a matching PYQ verbatim (then mark it with mark_pyq_asked); generate a question only when no PYQ fits. When his message answers a pending cross-exam question (listed above), grade it honestly with record_cross_exam_answer (verdict, score /10, feedback) before responding. Failed questions come back for re-testing; re-ask them naturally.
+- Directive mode: when asked "what should I do now" or similar, never answer generically. Call get_prep_pulse and get_weak_areas first, then give one specific, time-boxed prescription tied to his data, and create the todo for it.
+- Personal radar: track mood, stress, relationship and life context from memory and mood data. If stress or distraction is trending up, address it before the academic question, with care, not lectures.
+- Keep tool usage purposeful: at most a few calls per turn, then commit to a final answer.
 
 Tooling rules for syllabus operations:
 - If the user asks to add, edit, delete, or mark complete/incomplete any subject, chapter, topic, or sub-topic, use the syllabus management tool instead of only describing the steps.
@@ -520,7 +545,119 @@ Instructions for this turn:
     ],
     temperature: resolveTemperature(mode),
     maxOutputTokens: 4096,
+    stopWhen: stepCountIs(8),
     tools: {
+      get_prep_pulse: tool({
+        description:
+          "Read the live preparation pulse: study frequency and streak over the last 14 days, current-affairs consistency, mood and stress trend, recent test scores, distraction screen-time, and cross-exam accuracy. Call this before giving any 'what should I do now' or performance advice.",
+        inputSchema: z.object({}),
+        execute: async () => getPrepPulse(),
+      }),
+      get_weak_areas: tool({
+        description:
+          "Read his current weak areas: topics with the most wrong/skipped questions from the last 60 days of test logs (with error types), plus completed topics overdue for revision.",
+        inputSchema: z.object({}),
+        execute: async () => getWeakAreas(),
+      }),
+      save_memory: tool({
+        description:
+          "Persist a durable observation about Adarsh into long-term memory: personal facts, relationship updates, emotional patterns, commitments he makes, recurring mistakes, strengths, preferences, or current-affairs habits. Use whenever he reveals something worth remembering across conversations.",
+        inputSchema: z.object({
+          kind: z.enum(MEMORY_KINDS),
+          content: z.string().min(8).max(600).describe("One self-contained sentence stating the fact or pattern."),
+          sourceNote: z.string().max(255).optional().describe("Where this came from, e.g. 'chat 2026-06-10'."),
+          importance: z.number().int().min(1).max(5).optional(),
+        }),
+        execute: async (input) => saveAgentMemory(input),
+      }),
+      update_memory: tool({
+        description: "Correct a stale memory's content or importance, or archive it when no longer true.",
+        inputSchema: z.object({
+          memoryId: z.string(),
+          content: z.string().max(600).optional(),
+          importance: z.number().int().min(1).max(5).optional(),
+          archive: z.boolean().optional(),
+        }),
+        execute: async (input) => updateAgentMemory(input),
+      }),
+      recall_memories: tool({
+        description:
+          "Search long-term memory beyond the digest in the system prompt. Use keyword query and/or kind filter when you need older or more specific memories.",
+        inputSchema: z.object({
+          query: z.string().max(200).optional(),
+          kind: z.enum(MEMORY_KINDS).optional(),
+          limit: z.number().int().min(1).max(30).optional(),
+        }),
+        execute: async (input) => recallAgentMemories(input),
+      }),
+      ask_cross_exam_question: tool({
+        description:
+          "Log a cross-examination question you are asking him in this reply, so his future answer can be graded and weak answers re-tested later. Include the model answer points.",
+        inputSchema: z.object({
+          question: z.string().min(10).max(800),
+          expectedPoints: z.string().max(1200).optional(),
+          topicLabel: z.string().max(255).optional(),
+          subjectLabel: z.string().max(120).optional(),
+        }),
+        execute: async (input) => logCrossExamQuestion(input),
+      }),
+      search_pyqs: tool({
+        description:
+          "Search the stored bank of real UPSC previous-year questions by keywords, subject, topic, or exam stage. Use before cross-examining so you quiz with authentic PYQs.",
+        inputSchema: z.object({
+          query: z.string().max(200).optional(),
+          subject: z.string().max(120).optional(),
+          topic: z.string().max(255).optional(),
+          examStage: z.enum(["PRELIMS", "MAINS"]).optional(),
+          limit: z.number().int().min(1).max(20).optional(),
+        }),
+        execute: async (input) => searchPyqQuestions(input),
+      }),
+      add_pyq: tool({
+        description:
+          "Store a real UPSC previous-year question into the PYQ bank (e.g. when the user pastes PYQs or you encounter one in an attached PDF). These feed the simulator and cross-exam.",
+        inputSchema: z.object({
+          year: z.number().int().min(1995).max(2030),
+          examStage: z.enum(["PRELIMS", "MAINS"]).optional(),
+          paper: z.string().max(80).optional(),
+          subject: z.string().max(120).optional(),
+          topic: z.string().max(255).optional(),
+          question: z.string().min(10).max(3000),
+          options: z.array(z.string()).max(6).optional(),
+          correctAnswer: z.string().max(1000).optional(),
+          explanation: z.string().max(2000).optional(),
+        }),
+        execute: async (input) => addPyqQuestion(input),
+      }),
+      mark_pyq_asked: tool({
+        description: "Mark a PYQ as used after asking it in a cross-examination, so it rotates fairly.",
+        inputSchema: z.object({ pyqId: z.string() }),
+        execute: async (input) => markPyqAsked(input.pyqId),
+      }),
+      get_mood_performance_correlation: tool({
+        description:
+          "Compute Pearson correlations between his mood signals (stress, energy, confidence) and performance (study hours, focus, test scores) over the last 60 days. Use when discussing burnout, consistency, or mood-linked performance patterns.",
+        inputSchema: z.object({}),
+        execute: async () => computeMoodPerformanceCorrelation(),
+      }),
+      get_due_revisions: tool({
+        description:
+          "List topics overdue for spaced-repetition revision (intervals 1/3/7/21/45/90 days). Use when planning his day or auditing revision discipline.",
+        inputSchema: z.object({ limit: z.number().int().min(1).max(20).optional() }),
+        execute: async (input) => getDueRevisions(input.limit ?? 12),
+      }),
+      record_cross_exam_answer: tool({
+        description:
+          "Grade his answer to a pending cross-exam question (entry IDs are listed in the system prompt). Wrong or partial answers are automatically scheduled for re-testing.",
+        inputSchema: z.object({
+          entryId: z.string(),
+          userAnswer: z.string().min(1).max(4000),
+          verdict: z.enum(["CORRECT", "PARTIAL", "INCORRECT"]),
+          score: z.number().int().min(0).max(10).optional(),
+          feedback: z.string().max(1200).optional(),
+        }),
+        execute: async (input) => recordCrossExamAnswer(input),
+      }),
       manage_syllabus: tool({
         description:
           "Add, edit, delete, or change completion progress for a subject, chapter, topic, or sub-topic in the UPSC study tree.",
