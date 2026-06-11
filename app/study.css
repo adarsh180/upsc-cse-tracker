@@ -1,0 +1,589 @@
+/* ═══════════════════════════════════════════════════════════════════
+   STUDY WORKSPACE — GS papers / PSIR / CSAT / subject pages
+   Visual layer only: every class below is presentational; forms,
+   actions and checklist logic are untouched.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.study-route-page {
+  --study-accent: var(--gold);
+  --study-accent-soft: color-mix(in srgb, var(--study-accent) 16%, transparent);
+  --study-line: color-mix(in srgb, var(--text) 10%, transparent);
+  --study-ink-faint: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+
+.study-command-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: clamp(20px, 4vw, 44px);
+  align-items: center;
+  padding: clamp(24px, 4vw, 44px);
+  margin-bottom: 22px;
+  border-radius: 26px;
+  border: 1px solid color-mix(in srgb, var(--study-accent) 22%, var(--study-line));
+  background:
+    radial-gradient(120% 180% at 0% 0%, color-mix(in srgb, var(--study-accent) 14%, transparent) 0%, transparent 55%),
+    radial-gradient(110% 160% at 100% 110%, color-mix(in srgb, var(--lotus, #9a7bd4) 12%, transparent) 0%, transparent 60%),
+    linear-gradient(150deg, var(--bg-raised, rgba(255, 255, 255, 0.02)) 0%, var(--bg-surface, rgba(255, 255, 255, 0.01)) 100%);
+  overflow: hidden;
+  isolation: isolate;
+  animation: study-rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.study-hero-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--text) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 3.5%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(85% 90% at 30% 20%, black 0%, transparent 75%);
+  pointer-events: none;
+}
+
+.study-hero-ambient::after {
+  content: "";
+  position: absolute;
+  inset: -40% -20%;
+  background: conic-gradient(
+    from 180deg at 70% 30%,
+    transparent 0deg,
+    color-mix(in srgb, var(--study-accent) 7%, transparent) 90deg,
+    transparent 200deg
+  );
+  animation: study-aurora 14s linear infinite;
+  pointer-events: none;
+}
+
+.study-hero-copy {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.study-hero-copy > p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary, inherit);
+  max-width: 56ch;
+  margin: 0;
+}
+
+.study-hero-kicker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--study-accent) 78%, var(--text));
+}
+
+.study-hero-kicker > span:not(.study-hero-sigil) {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--study-accent) 30%, transparent);
+  background: var(--study-accent-soft);
+}
+
+.study-hero-sigil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  color: var(--study-accent);
+  background: var(--study-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--study-accent) 35%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--study-accent) 25%, transparent);
+}
+
+.study-hero-title {
+  margin: 0;
+  font-size: clamp(28px, 4.4vw, 46px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  font-weight: 760;
+  background: linear-gradient(
+    100deg,
+    var(--text) 30%,
+    color-mix(in srgb, var(--study-accent) 75%, var(--text)) 80%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.study-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.study-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary, inherit);
+  border: 1px solid var(--study-line);
+  background: var(--study-ink-faint);
+  backdrop-filter: blur(6px);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.study-hero-pill.link:hover {
+  color: var(--study-accent);
+  border-color: color-mix(in srgb, var(--study-accent) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+/* ── Hero console: ring + quick stats ─────────────────────────────── */
+
+.study-hero-console {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.4vw, 28px);
+  padding: clamp(16px, 2.4vw, 24px);
+  border-radius: 22px;
+  border: 1px solid var(--study-line);
+  background: color-mix(in srgb, var(--bg-surface, #11141a) 72%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px -28px color-mix(in srgb, var(--study-accent) 45%, transparent);
+}
+
+.study-hero-ring,
+.study-route-ring {
+  --ring-size: 118px;
+  position: relative;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--bg-surface, #11141a) 78%, transparent 79% 100%),
+    conic-gradient(
+      var(--study-accent) 0%,
+      color-mix(in srgb, var(--study-accent) 55%, var(--lotus-bright, #b79ae8)) var(--study-pct, 0%),
+      color-mix(in srgb, var(--text) 9%, transparent) var(--study-pct, 0%)
+    );
+  box-shadow:
+    inset 0 0 0 1px var(--study-line),
+    0 0 34px -10px color-mix(in srgb, var(--study-accent) 55%, transparent);
+}
+
+.study-hero-ring > span,
+.study-route-ring > span {
+  font-size: 26px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.study-hero-ring > small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted, inherit);
+}
+
+.study-hero-console-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(86px, 1fr));
+  gap: 10px;
+  flex: 1;
+}
+
+.study-hero-console-grid > div {
+  display: grid;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--study-line);
+  background: var(--study-ink-faint);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.study-hero-console-grid > div:hover {
+  border-color: color-mix(in srgb, var(--study-accent) 40%, transparent);
+  transform: translateY(-2px);
+}
+
+.study-hero-console-grid span {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted, inherit);
+}
+
+.study-hero-console-grid strong {
+  font-size: 19px;
+  font-weight: 740;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--study-accent) 60%, var(--text));
+}
+
+/* ── Command forms (metadata / expand / study log) ────────────────── */
+
+.study-command-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.study-command-form .span-2 {
+  grid-column: span 2;
+}
+
+.study-command-field {
+  display: grid;
+  gap: 8px;
+  padding: 13px 14px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--study-line);
+  background: var(--study-ink-faint);
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+.study-command-field:focus-within {
+  border-color: color-mix(in srgb, var(--study-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--study-accent) 5%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--study-accent) 14%, transparent),
+    0 12px 30px -18px color-mix(in srgb, var(--study-accent) 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.study-command-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-secondary, inherit);
+}
+
+.study-command-label em {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-muted, inherit);
+}
+
+.study-command-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  color: var(--study-accent);
+  background: var(--study-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--study-accent) 28%, transparent);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.study-command-field:focus-within .study-command-icon {
+  transform: scale(1.07);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--study-accent) 35%, transparent);
+}
+
+/* Bare inputs inside the framed cell — the cell carries the chrome. */
+.study-command-field .field,
+.study-command-field .textarea,
+.study-command-field .select {
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 2px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+}
+
+.study-command-field .field:focus,
+.study-command-field .textarea:focus,
+.study-command-field .select:focus {
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
+
+.study-command-field .textarea {
+  min-height: 64px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.study-command-form .button {
+  grid-column: span 2;
+  justify-self: start;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 24px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  font-weight: 680;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--study-accent) 50%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--study-accent) 24%, transparent),
+    color-mix(in srgb, var(--study-accent) 10%, transparent)
+  );
+  color: color-mix(in srgb, var(--study-accent) 65%, var(--text));
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.study-command-form .button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--text) 16%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+}
+
+.study-command-form .button:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--study-accent) 75%, transparent);
+  box-shadow: 0 14px 34px -16px color-mix(in srgb, var(--study-accent) 60%, transparent);
+}
+
+.study-command-form .button:hover::after {
+  transform: translateX(110%);
+}
+
+/* ── Ops + log layout grids ───────────────────────────────────────── */
+
+.study-ops-grid,
+.study-log-command-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.study-log-command-grid {
+  align-items: start;
+}
+
+.study-form-panel {
+  border-radius: 22px;
+  animation: study-rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+/* ── Recent logs ledger ───────────────────────────────────────────── */
+
+.study-ledger-shell {
+  margin-top: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--study-line);
+  overflow: auto;
+  max-height: 560px;
+}
+
+.study-log-ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.study-log-ledger thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted, inherit);
+  background: color-mix(in srgb, var(--bg-raised, #161a21) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--study-line);
+}
+
+.study-log-ledger tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.study-log-ledger tbody tr {
+  transition: background 0.18s ease;
+}
+
+.study-log-ledger tbody tr:hover {
+  background: color-mix(in srgb, var(--study-accent) 5%, transparent);
+}
+
+.study-log-ledger tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.study-log-title {
+  display: block;
+  font-weight: 640;
+  color: var(--text);
+}
+
+.study-log-subject {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted, inherit);
+}
+
+.study-log-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 680;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.study-log-chip.gold {
+  color: color-mix(in srgb, var(--gold) 72%, var(--text));
+  background: color-mix(in srgb, var(--gold) 13%, transparent);
+  border-color: color-mix(in srgb, var(--gold) 30%, transparent);
+}
+
+.study-log-chip.blue {
+  color: color-mix(in srgb, var(--physics) 76%, var(--text));
+  background: color-mix(in srgb, var(--physics) 13%, transparent);
+  border-color: color-mix(in srgb, var(--physics) 30%, transparent);
+}
+
+.study-log-chip.green {
+  color: color-mix(in srgb, var(--botany) 76%, var(--text));
+  background: color-mix(in srgb, var(--botany) 13%, transparent);
+  border-color: color-mix(in srgb, var(--botany) 30%, transparent);
+}
+
+.study-log-ledger .icon-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: var(--text-muted, inherit);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.study-log-ledger .icon-action-button:hover {
+  color: var(--rose-bright, #f17e9a);
+  background: color-mix(in srgb, var(--rose, #d9577a) 12%, transparent);
+  border-color: color-mix(in srgb, var(--rose, #d9577a) 32%, transparent);
+}
+
+/* ── Accent inheritance per paper (uses nav accent vars) ──────────── */
+
+.study-route-page[data-accent="gs1"] { --study-accent: var(--gs1); }
+.study-route-page[data-accent="gs2"] { --study-accent: var(--gs2); }
+.study-route-page[data-accent="gs3"] { --study-accent: var(--gs3); }
+.study-route-page[data-accent="gs4"] { --study-accent: var(--gs4); }
+.study-route-page[data-accent="psir"] { --study-accent: var(--psir); }
+.study-route-page[data-accent="csat"] { --study-accent: var(--csat); }
+.study-route-page[data-accent="essay"] { --study-accent: var(--lotus-bright); }
+
+/* ── Motion & responsive ──────────────────────────────────────────── */
+
+@keyframes study-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes study-aurora {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-command-hero,
+  .study-form-panel {
+    animation: none;
+  }
+  .study-hero-ambient::after {
+    animation: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .study-command-hero {
+    grid-template-columns: 1fr;
+  }
+  .study-hero-console {
+    flex-direction: row;
+  }
+  .study-ops-grid,
+  .study-log-command-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .study-hero-console {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+  .study-hero-ring {
+    justify-self: center;
+  }
+  .study-command-form {
+    grid-template-columns: 1fr;
+  }
+  .study-command-form .span-2,
+  .study-command-form .button {
+    grid-column: span 1;
+  }
+  .study-ledger-shell {
+    max-height: 420px;
+  }
+}

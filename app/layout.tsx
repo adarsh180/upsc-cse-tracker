@@ -9,6 +9,7 @@ import "./globals.css";
 import "./redesign.css";
 import "./premium.css";
 import "./theme.css";
+import "./study.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],
