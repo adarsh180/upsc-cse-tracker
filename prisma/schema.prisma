@@ -378,6 +378,24 @@ model CurrentAffairsDigest {
   @@index([digestDate])
 }
 
+model CaQuizAttempt {
+  id            String   @id @default(cuid())
+  digestDate    DateTime
+  questionIndex Int
+  question      String   @db.Text
+  optionsJson   String?  @db.Text
+  selectedIndex Int
+  correctIndex  Int
+  isCorrect     Boolean
+  explanation   String?  @db.Text
+  syllabusTag   String?  @db.VarChar(120)
+  createdAt     DateTime @default(now())
+
+  @@unique([digestDate, questionIndex])
+  @@index([digestDate])
+  @@index([createdAt])
+}
+
 model WeeklyReview {
   id                  String    @id @default(cuid())
   weekStart           DateTime  @unique

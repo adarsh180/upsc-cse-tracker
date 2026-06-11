@@ -217,14 +217,13 @@ LIVE DATA:
 - Yesterday's daily log: ${JSON.stringify(yesterdayLog ? { focus: yesterdayLog.primaryFocus, hours: yesterdayLog.totalHours, discipline: yesterdayLog.disciplineScore, wins: yesterdayLog.wins, blockers: yesterdayLog.blockers, tomorrowPlan: yesterdayLog.tomorrowPlan } : null)}
 - All subjects with completion: ${JSON.stringify(subjects.map((subject) => ({ title: subject.title, paper: subject.paper, pct: subject.completionPct, lastStudiedDaysAgo: subject.lastStudiedDaysAgo })))}`;
 
-  // Structured-JSON job on a deadline (morning cron): the 31B Gemma models
-  // routinely exceed 75s here, so default to a fast flash model.
+  // Gemma-4 first with a generous budget; flash only as the chain's last resort.
   const result = await generateTextResilient({
     prompt,
     temperature: 0.5,
     maxOutputTokens: 4096,
-    timeoutMs: 75_000,
-    modelEnvOverride: process.env.GOOGLE_AI_MODEL_PLAN ?? "gemini-flash-latest",
+    timeoutMs: 150_000,
+    modelEnvOverride: process.env.GOOGLE_AI_MODEL_PLAN,
   });
 
   const parsed = extractJsonBlock<{ briefingTitle?: string; briefingText?: string; tasks?: unknown }>(result.text);

@@ -144,14 +144,14 @@ ${newsHeadlines.map((h, i) => `${i + 1}. [${h.source}] ${h.title} — ${h.descri
 TODAY'S EDITORIALS:
 ${editorialHeadlines.map((h, i) => `${i + 1}. [${h.source}] ${h.title} — ${h.description}`).join("\n")}`;
 
-  // The digest needs a large output (8K tokens) — the 31B Gemma models are too
-  // slow for that within a cron budget, so default to a fast flash model.
+  // Gemma-4 first (preferred), generous budget — flash models are the chain's
+  // last resort inside generateTextResilient.
   const result = await generateTextResilient({
     prompt,
     temperature: 0.4,
     maxOutputTokens: 8192,
-    timeoutMs: 90_000,
-    modelEnvOverride: process.env.GOOGLE_AI_MODEL_DIGEST ?? "gemini-flash-latest",
+    timeoutMs: 170_000,
+    modelEnvOverride: process.env.GOOGLE_AI_MODEL_DIGEST,
   });
 
   const parsed = extractJsonBlock<{
@@ -189,9 +189,16 @@ export async function getOrCreateTodayDigest() {
       quizJson: JSON.stringify(generated.quiz ?? []),
       editorialsJson: JSON.stringify(generated.editorials ?? []),
       sourcesJson: JSON.stringify(RSS_SOURCES.map((source) => source.name)),
-      model: process.env.GOOGLE_AI_MODEL_DIGEST ?? "gemini-flash-latest",
+      model: process.env.GOOGLE_AI_MODEL_DIGEST ?? process.env.GOOGLE_AI_MODEL_PRIMARY ?? "gemma-4-31b-it",
     },
   });
+
+  // Retention: each digest lives a full day (6 AM to 6 AM). Once today's
+  // digest exists, older ones are purged — but CaQuizAttempt records (how he
+  // answered each day's self-check) are kept forever as the test history.
+  await db.currentAffairsDigest
+    .deleteMany({ where: { digestDate: { lt: dayKey } } })
+    .catch((error) => console.error("[current-affairs] retention cleanup failed:", error));
 
   return { digest, created: true };
 }

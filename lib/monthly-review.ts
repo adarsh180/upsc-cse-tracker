@@ -179,7 +179,7 @@ ${JSON.stringify({ score: integrity.score, verdict: integrity.verdict, flags: in
     prompt,
     temperature: 0.5,
     maxOutputTokens: 3072,
-    timeoutMs: 75_000,
+    timeoutMs: 150_000,
     modelEnvOverride: process.env.GOOGLE_AI_MODEL_REVIEW,
   });
 

@@ -42,6 +42,6 @@ export async function GET(request: NextRequest) {
       discord: Boolean(process.env.DISCORD_WEBHOOK_URL),
       cronSecretSet: Boolean(process.env.CRON_SECRET),
     },
-    hint: "If todayDigestCreated is false after 8:00 AM IST, the Vercel cron did not fire — check Vercel > Project > Settings > Cron Jobs (enabled + CRON_SECRET set in Vercel env). Trigger manually: /api/cron/morning?key=<CRON_SECRET>",
+    hint: "If todayDigestCreated is false after 7:00 AM IST, the Vercel cron did not fire — check Vercel > Project > Settings > Cron Jobs (enabled + CRON_SECRET set in Vercel env). Trigger manually: /api/cron/morning?key=<CRON_SECRET>",
   });
 }

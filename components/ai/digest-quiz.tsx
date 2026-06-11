@@ -10,10 +10,35 @@ type QuizItem = {
   explanation: string;
 };
 
-export function DigestQuiz({ quiz }: { quiz: QuizItem[] }) {
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+type InitialAttempt = { questionIndex: number; selectedIndex: number };
+
+export function DigestQuiz({
+  quiz,
+  initialAttempts = [],
+  persist = false,
+}: {
+  quiz: QuizItem[];
+  initialAttempts?: InitialAttempt[];
+  persist?: boolean;
+}) {
+  const [answers, setAnswers] = useState<Record<number, number>>(() =>
+    Object.fromEntries(initialAttempts.map((attempt) => [attempt.questionIndex, attempt.selectedIndex])),
+  );
 
   if (!quiz.length) return null;
+
+  function pick(questionIndex: number, optionIndex: number) {
+    setAnswers((prev) => ({ ...prev, [questionIndex]: optionIndex }));
+    if (persist) {
+      // Fire-and-forget: the answer is revealed instantly; the attempt record
+      // (kept after the digest itself is purged) lands in the background.
+      fetch("/api/current-affairs/quiz", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ questionIndex, selectedIndex: optionIndex }),
+      }).catch(() => {});
+    }
+  }
 
   const answeredCount = Object.keys(answers).length;
   const correctCount = quiz.filter((item, index) => answers[index] === item.answerIndex).length;
@@ -38,7 +63,7 @@ export function DigestQuiz({ quiz }: { quiz: QuizItem[] }) {
                     key={optionIndex}
                     type="button"
                     disabled={revealed}
-                    onClick={() => setAnswers((prev) => ({ ...prev, [questionIndex]: optionIndex }))}
+                    onClick={() => pick(questionIndex, optionIndex)}
                     className="button-secondary"
                     style={{
                       justifyContent: "flex-start",

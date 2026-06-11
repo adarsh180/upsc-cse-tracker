@@ -27,36 +27,45 @@ export function getGoogleModel(envOverride?: string) {
 }
 
 /**
- * generateText with a hard per-attempt timeout and automatic fallback through the
- * configured model chain (PRIMARY -> FALLBACK -> SECOND_FALLBACK). Background
- * cron jobs must never hang on a single slow model call: the whole serverless
- * function gets killed at maxDuration and every step after it is silently lost.
+ * generateText with a hard per-attempt timeout and automatic fallback chain.
+ * Gemma-4 models come first (preferred voice/quality) with a generous time
+ * budget; Gemini flash models are the LAST RESORT only, with a short timeout.
+ * Background cron jobs must never hang on a single slow model call: the whole
+ * serverless function gets killed at maxDuration (300s Vercel ceiling) and
+ * every step after it is silently lost.
  */
 export async function generateTextResilient(options: {
   prompt: string;
   temperature?: number;
   maxOutputTokens?: number;
+  /** Time budget for the PRIMARY (gemma) attempt; fallbacks get shorter slices. */
   timeoutMs?: number;
   modelEnvOverride?: string;
 }) {
   const chain = [
     options.modelEnvOverride ?? process.env.GOOGLE_AI_MODEL_PRIMARY ?? "gemma-4-31b-it",
-    process.env.GOOGLE_AI_MODEL_FALLBACK,
-    process.env.GOOGLE_AI_MODEL_SECOND_FALLBACK,
-    // Last resort: the lite flash model stays responsive even when the bigger
-    // models are overloaded (503) at peak hours.
+    process.env.GOOGLE_AI_MODEL_FALLBACK ?? "gemma-4-26b-a4b-it",
+    process.env.GOOGLE_AI_MODEL_SECOND_FALLBACK ?? "gemini-flash-latest",
+    // Absolute last resort: the lite flash model stays responsive even when
+    // the bigger models are overloaded (503) at peak hours.
     "gemini-flash-lite-latest",
   ].filter((id): id is string => Boolean(id));
 
+  const primaryTimeout = options.timeoutMs ?? 150_000;
   let lastError: unknown;
+  let attempt = 0;
   for (const modelId of [...new Set(chain.map(normalizeGoogleModelId))]) {
+    // First (gemma) attempt gets the full budget; each fallback gets a tighter
+    // slice so the chain still finishes inside the function's maxDuration.
+    const timeoutMs = attempt === 0 ? primaryTimeout : Math.min(primaryTimeout, attempt === 1 ? 90_000 : 45_000);
+    attempt += 1;
     try {
       return await generateText({
         model: google(modelId),
         prompt: options.prompt,
         temperature: options.temperature ?? 0.5,
         maxOutputTokens: options.maxOutputTokens ?? 2048,
-        abortSignal: AbortSignal.timeout(options.timeoutMs ?? 75_000),
+        abortSignal: AbortSignal.timeout(timeoutMs),
         // Gemini flash models default to extended thinking, which silently eats
         // the output-token budget and multiplies latency. These are structured
         // JSON jobs — disable thinking.

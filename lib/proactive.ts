@@ -117,21 +117,16 @@ async function announceMonthlyReportCard(options?: { regenerate?: boolean }) {
 }
 
 /**
- * 7:00 AM IST briefing. IMPORTANT: this never creates todos by itself.
- * It builds the current-affairs digest, drafts a full day plan (subject
- * rotation, revisions, answer writing, CA reading, books) as a PENDING
- * proposal, and notifies the user. Todos are only created when the user
- * approves the plan inside the app (see lib/day-plan.ts approveDayPlan).
+ * 6:00 AM IST briefing. IMPORTANT: this never creates todos by itself.
+ * It drafts a full day plan (subject rotation, revisions, answer writing,
+ * CA reading, books) as a PENDING proposal, notifies the user FIRST (the
+ * wake-up push is the one thing that must never be lost), then builds the
+ * current-affairs digest and any due report cards. Todos are only created
+ * when the user approves the plan inside the app (see lib/day-plan.ts).
  * Every step is individually fenced so one failure cannot eat the rest.
  */
 export async function runMorningBriefing() {
   const results: Record<string, unknown> = {};
-
-  const digestOutcome = await getOrCreateTodayDigest().catch((error) => {
-    console.error("[proactive] digest failed:", error);
-    return null;
-  });
-  results.digestCreated = digestOutcome?.created ?? false;
 
   let title = "Your day plan is ready";
   let body =
@@ -161,6 +156,14 @@ export async function runMorningBriefing() {
     return { error: String(error) };
   });
 
+  // Digest AFTER the push: if the function dies here, the notification already
+  // went out and the digest regenerates lazily (page button / evening catch-up).
+  const digestOutcome = await getOrCreateTodayDigest().catch((error) => {
+    console.error("[proactive] digest failed:", error);
+    return null;
+  });
+  results.digestCreated = digestOutcome?.created ?? false;
+
   if (isSundayIST()) {
     results.weeklyReportCard = await announceWeeklyReportCard().catch((error) => {
       console.error("[proactive] weekly report card failed:", error);
@@ -188,8 +191,14 @@ export async function runEveningGuard() {
 
   const results: Record<string, unknown> = {};
 
-  // Catch-up: if the morning run died before announcing a due report card,
-  // announce it now (no regeneration; notifiedAt keeps this idempotent).
+  // Catch-up: if the morning run died before the digest or before announcing
+  // a due report card, fill the gap now (all idempotent).
+  results.digestCatchUp = await getOrCreateTodayDigest()
+    .then((outcome) => ({ created: outcome.created }))
+    .catch((error) => {
+      console.error("[proactive] evening digest catch-up failed:", error);
+      return { created: false, error: String(error) };
+    });
   if (isSundayIST()) {
     results.weeklyReportCardCatchUp = await announceWeeklyReportCard({ regenerate: false }).catch((error) => {
       console.error("[proactive] weekly catch-up failed:", error);

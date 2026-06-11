@@ -282,7 +282,7 @@ ${JSON.stringify(correlation, null, 2)}`;
     prompt,
     temperature: 0.5,
     maxOutputTokens: 2560,
-    timeoutMs: 60_000,
+    timeoutMs: 150_000,
     modelEnvOverride: process.env.GOOGLE_AI_MODEL_REVIEW,
   });
 

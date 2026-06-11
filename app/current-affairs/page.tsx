@@ -7,6 +7,7 @@ import { DigestQuiz } from "@/components/ai/digest-quiz";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getLatestDigest, istDayKey, type DigestItem, type EditorialPick } from "@/lib/current-affairs";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +36,19 @@ export default async function CurrentAffairsPage() {
   const editorials = safeParse<EditorialPick[]>(digest?.editorialsJson, []);
   const quiz = safeParse<QuizItem[]>(digest?.quizJson, []);
 
+  const attempts = digest
+    ? await db.caQuizAttempt.findMany({
+        where: { digestDate: digest.digestDate },
+        select: { questionIndex: true, selectedIndex: true },
+      })
+    : [];
+
   return (
     <main className="page-shell">
       <PageIntro
         eyebrow="Current Affairs"
         title="Daily UPSC-filtered digest."
-        description="Auto-generated every morning at 7:00 AM from The Hindu, Indian Express, PIB, PRS and more — precise points, prelims pointers, mains angles, editorial picks and a 5-question self-check."
+        description="Auto-generated every morning at 6:00 AM from The Hindu, Indian Express, PIB, PRS and more — precise points, prelims pointers, mains angles, editorial picks and a 5-question self-check. Each day's digest is replaced the next morning; your quiz attempts are kept forever."
         glyph="essay"
         actions={
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -57,7 +65,7 @@ export default async function CurrentAffairsPage() {
         <section className="db-section">
           <article className="glass" style={{ padding: "22px 24px", borderRadius: 16 }}>
             <p style={{ fontSize: 14 }}>
-              No digest has been generated yet. It is created automatically by the 7:00 AM briefing &mdash; or tap
+              No digest has been generated yet. It is created automatically by the 6:00 AM briefing &mdash; or tap
               &quot;Generate today&apos;s digest now&quot; above to fetch and analyse today&apos;s headlines immediately.
             </p>
           </article>
@@ -170,7 +178,7 @@ export default async function CurrentAffairsPage() {
 
           <section className="db-section">
             <div className="db-section-title">Self-check (5 MCQs)</div>
-            <DigestQuiz quiz={quiz} />
+            <DigestQuiz quiz={quiz} initialAttempts={attempts} persist={hasToday} />
           </section>
         </>
       )}

@@ -113,7 +113,7 @@ Rules: exactly ${mcqCount} MCQ questions and ${mainsCount} MAINS questions, in t
 CLAIMED STUDY (period ${input.rangeStart.toISOString().slice(0, 10)} to ${input.rangeEnd.toISOString().slice(0, 10)}):
 ${JSON.stringify(claimed, null, 2)}`;
 
-  const result = await generateTextResilient({ prompt, temperature: 0.6, maxOutputTokens: 4096, timeoutMs: 60_000 });
+  const result = await generateTextResilient({ prompt, temperature: 0.6, maxOutputTokens: 4096, timeoutMs: 120_000 });
   const parsed = extractJsonBlock<{ questions?: Array<Record<string, unknown>> }>(result.text);
   const raw = Array.isArray(parsed?.questions) ? parsed.questions : [];
 
@@ -234,7 +234,7 @@ HIS ANSWER: ${answer.slice(0, 2500)}
 Output STRICT JSON only: { "verdict": "CORRECT" | "PARTIAL" | "INCORRECT", "score": 0-10, "feedback": "2-4 sentences: what was right, what was missing, one concrete improvement in UPSC answer-writing terms (structure, keywords, examples)" }
 Verdict guide: CORRECT = covers most expected points accurately; PARTIAL = right direction but significant gaps; INCORRECT = wrong, empty, or bluffing.`;
 
-  const result = await generateTextResilient({ prompt, temperature: 0.3, maxOutputTokens: 768, timeoutMs: 45_000 });
+  const result = await generateTextResilient({ prompt, temperature: 0.3, maxOutputTokens: 768, timeoutMs: 90_000 });
   const parsed = extractJsonBlock<{ verdict?: string; score?: number; feedback?: string }>(result.text);
   const verdict =
     parsed?.verdict === "CORRECT" || parsed?.verdict === "PARTIAL" || parsed?.verdict === "INCORRECT"

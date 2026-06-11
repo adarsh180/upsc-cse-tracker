@@ -374,7 +374,7 @@ export function ReportCardClient({ initialWeekly, initialMonthly }: { initialWee
       {!selected ? (
         <article className="glass" style={{ padding: "22px 24px", borderRadius: 16 }}>
           <p style={{ fontSize: 14 }}>
-            No {scope} report card yet. The weekly one is generated every Sunday at 7:00 AM and the monthly one on the
+            No {scope} report card yet. The weekly one is generated every Sunday at 6:00 AM and the monthly one on the
             1st &mdash; you&apos;ll get a notification when it&apos;s ready. Or generate the current period now with the
             button above.
           </p>
