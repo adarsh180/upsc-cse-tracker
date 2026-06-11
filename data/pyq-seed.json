@@ -1,0 +1,626 @@
+[
+  {
+    "year": 2018,
+    "subject": "Polity & Governance",
+    "topic": "State Legislature — Speaker",
+    "question": "Consider the following statements:\n1. The Speaker of the Legislative Assembly shall vacate his/her office if he/she ceases to be a member of the Assembly.\n2. Whenever the Legislative Assembly is dissolved, the Speaker shall vacate his/her office immediately.\nWhich of the statements given above is/are correct?",
+    "options": [
+      "1 only",
+      "2 only",
+      "Both 1 and 2",
+      "Neither 1 nor 2"
+    ],
+    "correctAnswer": "1 only",
+    "explanation": "The Speaker vacates office on ceasing to be a member, but on dissolution continues in office until immediately before the first meeting of the new Assembly.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Polity & Governance",
+    "topic": "Election Commission of India",
+    "question": "Consider the following statements:\n1. The Election Commission of India is a five-member body.\n2. The Union Ministry of Home Affairs decides the election schedule for the conduct of both general elections and bye-elections.\n3. Election Commission resolves the disputes relating to splits/mergers of recognised political parties.\nWhich of the statements given above is/are correct?",
+    "options": [
+      "1 and 2 only",
+      "2 only",
+      "2 and 3 only",
+      "3 only"
+    ],
+    "correctAnswer": "3 only",
+    "explanation": "ECI is currently a three-member body; the ECI itself decides the election schedule; under the Symbols Order it decides disputes on splits/mergers of recognised parties.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Polity & Governance",
+    "topic": "Chief Secretary",
+    "question": "Consider the following statements:\n1. The Chief Secretary in a State is appointed by the Governor of that State.\n2. The Chief Secretary in a State has a fixed tenure.\nWhich of the statements given above is/are correct?",
+    "options": [
+      "1 only",
+      "2 only",
+      "Both 1 and 2",
+      "Neither 1 nor 2"
+    ],
+    "correctAnswer": "Neither 1 nor 2",
+    "explanation": "The Chief Secretary is chosen by the Chief Minister (appointed by the State Government), and the post has no fixed tenure.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2020,
+    "subject": "Polity & Governance",
+    "topic": "Fundamental Duties",
+    "question": "In the context of India, which one of the following is not a fundamental duty?",
+    "options": [
+      "To vote in public elections",
+      "To develop the scientific temper",
+      "To safeguard public property",
+      "To abide by the Constitution and respect its ideals"
+    ],
+    "correctAnswer": "To vote in public elections",
+    "explanation": "Voting is a legal/statutory right, not among the eleven Fundamental Duties under Article 51A.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Polity & Governance",
+    "topic": "Constitutional Amendments / Judiciary",
+    "question": "Consider the following statements:\n1. The 44th Amendment to the Constitution of India introduced an Article placing the election of the Prime Minister beyond judicial review.\n2. The Supreme Court of India struck down the 99th Amendment to the Constitution of India as being violative of the independence of judiciary.\nWhich of the statements given above is/are correct?",
+    "options": [
+      "1 only",
+      "2 only",
+      "Both 1 and 2",
+      "Neither 1 nor 2"
+    ],
+    "correctAnswer": "2 only",
+    "explanation": "It was the 39th Amendment (1975), not the 44th, that placed the PM's election beyond judicial review; the SC struck down the 99th Amendment (NJAC) in 2015.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2021,
+    "subject": "Polity & Governance",
+    "topic": "Right to Privacy",
+    "question": "'Right to Privacy' is protected as an intrinsic part of Right to Life and Personal Liberty. Which of the following in the Constitution of India correctly and appropriately imply the above statement?",
+    "options": [
+      "Article 14 and the provisions under the 42nd Amendment to the Constitution",
+      "Article 17 and the Directive Principles of State Policy in Part IV",
+      "Article 21 and the freedoms guaranteed in Part III",
+      "Article 24 and the provisions under the 44th Amendment to the Constitution"
+    ],
+    "correctAnswer": "Article 21 and the freedoms guaranteed in Part III",
+    "explanation": "Puttaswamy (2017): privacy is intrinsic to Article 21 and the Part III freedoms.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Polity & Governance",
+    "topic": "Preamble",
+    "question": "Which one of the following objectives is not embodied in the Preamble to the Constitution of India?",
+    "options": [
+      "Liberty of thought",
+      "Economic liberty",
+      "Liberty of expression",
+      "Liberty of belief"
+    ],
+    "correctAnswer": "Economic liberty",
+    "explanation": "The Preamble mentions liberty of thought, expression, belief, faith and worship — not economic liberty.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Polity & Governance",
+    "topic": "NITI Aayog / Innovation",
+    "question": "Atal Innovation Mission is set up under the",
+    "options": [
+      "Department of Science and Technology",
+      "Ministry of Labour and Employment",
+      "NITI Aayog",
+      "Ministry of Skill Development and Entrepreneurship"
+    ],
+    "correctAnswer": "NITI Aayog",
+    "explanation": "AIM (with SETU) is NITI Aayog's flagship innovation and entrepreneurship initiative.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Polity & Governance",
+    "topic": "Indices & Reports",
+    "question": "The 'Rule of Law Index' is released by which of the following?",
+    "options": [
+      "Amnesty International",
+      "International Court of Justice",
+      "The Office of UN Commissioner for Human Rights",
+      "World Justice Project"
+    ],
+    "correctAnswer": "World Justice Project",
+    "explanation": "The WJP Rule of Law Index measures rule-of-law adherence across countries.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2020,
+    "subject": "Economy",
+    "topic": "Money Supply",
+    "question": "If you withdraw Rs. 1,00,000 in cash from your Demand Deposit Account at your bank, the immediate effect on aggregate money supply in the economy will be",
+    "options": [
+      "to reduce it by Rs. 1,00,000",
+      "to increase it by Rs. 1,00,000",
+      "to increase it by more than Rs. 1,00,000",
+      "to leave it unchanged"
+    ],
+    "correctAnswer": "to leave it unchanged",
+    "explanation": "M1 = currency with public + demand deposits; the withdrawal only converts deposit money into currency, leaving M1 unchanged.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Economy",
+    "topic": "Growth vs Development",
+    "question": "Increase in absolute and per capita real GNP do not connote a higher level of economic development, if",
+    "options": [
+      "industrial output fails to keep pace with agricultural output",
+      "agricultural output fails to keep pace with industrial output",
+      "poverty and unemployment increase",
+      "imports grow faster than exports"
+    ],
+    "correctAnswer": "poverty and unemployment increase",
+    "explanation": "Development implies distributive improvement; rising poverty/unemployment negates higher GNP.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Economy",
+    "topic": "Legal Tender",
+    "question": "Which one of the following statements correctly describes the meaning of legal tender money?",
+    "options": [
+      "The money which is tendered in courts of law to defray the fee of legal cases",
+      "The money which a creditor is under compulsion to accept in settlement of his claims",
+      "The bank money in the form of cheques, drafts, bills of exchange, etc.",
+      "The metallic money in circulation in a country"
+    ],
+    "correctAnswer": "The money which a creditor is under compulsion to accept in settlement of his claims",
+    "explanation": "Legal tender must be accepted in discharge of monetary obligations.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2021,
+    "subject": "Economy",
+    "topic": "Government Securities",
+    "question": "Indian Government Bond Yields are influenced by which of the following?\n1. Actions of the United States Federal Reserve\n2. Actions of the Reserve Bank of India\n3. Inflation and short-term interest rates\nSelect the correct answer using the code given below.",
+    "options": [
+      "1 and 2 only",
+      "2 only",
+      "3 only",
+      "1, 2 and 3"
+    ],
+    "correctAnswer": "1, 2 and 3",
+    "explanation": "Global rate moves (Fed), domestic monetary policy (RBI) and inflation/short-term rates all move G-sec yields.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Economy",
+    "topic": "Taxation — BEPS",
+    "question": "The term 'Base Erosion and Profit Shifting' is sometimes seen in the news in the context of",
+    "options": [
+      "mining operation by multinational companies in resource-rich but backward areas",
+      "curbing of the tax evasion by multinational companies",
+      "exploitation of genetic resources of a country by multinational companies",
+      "lack of consideration of environmental costs in the planning and implementation of developmental projects"
+    ],
+    "correctAnswer": "curbing of the tax evasion by multinational companies",
+    "explanation": "BEPS refers to MNCs shifting profits to low-tax jurisdictions; the OECD/G20 BEPS project counters it.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Economy",
+    "topic": "Social Capital",
+    "question": "In the context of any country, which one of the following would be considered as part of its social capital?",
+    "options": [
+      "The proportion of literates in the population",
+      "The stock of its buildings, other infrastructure and machines",
+      "The size of population in the working age group",
+      "The level of mutual trust and harmony in the society"
+    ],
+    "correctAnswer": "The level of mutual trust and harmony in the society",
+    "explanation": "Social capital denotes networks, norms and trust enabling cooperation — not physical or human capital.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2020,
+    "subject": "Economy",
+    "topic": "Budget / FRBM",
+    "question": "Along with the Budget, the Finance Minister also places other documents before the Parliament which include 'The Macro Economic Framework Statement'. The aforesaid document is presented because this is mandated by",
+    "options": [
+      "Long standing parliamentary convention",
+      "Article 112 and Article 110(1) of the Constitution of India",
+      "Article 113 of the Constitution of India",
+      "Provisions of the Fiscal Responsibility and Budget Management Act, 2003"
+    ],
+    "correctAnswer": "Provisions of the Fiscal Responsibility and Budget Management Act, 2003",
+    "explanation": "The FRBM Act, 2003 mandates the Macro-Economic Framework, Medium-Term Fiscal Policy and Fiscal Policy Strategy statements.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Environment & Ecology",
+    "topic": "Climate Initiatives",
+    "question": "'Momentum for Change: Climate Neutral Now' is an initiative launched by",
+    "options": [
+      "The Intergovernmental Panel on Climate Change",
+      "The UNEP Secretariat",
+      "The UNFCCC Secretariat",
+      "The World Meteorological Organisation"
+    ],
+    "correctAnswer": "The UNFCCC Secretariat",
+    "explanation": "Climate Neutral Now (2015) is a UNFCCC Secretariat initiative encouraging voluntary climate neutrality.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Environment & Ecology",
+    "topic": "Sustainable Development",
+    "question": "With reference to 'Agenda 21', sometimes seen in the news, consider the following statements:\n1. It is a global action plan for sustainable development.\n2. It originated in the World Summit on Sustainable Development held in Johannesburg in 2002.\nWhich of the statements given above is/are correct?",
+    "options": [
+      "1 only",
+      "2 only",
+      "Both 1 and 2",
+      "Neither 1 nor 2"
+    ],
+    "correctAnswer": "1 only",
+    "explanation": "Agenda 21 originated at the Rio Earth Summit (UNCED), 1992 — not Johannesburg 2002.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Environment & Ecology",
+    "topic": "Marine Pollution",
+    "question": "Why is there a great concern about the 'microbeads' that are released into environment?",
+    "options": [
+      "They are considered harmful to marine ecosystems",
+      "They are considered to cause skin cancer in children",
+      "They are small enough to be absorbed by crop plants in irrigated fields",
+      "They are often found to be used as food adulterants"
+    ],
+    "correctAnswer": "They are considered harmful to marine ecosystems",
+    "explanation": "Microbeads are non-biodegradable microplastics ingested by marine organisms, entering food chains.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2020,
+    "subject": "Environment & Ecology",
+    "topic": "Wildlife Protection Act",
+    "question": "If a particular plant species is placed under Schedule VI of The Wildlife Protection Act, 1972, what is the implication?",
+    "options": [
+      "A licence is required to cultivate that plant",
+      "Such a plant cannot be cultivated under any circumstances",
+      "It is a Genetically Modified crop plant",
+      "Such a plant is invasive and harmful to the ecosystem"
+    ],
+    "correctAnswer": "A licence is required to cultivate that plant",
+    "explanation": "Schedule VI regulates specified plants — cultivation/trade requires a licence from the Chief Wildlife Warden.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Environment & Ecology",
+    "topic": "Global Hunger Index",
+    "question": "Which of the following is/are the indicator/indicators used by IFPRI to compute the Global Hunger Index Report?\n1. Undernourishment\n2. Child stunting\n3. Child mortality\nSelect the correct answer using the code given below.",
+    "options": [
+      "1 only",
+      "2 and 3 only",
+      "1, 2 and 3",
+      "1 and 3 only"
+    ],
+    "correctAnswer": "1, 2 and 3",
+    "explanation": "GHI combines undernourishment, child wasting, child stunting and child mortality.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Environment & Ecology",
+    "topic": "Climate Change — CO2",
+    "question": "'Carbon fertilization' is best described as",
+    "options": [
+      "increased plant growth due to increased concentration of carbon dioxide in the atmosphere",
+      "increased temperature of Earth due to increased concentration of carbon dioxide in the atmosphere",
+      "increased acidity of oceans as a result of increased concentration of carbon dioxide in the atmosphere",
+      "adaptation of all living beings on Earth to the climate change brought about by the increased concentration of carbon dioxide in the atmosphere"
+    ],
+    "correctAnswer": "increased plant growth due to increased concentration of carbon dioxide in the atmosphere",
+    "explanation": "Higher atmospheric CO2 can enhance photosynthesis and plant growth — the CO2 fertilization effect.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Environment & Ecology",
+    "topic": "Tiger Conservation",
+    "question": "The term 'M-STRIPES' is sometimes seen in the news in the context of",
+    "options": [
+      "Captive breeding of Wild Fauna",
+      "Maintenance of National Highways",
+      "Monitoring of Tiger Reserves",
+      "Security of National Highways"
+    ],
+    "correctAnswer": "Monitoring of Tiger Reserves",
+    "explanation": "M-STrIPES (Monitoring System for Tigers — Intensive Protection and Ecological Status) is NTCA's patrol-monitoring app.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Science & Tech",
+    "topic": "NFC",
+    "question": "With reference to 'Near Field Communication (NFC) Technology', which of the following statements is/are correct?\n1. It is a contactless communication technology that uses electromagnetic radio fields.\n2. NFC is designed for use by devices which can be at a distance of even a metre from each other.\n3. NFC can use encryption when sending sensitive information.\nSelect the correct answer using the code given below.",
+    "options": [
+      "1 and 2 only",
+      "3 only",
+      "1 and 3 only",
+      "1, 2 and 3"
+    ],
+    "correctAnswer": "1 and 3 only",
+    "explanation": "NFC works only over a few centimetres (not a metre); it is contactless and supports encryption.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Science & Tech",
+    "topic": "Internet Technology",
+    "question": "'Project Loon', sometimes seen in the news, is related to",
+    "options": [
+      "waste management technology",
+      "wireless communication technology",
+      "solar power production technology",
+      "water conservation technology"
+    ],
+    "correctAnswer": "wireless communication technology",
+    "explanation": "Project Loon (Google/Alphabet) used stratospheric balloons to beam internet connectivity.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2023,
+    "subject": "Science & Tech",
+    "topic": "Disease Control",
+    "question": "'Wolbachia method' is sometimes talked about with reference to which one of the following?",
+    "options": [
+      "Controlling the viral diseases spread by mosquitoes",
+      "Converting crop residues into packing material",
+      "Producing biodegradable plastics",
+      "Producing biochar from thermo-chemical conversion of biomass"
+    ],
+    "correctAnswer": "Controlling the viral diseases spread by mosquitoes",
+    "explanation": "Wolbachia-infected mosquitoes suppress transmission of dengue and other arboviruses.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Ancient & Medieval History",
+    "topic": "Kakatiya Kingdom",
+    "question": "Which one of the following was a very important seaport in the Kakatiya kingdom?",
+    "options": [
+      "Kakinada",
+      "Motupalli",
+      "Machilipatnam (Masulipatnam)",
+      "Nelluru"
+    ],
+    "correctAnswer": "Motupalli",
+    "explanation": "Motupalli (Andhra coast) was the Kakatiyas' chief port, mentioned by Marco Polo.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Ancient & Medieval History",
+    "topic": "Vijayanagara Architecture",
+    "question": "Building 'Kalyaana Mandapas' was a notable feature in the temple construction in the kingdom of",
+    "options": [
+      "Chalukya",
+      "Chandela",
+      "Rashtrakuta",
+      "Vijayanagara"
+    ],
+    "correctAnswer": "Vijayanagara",
+    "explanation": "Kalyana mandapas (ceremonial marriage halls) are a hallmark of Vijayanagara temple architecture.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Ancient & Medieval History",
+    "topic": "Foreign Travellers",
+    "question": "Which one of the following foreign travellers elaborately discussed about diamonds and diamond mines of India?",
+    "options": [
+      "Francois Bernier",
+      "Jean-Baptiste Tavernier",
+      "Jean de Thevenot",
+      "Abbe Barthelemy Carre"
+    ],
+    "correctAnswer": "Jean-Baptiste Tavernier",
+    "explanation": "Tavernier, the French gem merchant, documented Golconda's diamond mines in detail.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Ancient & Medieval History",
+    "topic": "Medieval Society",
+    "question": "Banjaras during the medieval period of Indian history were generally",
+    "options": [
+      "agriculturists",
+      "warriors",
+      "weavers",
+      "traders"
+    ],
+    "correctAnswer": "traders",
+    "explanation": "Banjaras were itinerant grain and salt carriers/traders moving with bullock caravans.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2016,
+    "subject": "Art & Culture",
+    "topic": "Textiles & Painting",
+    "question": "Kalamkari painting refers to",
+    "options": [
+      "a hand-painted cotton textile in South India",
+      "a handmade drawing on bamboo handicrafts in North-East India",
+      "a block-painted woollen cloth in Western Himalayan region of India",
+      "a hand-painted decorative silk cloth in North-Western India"
+    ],
+    "correctAnswer": "a hand-painted cotton textile in South India",
+    "explanation": "Kalamkari ('pen work') is hand-painted/block-printed cotton textile art of Andhra Pradesh (Srikalahasti, Machilipatnam).",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2018,
+    "subject": "Art & Culture",
+    "topic": "Religious Sects",
+    "question": "With reference to the religious practices in India, the 'Sthanakvasi' sect belongs to",
+    "options": [
+      "Buddhism",
+      "Jainism",
+      "Vaishnavism",
+      "Shaivism"
+    ],
+    "correctAnswer": "Jainism",
+    "explanation": "Sthanakvasi is a Svetambara Jain sect that rejects idol worship.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Modern History",
+    "topic": "British Policies",
+    "question": "The object of the Butler Committee of 1927 was to",
+    "options": [
+      "Define the jurisdiction of the Central and Provincial Governments",
+      "Define the powers of the Secretary of State for India",
+      "Impose censorship on national press",
+      "Improve the relationship between the Government of India and the Indian States"
+    ],
+    "correctAnswer": "Improve the relationship between the Government of India and the Indian States",
+    "explanation": "The Butler Committee examined paramountcy — the relationship between the Crown/Government of India and the princely states.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2021,
+    "subject": "Modern History",
+    "topic": "Social Reform — Education",
+    "question": "Who among the following was associated as Secretary with Hindu Female School which later came to be known as Bethune Female School?",
+    "options": [
+      "Annie Besant",
+      "Debendranath Tagore",
+      "Ishwar Chandra Vidyasagar",
+      "Sarojini Naidu"
+    ],
+    "correctAnswer": "Ishwar Chandra Vidyasagar",
+    "explanation": "Vidyasagar served as secretary of Bethune School, pioneering women's education in Bengal.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Geography",
+    "topic": "Indian Ocean Islands",
+    "question": "Which of the following is geographically closest to Great Nicobar?",
+    "options": [
+      "Sumatra",
+      "Borneo",
+      "Java",
+      "Sri Lanka"
+    ],
+    "correctAnswer": "Sumatra",
+    "explanation": "Indira Point on Great Nicobar lies only ~150 km from Sumatra (Indonesia).",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Geography",
+    "topic": "Earth's Motions",
+    "question": "On 21st June, the Sun",
+    "options": [
+      "does not set below the horizon at the Arctic Circle",
+      "does not set below the horizon at Antarctic Circle",
+      "shines vertically overhead at noon on the Equator",
+      "shines vertically overhead at the Tropic of Capricorn"
+    ],
+    "correctAnswer": "does not set below the horizon at the Arctic Circle",
+    "explanation": "Summer solstice: the Sun is overhead at the Tropic of Cancer and the Arctic Circle has the midnight sun.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "Geography",
+    "topic": "World Geography — Mediterranean",
+    "question": "Consider the following countries:\n1. Jordan\n2. Iraq\n3. Lebanon\n4. Syria\nWhich of the above have borders with the Mediterranean Sea?",
+    "options": [
+      "1 and 2 only",
+      "2 and 3 only",
+      "3 and 4 only",
+      "1, 3 and 4 only"
+    ],
+    "correctAnswer": "3 and 4 only",
+    "explanation": "Lebanon and Syria are Mediterranean littorals; Jordan opens to the Red Sea (Gulf of Aqaba), Iraq to the Persian Gulf.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2019,
+    "subject": "Geography",
+    "topic": "Columbian Exchange",
+    "question": "Which one of the following groups of plants was domesticated in the 'New World' and introduced into the 'Old World'?",
+    "options": [
+      "Tobacco, cocoa and rubber",
+      "Tobacco, cotton and rubber",
+      "Cotton, coffee and sugarcane",
+      "Rubber, coffee and wheat"
+    ],
+    "correctAnswer": "Tobacco, cocoa and rubber",
+    "explanation": "Tobacco, cocoa and rubber are Americas-origin domesticates; coffee, wheat and sugarcane are Old World.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  },
+  {
+    "year": 2017,
+    "subject": "International Relations",
+    "topic": "India–EU",
+    "question": "The term 'Broad-based Trade and Investment Agreement (BTIA)' is sometimes seen in the news in the context of negotiations held between India and",
+    "options": [
+      "European Union",
+      "Gulf Cooperation Council",
+      "Organization for Economic Cooperation and Development",
+      "Shanghai Cooperation Organization"
+    ],
+    "correctAnswer": "European Union",
+    "explanation": "BTIA is the long-running India–EU free trade and investment negotiation.",
+    "examStage": "PRELIMS",
+    "paper": "GS Paper I"
+  }
+]

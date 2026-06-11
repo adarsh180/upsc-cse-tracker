@@ -2,10 +2,11 @@ import { format } from "date-fns";
 import { ExternalLink, Newspaper } from "lucide-react";
 import Link from "next/link";
 
+import { DigestGenerateButton } from "@/components/ai/digest-generate-button";
 import { DigestQuiz } from "@/components/ai/digest-quiz";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
-import { getLatestDigest } from "@/lib/current-affairs";
+import { getLatestDigest, istDayKey } from "@/lib/current-affairs";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function CurrentAffairsPage() {
   await requireSession();
 
   const digest = await getLatestDigest();
+  const hasToday = Boolean(digest && digest.digestDate.getTime() === istDayKey().getTime());
   const items = safeParse<DigestItem[]>(digest?.itemsJson, []);
   const quiz = safeParse<QuizItem[]>(digest?.quizJson, []);
 
@@ -48,9 +50,12 @@ export default async function CurrentAffairsPage() {
         description="Auto-generated every morning at 7:00 AM from The Hindu and PIB, filtered for exam relevance, with a 5-question self-check."
         glyph="essay"
         actions={
-          <div className="pill">
-            <Newspaper size={14} />
-            {digest ? format(digest.digestDate, "d MMM yyyy") : "No digest yet"}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="pill">
+              <Newspaper size={14} />
+              {digest ? format(digest.digestDate, "d MMM yyyy") : "No digest yet"}
+            </div>
+            <DigestGenerateButton hasToday={hasToday} />
           </div>
         }
       />
@@ -59,8 +64,8 @@ export default async function CurrentAffairsPage() {
         <section className="db-section">
           <article className="glass" style={{ padding: "22px 24px", borderRadius: 16 }}>
             <p style={{ fontSize: 14 }}>
-              No digest has been generated yet. It is created automatically by the 7:00 AM briefing, or you can ask
-              Guru to brief you on today&apos;s current affairs.
+              No digest has been generated yet. It is created automatically by the 7:00 AM briefing &mdash; or tap
+              &quot;Generate today&apos;s digest now&quot; above to fetch and analyse today&apos;s headlines immediately.
             </p>
           </article>
         </section>

@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed-pyq": "tsx scripts/seed-pyq.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.0",

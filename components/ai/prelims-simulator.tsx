@@ -1,15 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlarmClock, CheckCircle2, Loader2, Play, XCircle } from "lucide-react";
+import { AlarmClock, BookOpenCheck, CheckCircle2, Loader2, Play, ShieldCheck, XCircle } from "lucide-react";
 
 type SimQuestion = {
+  qtype?: string;
+  context?: string | null;
+  statements?: string[] | null;
   question: string;
   options: string[];
   answerIndex: number;
   explanation: string;
   subject: string;
   topic: string;
+  source?: string | null;
 };
 
 type SimResult = {
@@ -27,9 +31,59 @@ type Phase = "setup" | "loading" | "running" | "submitting" | "done";
 
 const SECONDS_PER_QUESTION = 72; // UPSC pace: 100 Q in 120 min
 
+const SUBJECTS = [
+  "Polity & Governance",
+  "Modern History",
+  "Ancient & Medieval History",
+  "Art & Culture",
+  "Geography",
+  "Economy",
+  "Environment & Ecology",
+  "Science & Tech",
+  "International Relations",
+  "Current Affairs",
+];
+
+/** Renders a question in true UPSC paper layout: intro line, statements on their own lines, closing question. */
+function QuestionText({ question, number }: { question: SimQuestion; number: number }) {
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>
+        Q{number}. {question.context ?? question.question}
+      </p>
+      {question.statements?.length ? (
+        <div style={{ display: "grid", gap: 4, paddingLeft: 18 }}>
+          {question.statements.map((statement, index) => (
+            <p key={index} style={{ fontSize: 14, lineHeight: 1.55 }}>
+              {statement}
+            </p>
+          ))}
+        </div>
+      ) : null}
+      {question.context ? (
+        <p style={{ fontSize: 14.5, fontWeight: 600, lineHeight: 1.6 }}>{question.question}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (!source) return null;
+  const isPyq = source.toUpperCase().includes("UPSC");
+  return (
+    <span className="pill" style={{ fontSize: 10.5, opacity: 0.85 }}>
+      {isPyq ? <BookOpenCheck size={11} /> : <ShieldCheck size={11} />}
+      {source}
+    </span>
+  );
+}
+
 export function PrelimsSimulator() {
   const [phase, setPhase] = useState<Phase>("setup");
   const [count, setCount] = useState(10);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [focusWeakAreas, setFocusWeakAreas] = useState(true);
+  const [includeCurrentAffairs, setIncludeCurrentAffairs] = useState(true);
   const [questions, setQuestions] = useState<SimQuestion[]>([]);
   const [answers, setAnswers] = useState<Array<number | null>>([]);
   const [current, setCurrent] = useState(0);
@@ -89,6 +143,12 @@ export function PrelimsSimulator() {
   const questionsRef = useRef(questions);
   questionsRef.current = questions;
 
+  function toggleSubject(subject: string) {
+    setSubjects((previous) =>
+      previous.includes(subject) ? previous.filter((entry) => entry !== subject) : [...previous, subject],
+    );
+  }
+
   async function start() {
     setPhase("loading");
     setError(null);
@@ -96,7 +156,13 @@ export function PrelimsSimulator() {
       const response = await fetch("/api/simulator", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "generate", count }),
+        body: JSON.stringify({
+          action: "generate",
+          count,
+          subjects: subjects.length ? subjects : undefined,
+          focusWeakAreas,
+          includeCurrentAffairs,
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error ?? "Generation failed");
@@ -122,9 +188,49 @@ export function PrelimsSimulator() {
     return (
       <article className="glass" style={{ padding: "24px", borderRadius: 16, display: "grid", gap: 16 }}>
         <p style={{ fontSize: 14 }}>
-          Timed mock generated from your weak topics and stored PYQs. UPSC marking: +2 per correct, −0.67 per wrong.
-          The result is saved as a real test record and feeds your analytics.
+          Timed mock in the modern UPSC idiom (statement-based, &quot;how many of the above&quot;, Statement-I/II,
+          match-the-pairs). Real PYQs from the bank are mixed in verbatim with their official answers; AI questions go
+          through a second fact-check pass before you see them. Marking: +2 correct, −0.67 wrong.
         </p>
+
+        <div>
+          <p style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
+            Subjects (leave empty for a balanced full-syllabus paper):
+          </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {SUBJECTS.map((subject) => (
+              <button
+                key={subject}
+                type="button"
+                className={subjects.includes(subject) ? "button-primary" : "button-secondary"}
+                onClick={() => toggleSubject(subject)}
+                style={{ minHeight: 32, fontSize: 12, padding: "4px 12px" }}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={focusWeakAreas ? "button-primary" : "button-secondary"}
+            onClick={() => setFocusWeakAreas((value) => !value)}
+            style={{ minHeight: 34, fontSize: 12.5 }}
+          >
+            {focusWeakAreas ? "✓ " : ""}Prioritise my weak areas (~50%)
+          </button>
+          <button
+            type="button"
+            className={includeCurrentAffairs ? "button-primary" : "button-secondary"}
+            onClick={() => setIncludeCurrentAffairs((value) => !value)}
+            style={{ minHeight: 34, fontSize: 12.5 }}
+          >
+            {includeCurrentAffairs ? "✓ " : ""}Include today&apos;s current affairs
+          </button>
+        </div>
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[10, 25, 50].map((option) => (
             <button
@@ -138,6 +244,7 @@ export function PrelimsSimulator() {
             </button>
           ))}
         </div>
+
         {error ? <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p> : null}
         <button
           type="button"
@@ -147,8 +254,13 @@ export function PrelimsSimulator() {
           style={{ justifySelf: "start", minHeight: 40 }}
         >
           {phase === "loading" ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
-          {phase === "loading" ? "Generating from your weak areas…" : "Start mock"}
+          {phase === "loading" ? "Setting the paper + fact-checking…" : "Start mock"}
         </button>
+        {phase === "loading" ? (
+          <p style={{ fontSize: 12, opacity: 0.6 }}>
+            Two model passes run before the paper opens (generation, then verification) — this can take up to a minute.
+          </p>
+        ) : null}
       </article>
     );
   }
@@ -173,24 +285,27 @@ export function PrelimsSimulator() {
           const wasCorrect = picked === question.answerIndex;
           return (
             <article key={index} className="glass" style={{ padding: "18px 20px", borderRadius: 14 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8 }}>
                 {picked === null ? (
                   <span style={{ opacity: 0.5, flexShrink: 0 }}>—</span>
                 ) : wasCorrect ? (
-                  <CheckCircle2 size={16} style={{ color: "#4ade80", flexShrink: 0, marginTop: 2 }} />
+                  <CheckCircle2 size={16} style={{ color: "#4ade80", flexShrink: 0, marginTop: 4 }} />
                 ) : (
-                  <XCircle size={16} style={{ color: "#f87171", flexShrink: 0, marginTop: 2 }} />
+                  <XCircle size={16} style={{ color: "#f87171", flexShrink: 0, marginTop: 4 }} />
                 )}
-                Q{index + 1}. {question.question}
-              </p>
+                <QuestionText question={question} number={index + 1} />
+              </div>
               <p style={{ fontSize: 13, marginTop: 10 }}>
                 {picked !== null ? `Your answer: ${String.fromCharCode(65 + picked)}. ` : "Skipped. "}
                 Correct: {String.fromCharCode(65 + question.answerIndex)}. {question.options[question.answerIndex]}
               </p>
               <p style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>{question.explanation}</p>
-              <span className="pill" style={{ marginTop: 10, fontSize: 11 }}>
-                {question.subject} · {question.topic}
-              </span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                <span className="pill" style={{ fontSize: 11 }}>
+                  {question.subject} · {question.topic}
+                </span>
+                <SourceBadge source={question.source} />
+              </div>
             </article>
           );
         })}
@@ -217,9 +332,7 @@ export function PrelimsSimulator() {
       </div>
 
       <article className="glass" style={{ padding: "22px 24px", borderRadius: 16 }}>
-        <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>
-          Q{current + 1}. {question.question}
-        </p>
+        <QuestionText question={question} number={current + 1} />
         <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
           {question.options.map((option, optionIndex) => (
             <button
