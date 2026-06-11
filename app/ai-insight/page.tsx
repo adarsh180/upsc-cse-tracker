@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BrainCircuit, ListTodo, Newspaper, PenSquare, ScanSearch, Target, Timer, Trophy } from "lucide-react";
+import { ArrowRight, BrainCircuit, GraduationCap, ListTodo, Newspaper, PenSquare, ScanSearch, Target, Timer, Trophy } from "lucide-react";
 
 import { MetricCard, PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
@@ -23,6 +23,14 @@ const tools = [
     cta: "Enter Guru",
   },
   {
+    href: "/report-card",
+    icon: GraduationCap,
+    color: "var(--saffron)",
+    title: "Report Card",
+    desc: "Weekly & monthly mentor verdicts with honesty checks, verification viva and progress graphs.",
+    cta: "Open report card",
+  },
+  {
     href: "/ai-insight/deep-analytics",
     icon: ScanSearch,
     color: "var(--physics)",
@@ -43,7 +51,7 @@ const tools = [
     icon: Newspaper,
     color: "var(--physics)",
     title: "Current Affairs",
-    desc: "Auto-generated daily digest from The Hindu and PIB with UPSC angles and a 5-MCQ self-check.",
+    desc: "Daily 6 AM digest from The Hindu, Indian Express, PIB & PRS — key points, editorials, 5-MCQ self-check.",
     cta: "Read today's digest",
   },
   {

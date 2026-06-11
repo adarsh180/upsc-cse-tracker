@@ -32,6 +32,7 @@ const desktopNav = [
   { href: "/tests", label: "Tests" },
   { href: "/performance", label: "Performance" },
   { href: "/ai-insight/guru", label: "Guru" },
+  { href: "/report-card", label: "Report Card" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
