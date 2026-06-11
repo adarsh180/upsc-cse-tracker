@@ -4,6 +4,7 @@ import { generateText } from "ai";
 const GOOGLE_MODEL_ALIASES: Record<string, string> = {
   "gemma-4-31b": "gemma-4-31b-it",
   "gemma-4-26b": "gemma-4-26b-a4b-it",
+  "gemma-4-26b-it": "gemma-4-26b-a4b-it",
   // gemma-3 was retired from the Generative Language API (404s as of mid-2026);
   // remap stale env values to a live fast model instead of failing.
   "gemma-3-27b": "gemini-flash-latest",
