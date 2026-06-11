@@ -4,7 +4,9 @@ import { runEveningGuard } from "@/lib/proactive";
 import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+// Sundays/1sts may run a report-card catch-up generation; AI calls are
+// individually time-boxed, 300s is the Hobby/Fluid ceiling.
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {

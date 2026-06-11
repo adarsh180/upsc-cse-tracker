@@ -53,7 +53,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function deliverWebPush(target: PushTarget, notification: PushNotificationPayload) {
+async function deliverWebPush(target: PushTarget, notification: PushNotificationPayload, url = "/dashboard") {
   const pushSubscription = {
     endpoint: target.endpoint,
     keys: {
@@ -73,7 +73,7 @@ async function deliverWebPush(target: PushTarget, notification: PushNotification
     vibrate: [160, 70, 160, 70, 240],
     data: {
       id: notification.id,
-      url: "/dashboard",
+      url,
       tone: notification.tone,
       createdAt: notification.createdAt,
       urgent: true,
@@ -107,6 +107,7 @@ export async function sendWebPushToSubscription(target: PushTarget, notification
 export async function sendWebPushNotification(
   notification: PushNotificationPayload,
   excludeClientId?: string | null,
+  url?: string,
 ) {
   configureWebPush();
   if (!isWebPushConfigured()) return { sent: 0, failed: 0 };
@@ -121,7 +122,7 @@ export async function sendWebPushNotification(
   await Promise.all(
     subscriptions.map(async (subscription) => {
       try {
-        await deliverWebPush(subscription, notification);
+        await deliverWebPush(subscription, notification, url);
         sent += 1;
       } catch (error) {
         failed += 1;

@@ -1,8 +1,7 @@
-import { generateText } from "ai";
 import { subDays } from "date-fns";
 
 import { getPrepPulse, getWeakAreas } from "@/lib/agent-memory";
-import { extractJsonBlock, getGoogleModel } from "@/lib/ai-models";
+import { extractJsonBlock, generateTextResilient } from "@/lib/ai-models";
 import { istDayKey } from "@/lib/current-affairs";
 import { db } from "@/lib/db";
 import { createManualTodoTask } from "@/lib/mission-control";
@@ -218,11 +217,14 @@ LIVE DATA:
 - Yesterday's daily log: ${JSON.stringify(yesterdayLog ? { focus: yesterdayLog.primaryFocus, hours: yesterdayLog.totalHours, discipline: yesterdayLog.disciplineScore, wins: yesterdayLog.wins, blockers: yesterdayLog.blockers, tomorrowPlan: yesterdayLog.tomorrowPlan } : null)}
 - All subjects with completion: ${JSON.stringify(subjects.map((subject) => ({ title: subject.title, paper: subject.paper, pct: subject.completionPct, lastStudiedDaysAgo: subject.lastStudiedDaysAgo })))}`;
 
-  const result = await generateText({
-    model: getGoogleModel(),
+  // Structured-JSON job on a deadline (morning cron): the 31B Gemma models
+  // routinely exceed 75s here, so default to a fast flash model.
+  const result = await generateTextResilient({
     prompt,
     temperature: 0.5,
-    maxOutputTokens: 3072,
+    maxOutputTokens: 4096,
+    timeoutMs: 75_000,
+    modelEnvOverride: process.env.GOOGLE_AI_MODEL_PLAN ?? "gemini-flash-latest",
   });
 
   const parsed = extractJsonBlock<{ briefingTitle?: string; briefingText?: string; tasks?: unknown }>(result.text);

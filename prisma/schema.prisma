@@ -365,11 +365,12 @@ model DayPlan {
 
 model CurrentAffairsDigest {
   id            String   @id @default(cuid())
-  digestDate    DateTime @unique
-  summaryText   String   @db.LongText
-  itemsJson     String   @db.LongText
-  quizJson      String?  @db.LongText
-  sourcesJson   String?  @db.Text
+  digestDate     DateTime @unique
+  summaryText    String   @db.LongText
+  itemsJson      String   @db.LongText
+  quizJson       String?  @db.LongText
+  editorialsJson String?  @db.LongText
+  sourcesJson    String?  @db.Text
   model         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -383,12 +384,31 @@ model WeeklyReview {
   reportText          String    @db.LongText
   statsJson           String    @db.LongText
   moodCorrelationJson String?   @db.LongText
+  integrityJson       String?   @db.LongText
+  quizJson            String?   @db.LongText
   model               String?
   seenAt              DateTime?
+  notifiedAt          DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
   @@index([weekStart])
+}
+
+model MonthlyReview {
+  id            String    @id @default(cuid())
+  monthStart    DateTime  @unique
+  reportText    String    @db.LongText
+  statsJson     String    @db.LongText
+  integrityJson String?   @db.LongText
+  quizJson      String?   @db.LongText
+  model         String?
+  seenAt        DateTime?
+  notifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([monthStart])
 }
 
 model PyqQuestion {

@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import { CalendarCheck2 } from "lucide-react";
+import { ArrowRight, CalendarCheck2 } from "lucide-react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -19,11 +20,15 @@ export function SundayReviewCard({ weekStart, reportText }: SundayReviewProps) {
           border: "1px solid color-mix(in srgb, var(--gold-bright, #d4af37) 35%, transparent)",
         }}
       >
-        <div className="db-section-title" style={{ marginBottom: 12 }}>
+        <div className="db-section-title" style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <CalendarCheck2 size={16} style={{ color: "var(--gold-bright, #d4af37)" }} />
             Sunday Self-Review · week of {format(weekStart, "d MMM yyyy")}
           </span>
+          <Link href="/report-card" className="pill" style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            Full report card + viva
+            <ArrowRight size={12} />
+          </Link>
         </div>
         <div className="prose-invert" style={{ fontSize: 14, lineHeight: 1.65 }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{reportText}</ReactMarkdown>

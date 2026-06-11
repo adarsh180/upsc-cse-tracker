@@ -8,5 +8,7 @@ dist
 coverage
 *.log
 .npm-cache
+tools
+tmp
 
 .vercel

@@ -1,10 +1,11 @@
-import { generateText } from "ai";
 import { subDays } from "date-fns";
 
 import { getCrossExamStats } from "@/lib/agent-memory";
-import { getGoogleModel } from "@/lib/ai-models";
+import { generateTextResilient } from "@/lib/ai-models";
 import { istDayKey } from "@/lib/current-affairs";
 import { db } from "@/lib/db";
+import { computeIntegrityAudit } from "@/lib/integrity";
+import { generateVivaQuestions, summarizeViva, type VivaQuestion } from "@/lib/report-card";
 
 /** Monday 00:00 IST of the week containing the given date (as UTC day key). */
 export function istWeekStart(date = new Date()) {
@@ -219,47 +220,90 @@ async function computeWeeklyStats(weekStart: Date) {
 /** Generate (or return existing) weekly review for the week containing `date`. */
 export async function generateWeeklyReview(date = new Date(), force = false) {
   const weekStart = istWeekStart(date);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000);
 
   const existing = await db.weeklyReview.findUnique({ where: { weekStart } });
   if (existing && !force) return { review: existing, created: false };
 
-  const [stats, correlation] = await Promise.all([
+  const [stats, correlation, integrity] = await Promise.all([
     computeWeeklyStats(weekStart),
     computeMoodPerformanceCorrelation(),
+    computeIntegrityAudit(weekStart, weekEnd),
   ]);
 
-  const prompt = `You are UPSC-GURU writing Adarsh Tiwari's Sunday self-review for the week starting ${stats.weekStart} (UPSC CSE 2027 prep, 3rd attempt).
+  // Viva questions are only generated once per week — regenerating the report
+  // (force) must not spawn duplicate cross-exam entries.
+  let viva: VivaQuestion[] = [];
+  if (existing?.quizJson) {
+    try {
+      viva = JSON.parse(existing.quizJson).questions ?? [];
+    } catch {
+      viva = [];
+    }
+  }
+  if (viva.length === 0) {
+    viva = await generateVivaQuestions({
+      rangeStart: weekStart,
+      rangeEnd: weekEnd,
+      count: 6,
+      scopeLabel: "weekly report-card",
+    }).catch((error) => {
+      console.error("[weekly-review] viva generation failed:", error);
+      return [];
+    });
+  }
+
+  const prompt = `You are UPSC-GURU, Adarsh Tiwari's personal mentor, writing his Sunday report card for the week starting ${stats.weekStart} (UPSC CSE 2027 prep, 3rd attempt, PSIR optional). Speak like a mentor who knows him well: direct, warm but unsparing, always pointing at the next concrete action.
 Write in clean markdown with these exact sections:
 ## The Week in One Verdict
 ## What the Numbers Say
 ## Wins Worth Keeping
 ## Failures Worth Fixing
+## Honesty Check
 ## Mood × Performance Read
+## How to Level Up
 ## Next Week's Contract
-Rules: surgical honesty, no fluff, cite the actual numbers given, max ~450 words. In "Mood × Performance Read" interpret the Pearson correlations carefully (correlation ≠ causation, mention sample sizes). "Next Week's Contract" must be 3-5 concrete, measurable commitments.
+Rules: surgical honesty, no fluff, cite the actual numbers given, max ~600 words.
+- "Honesty Check": use the INTEGRITY AUDIT below. If flags exist, name them plainly (dates, numbers) and say what honest logging would look like; if the audit is clean, say so and credit it. Mention his viva/verification record (answered vs ignored, accuracy).
+- "Mood × Performance Read": interpret the Pearson correlations carefully (correlation ≠ causation, mention sample sizes).
+- "How to Level Up": 2-3 mentor-grade improvements to HOW he studies (technique, sequencing, revision spacing, answer writing), not just how much.
+- "Next Week's Contract": 3-5 concrete, measurable commitments.
 
 WEEK DATA (JSON):
 ${JSON.stringify(stats, null, 2)}
 
+INTEGRITY AUDIT (JSON):
+${JSON.stringify({ score: integrity.score, verdict: integrity.verdict, flags: integrity.flags, vivaVerification: integrity.vivaVerification }, null, 2)}
+
 MOOD-PERFORMANCE CORRELATIONS (JSON):
 ${JSON.stringify(correlation, null, 2)}`;
 
-  const model = getGoogleModel(process.env.GOOGLE_AI_MODEL_REVIEW);
-  const result = await generateText({ model, prompt, temperature: 0.5, maxOutputTokens: 2048 });
+  const result = await generateTextResilient({
+    prompt,
+    temperature: 0.5,
+    maxOutputTokens: 2560,
+    timeoutMs: 60_000,
+    modelEnvOverride: process.env.GOOGLE_AI_MODEL_REVIEW,
+  });
 
+  const quizJson = JSON.stringify({ questions: viva, summary: summarizeViva(viva) });
   const review = await db.weeklyReview.upsert({
     where: { weekStart },
     update: {
       reportText: result.text,
       statsJson: JSON.stringify(stats),
       moodCorrelationJson: JSON.stringify(correlation),
+      integrityJson: JSON.stringify(integrity),
+      quizJson,
     },
     create: {
       weekStart,
       reportText: result.text,
       statsJson: JSON.stringify(stats),
       moodCorrelationJson: JSON.stringify(correlation),
-      model: process.env.GOOGLE_AI_MODEL_REVIEW ?? process.env.GOOGLE_AI_MODEL_PRIMARY ?? "gemma-3-27b-it",
+      integrityJson: JSON.stringify(integrity),
+      quizJson,
+      model: process.env.GOOGLE_AI_MODEL_REVIEW ?? process.env.GOOGLE_AI_MODEL_PRIMARY ?? "gemma-4-31b-it",
     },
   });
 

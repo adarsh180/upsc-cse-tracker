@@ -8,6 +8,7 @@ import {
   ListTodo,
   FileText,
   Goal,
+  GraduationCap,
   HeartPulse,
   LayoutDashboard,
   Newspaper,
@@ -37,6 +38,7 @@ export const navGroups = [
     items: [
       { href: "/ai-insight", label: "AI Hub", icon: Sparkles, accent: "var(--gold)" },
       { href: "/ai-insight/guru", label: "UPSC Guru", icon: BrainCircuit, accent: "var(--gold-bright)" },
+      { href: "/report-card", label: "Report Card", icon: GraduationCap, accent: "var(--saffron)" },
       { href: "/ai-insight/rank-prediction", label: "Rank Prediction", icon: Trophy, accent: "var(--botany)" },
       { href: "/ai-insight/deep-analytics", label: "Deep Analytics", icon: ScanSearch, accent: "var(--physics)" },
       { href: "/ai-insight/essay-checker", label: "Essay Checker", icon: PenSquare, accent: "var(--rose-bright)" },
