@@ -12,6 +12,11 @@ import {
   upsertQuestionLog,
   upsertQuestionLogs,
 } from "@/lib/test-analysis";
+import {
+  syncDailyLogForTestCreate,
+  syncDailyLogForTestDelete,
+  syncDailyLogForTestUpdate,
+} from "@/lib/test-daily-log-sync";
 
 export const runtime = "nodejs";
 
@@ -108,10 +113,29 @@ export async function POST(request: Request) {
       notes: String(test.notes ?? "").trim(),
     };
 
+    const previous =
+      body.action === "update_test" && testId
+        ? await db.testRecord.findUnique({
+            where: { id: testId },
+            select: {
+              testDate: true,
+              timeMinutes: true,
+              attemptedQuestions: true,
+              totalQuestions: true,
+            },
+          })
+        : null;
+
     const saved =
       body.action === "update_test" && testId
         ? await db.testRecord.update({ where: { id: testId }, data })
         : await db.testRecord.create({ data });
+
+    if (previous) {
+      await syncDailyLogForTestUpdate(previous, saved);
+    } else {
+      await syncDailyLogForTestCreate(saved);
+    }
 
     revalidatePath("/tests");
     revalidatePath("/tests/error-analysis");
@@ -123,7 +147,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "testId is required" }, { status: 400 });
     }
 
+    const existing = await db.testRecord.findUnique({
+      where: { id: body.testId },
+      select: {
+        testDate: true,
+        timeMinutes: true,
+        attemptedQuestions: true,
+        totalQuestions: true,
+      },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Test not found" }, { status: 404 });
+    }
+
     await db.testRecord.delete({ where: { id: body.testId } });
+    await syncDailyLogForTestDelete(existing);
     revalidatePath("/tests");
     revalidatePath("/tests/error-analysis");
     return NextResponse.json({ ok: true });

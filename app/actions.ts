@@ -22,6 +22,11 @@ import {
 } from "@/lib/mission-control";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
 import { createStudyNode, deleteStudyNode, updateStudyNode } from "@/lib/study-tree";
+import {
+  syncDailyLogForTestCreate,
+  syncDailyLogForTestDelete,
+  syncDailyLogForTestUpdate,
+} from "@/lib/test-daily-log-sync";
 import { slugify } from "@/lib/utils";
 
 const google = createGoogleGenerativeAI({
@@ -308,29 +313,33 @@ export async function saveMoodAction(formData: FormData) {
 
 export async function saveTestAction(formData: FormData) {
   await requireSession();
-  await db.testRecord.create({
-    data: {
-      studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
-      title: String(formData.get("title") ?? "Untitled test"),
-      examStage: String(formData.get("examStage") ?? "PRELIMS"),
-      testType: String(formData.get("testType") ?? "SECTIONAL"),
-      paperCode: String(formData.get("paperCode") ?? "") || null,
-      paperName: String(formData.get("paperName") ?? "") || null,
-      optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
-      testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
-      totalQuestions: Number(formData.get("totalQuestions") ?? 0),
-      totalMarks: Number(formData.get("totalMarks") ?? 0),
-      score: Number(formData.get("score") ?? 0),
-      negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
-      cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
-      correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
-      incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
-      attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
-      percentile: Number(formData.get("percentile") ?? 0) || null,
-      timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
-      notes: String(formData.get("notes") ?? ""),
-    },
+  const data = {
+    studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
+    title: String(formData.get("title") ?? "Untitled test"),
+    examStage: String(formData.get("examStage") ?? "PRELIMS"),
+    testType: String(formData.get("testType") ?? "SECTIONAL"),
+    paperCode: String(formData.get("paperCode") ?? "") || null,
+    paperName: String(formData.get("paperName") ?? "") || null,
+    optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
+    testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
+    totalQuestions: Number(formData.get("totalQuestions") ?? 0),
+    totalMarks: Number(formData.get("totalMarks") ?? 0),
+    score: Number(formData.get("score") ?? 0),
+    negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
+    cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
+    correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
+    incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
+    attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
+    percentile: Number(formData.get("percentile") ?? 0) || null,
+    timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
+    notes: String(formData.get("notes") ?? ""),
+  };
+
+  const test = await db.testRecord.create({
+    data,
   });
+
+  await syncDailyLogForTestCreate(test);
 
   refreshCorePages("/tests");
 }
@@ -339,30 +348,47 @@ export async function updateTestAction(formData: FormData) {
   await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
-  await db.testRecord.update({
+
+  const previous = await db.testRecord.findUnique({
     where: { id },
-    data: {
-      studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
-      title: String(formData.get("title") ?? "Untitled test"),
-      examStage: String(formData.get("examStage") ?? "PRELIMS"),
-      testType: String(formData.get("testType") ?? "SECTIONAL"),
-      paperCode: String(formData.get("paperCode") ?? "") || null,
-      paperName: String(formData.get("paperName") ?? "") || null,
-      optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
-      testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
-      totalQuestions: Number(formData.get("totalQuestions") ?? 0),
-      totalMarks: Number(formData.get("totalMarks") ?? 0),
-      score: Number(formData.get("score") ?? 0),
-      negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
-      cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
-      correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
-      incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
-      attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
-      percentile: Number(formData.get("percentile") ?? 0) || null,
-      timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
-      notes: String(formData.get("notes") ?? ""),
+    select: {
+      testDate: true,
+      timeMinutes: true,
+      attemptedQuestions: true,
+      totalQuestions: true,
     },
   });
+  if (!previous) return;
+
+  const data = {
+    studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
+    title: String(formData.get("title") ?? "Untitled test"),
+    examStage: String(formData.get("examStage") ?? "PRELIMS"),
+    testType: String(formData.get("testType") ?? "SECTIONAL"),
+    paperCode: String(formData.get("paperCode") ?? "") || null,
+    paperName: String(formData.get("paperName") ?? "") || null,
+    optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
+    testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
+    totalQuestions: Number(formData.get("totalQuestions") ?? 0),
+    totalMarks: Number(formData.get("totalMarks") ?? 0),
+    score: Number(formData.get("score") ?? 0),
+    negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
+    cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
+    correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
+    incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
+    attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
+    percentile: Number(formData.get("percentile") ?? 0) || null,
+    timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
+    notes: String(formData.get("notes") ?? ""),
+  };
+
+  const updated = await db.testRecord.update({
+    where: { id },
+    data,
+  });
+
+  await syncDailyLogForTestUpdate(previous, updated);
+
   refreshCorePages("/tests");
 }
 
@@ -370,7 +396,20 @@ export async function deleteTestAction(formData: FormData) {
   await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
+
+  const existing = await db.testRecord.findUnique({
+    where: { id },
+    select: {
+      testDate: true,
+      timeMinutes: true,
+      attemptedQuestions: true,
+      totalQuestions: true,
+    },
+  });
+  if (!existing) return;
+
   await db.testRecord.delete({ where: { id } });
+  await syncDailyLogForTestDelete(existing);
   refreshCorePages("/tests");
 }
 

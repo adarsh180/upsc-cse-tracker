@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -35,6 +36,25 @@ function average(values: number[]) {
 
 function scorePct(score: number, totalMarks: number) {
   return totalMarks > 0 ? (score / totalMarks) * 100 : 0;
+}
+
+function istDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value ?? "1970";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+  return `${year}-${month}-${day}`;
+}
+
+function shiftDateKey(key: string, days: number) {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
 }
 
 type PrepConfidence = {
@@ -101,6 +121,27 @@ export default async function DashboardPage() {
   const recentLog = summary.dailyLogs[0];
   const recentTest = summary.tests[0];
   const latestMood = summary.moods[0];
+  const dailyHoursByKey = new Map(
+    [...summary.dailyLogs]
+      .sort((a, b) => b.logDate.getTime() - a.logDate.getTime())
+      .map((log) => [istDateKey(log.logDate), log.totalHours]),
+  );
+  const todayKey = istDateKey(new Date());
+  const todayHours = dailyHoursByKey.get(todayKey) ?? 0;
+  let streakCursor = todayHours >= 8 ? todayKey : shiftDateKey(todayKey, -1);
+  let currentStudyStreak = 0;
+  while ((dailyHoursByKey.get(streakCursor) ?? 0) >= 8) {
+    currentStudyStreak += 1;
+    streakCursor = shiftDateKey(streakCursor, -1);
+  }
+  const streakProgressPct = clampPct((todayHours / 8) * 100);
+  const streakCircleRadius = 50;
+  const streakCircleCircumference = 2 * Math.PI * streakCircleRadius;
+  const streakCircleOffset = streakCircleCircumference * (1 - streakProgressPct / 100);
+  const streakCircleStyle = {
+    "--streak-offset": streakCircleOffset,
+    "--streak-circumference": streakCircleCircumference,
+  } as CSSProperties;
 
   const paperPctMap = await getPaperCompletionMap(summary.papers);
   const syllabusCompletion = average(Object.values(paperPctMap));
@@ -264,6 +305,43 @@ export default async function DashboardPage() {
             </article>
           );
         })}
+      </section>
+
+      <section className="db-section anim-fade-up">
+        <article className="glass db-streak-widget">
+          <div className="db-streak-copy">
+            <div className="eyebrow">8-hour streak loop</div>
+            <h2>{currentStudyStreak}d active streak</h2>
+            <p>
+              Today: {todayHours.toFixed(1)}h / 8h. {todayHours >= 8 ? "Target cleared; protect the chain tomorrow." : "Today is still open, so it does not break the chain yet."}
+            </p>
+          </div>
+          <div className="db-streak-ring-wrap" aria-label={`${currentStudyStreak} day study streak, ${streakProgressPct}% of today's target complete`}>
+            <svg className="db-streak-svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+              <defs>
+                <linearGradient id="streakGradient" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="var(--gold-bright)" />
+                  <stop offset="52%" stopColor="var(--saffron)" />
+                  <stop offset="100%" stopColor="var(--rose-bright)" />
+                </linearGradient>
+              </defs>
+              <circle className="db-streak-bg" cx="64" cy="64" r={streakCircleRadius} />
+              <circle
+                className="streak-svg-circle"
+                cx="64"
+                cy="64"
+                r={streakCircleRadius}
+                strokeDasharray={streakCircleCircumference}
+                style={streakCircleStyle}
+              />
+            </svg>
+            <div className="db-streak-core">
+              <Flame size={28} />
+              <strong>{currentStudyStreak}d streak</strong>
+              <span>{streakProgressPct}% today</span>
+            </div>
+          </div>
+        </article>
       </section>
 
       {/* Countdowns + readiness */}

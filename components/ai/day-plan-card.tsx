@@ -71,7 +71,7 @@ export function DayPlanCard({ planId, briefingTitle, briefingText, tasks }: DayP
 
   if (outcome) {
     return (
-      <article className="glass" style={{ padding: "18px 22px", borderRadius: 16 }}>
+      <article className="glass day-plan-approval-card">
         <p style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <CheckCheck size={16} style={{ color: "#4ade80" }} />
           {outcome}
@@ -81,56 +81,40 @@ export function DayPlanCard({ planId, briefingTitle, briefingText, tasks }: DayP
   }
 
   return (
-    <article
-      className="glass"
-      style={{
-        padding: "22px 24px",
-        borderRadius: 18,
-        border: "1px solid color-mix(in srgb, var(--gold-bright, #d4af37) 35%, transparent)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <Sparkles size={16} style={{ color: "var(--gold-bright, #d4af37)" }} />
-        <span style={{ fontWeight: 700, fontSize: 15 }}>{briefingTitle}</span>
-        <span className="pill" style={{ marginLeft: "auto", fontSize: 11 }}>
-          Awaiting your approval
+    <article className="glass day-plan-approval-card">
+      <div className="day-plan-head">
+        <span className="day-plan-sigil">
+          <Sparkles size={16} />
         </span>
+        <div>
+          <div className="eyebrow">Guru briefing</div>
+          <h2 className="day-plan-title">{briefingTitle}</h2>
+        </div>
+        <span className="pill day-plan-pill">Awaiting your approval</span>
       </div>
-      <p style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.6, marginBottom: 16 }}>{briefingText}</p>
 
-      <div style={{ display: "grid", gap: 8 }}>
+      <p className="day-plan-brief">{briefingText}</p>
+
+      <div className="day-plan-task-list">
         {tasks.map((task, index) => (
-          <label
-            key={index}
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "flex-start",
-              padding: "10px 12px",
-              borderRadius: 12,
-              cursor: "pointer",
-              background: "color-mix(in srgb, currentColor 4%, transparent)",
-              opacity: selected[index] ? 1 : 0.5,
-            }}
-          >
+          <label key={index} className={`day-plan-task ${selected[index] ? "" : "is-muted"}`}>
             <input
               type="checkbox"
               checked={selected[index]}
               onChange={() =>
                 setSelected((previous) => previous.map((value, i) => (i === index ? !value : value)))
               }
-              style={{ marginTop: 3 }}
             />
-            <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+            <span className="day-plan-task-copy">
               <strong>{task.title}</strong>{" "}
               <span style={{ color: PRIORITY_COLORS[task.priority] ?? "inherit", fontSize: 11, fontWeight: 700 }}>
                 {task.priority}
               </span>{" "}
-              <span style={{ opacity: 0.6, fontSize: 11 }}>
-                {task.taskType} · ~{task.estimatedMinutes}m{task.subject ? ` · ${task.subject}` : ""}
+              <span className="day-plan-task-meta">
+                {task.taskType} - ~{task.estimatedMinutes}m{task.subject ? ` - ${task.subject}` : ""}
               </span>
               <br />
-              <span style={{ opacity: 0.75 }}>{task.detail}</span>
+              <span className="day-plan-task-detail">{task.detail}</span>
             </span>
           </label>
         ))}
@@ -138,10 +122,10 @@ export function DayPlanCard({ planId, briefingTitle, briefingText, tasks }: DayP
 
       {error ? <p style={{ color: "#f87171", fontSize: 13, marginTop: 12 }}>{error}</p> : null}
 
-      <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="day-plan-actions">
         <button
           type="button"
-          className="button-primary"
+          className="button"
           disabled={busy !== null || selectedCount === 0}
           onClick={() => act("approve")}
           style={{ minHeight: 38 }}
@@ -159,7 +143,7 @@ export function DayPlanCard({ planId, briefingTitle, briefingText, tasks }: DayP
           <X size={14} />
           Not today
         </button>
-        <span style={{ fontSize: 12, opacity: 0.6 }}>≈ {Math.round((totalMinutes / 60) * 10) / 10}h planned</span>
+        <span className="day-plan-hours">~ {Math.round((totalMinutes / 60) * 10) / 10}h planned</span>
       </div>
     </article>
   );

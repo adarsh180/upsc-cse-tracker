@@ -1060,12 +1060,29 @@ export function NotificationCenter({
           --drag-progress: 0;
           --drag-tilt: 0deg;
           --drag-scale: 1;
+          --notify-tone-rgb: 212, 168, 83;
           position: relative;
           overflow: hidden;
           border-radius: 20px;
           isolation: isolate;
           transform-origin: center;
           transition: height 220ms cubic-bezier(0.22, 1, 0.36, 1), margin 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+        }
+
+        .notify-item.tone-focus {
+          --notify-tone-rgb: 212, 168, 83;
+        }
+
+        .notify-item.tone-urgent {
+          --notify-tone-rgb: 232, 114, 138;
+        }
+
+        .notify-item.tone-care {
+          --notify-tone-rgb: 91, 156, 245;
+        }
+
+        .notify-item.tone-win {
+          --notify-tone-rgb: 101, 240, 181;
         }
 
         .notify-item.exiting {
@@ -1135,7 +1152,7 @@ export function NotificationCenter({
           padding: 13px;
           text-align: left;
           overflow: hidden;
-          border: 1px solid rgba(255,255,255,0.18);
+          border: 1px solid rgba(var(--notify-tone-rgb),0.28);
           border-radius: 20px;
           background:
             linear-gradient(150deg, rgba(255,255,255,0.18), rgba(255,255,255,0.07) 45%, rgba(255,255,255,0.035)),
@@ -1144,6 +1161,8 @@ export function NotificationCenter({
           cursor: pointer;
           box-shadow:
             0 18px 34px rgba(0,0,0,0.22),
+            0 0 0 1px rgba(var(--notify-tone-rgb),0.08),
+            0 0 26px rgba(var(--notify-tone-rgb),0.12),
             inset 0 1px 0 rgba(255,255,255,0.22),
             inset 0 -1px 0 rgba(255,255,255,0.055);
           backdrop-filter: blur(20px) saturate(170%);
@@ -1186,13 +1205,13 @@ export function NotificationCenter({
         }
 
         .notify-item-card:hover {
-          border-color: rgba(255,235,190,0.32);
+          border-color: rgba(var(--notify-tone-rgb),0.42);
           background:
             linear-gradient(150deg, rgba(255,255,255,0.23), rgba(255,255,255,0.085) 46%, rgba(255,255,255,0.045)),
             rgba(9,11,22,0.64);
           box-shadow:
             0 22px 42px rgba(0,0,0,0.26),
-            0 0 22px rgba(212,168,83,0.12),
+            0 0 30px rgba(var(--notify-tone-rgb),0.18),
             inset 0 1px 0 rgba(255,255,255,0.28);
         }
 
@@ -1282,7 +1301,11 @@ export function NotificationCenter({
           margin-top: 5px;
           border-radius: 999px;
           background: var(--gold);
-          box-shadow: 0 0 16px var(--gold-glow);
+          box-shadow: 0 0 16px rgba(var(--notify-tone-rgb),0.42);
+        }
+
+        .notify-item:not(.read) .notify-dot {
+          animation: notifyDotPulse 2.4s ease-in-out infinite;
         }
 
         .tone-urgent .notify-dot { background: var(--danger); }
@@ -1391,6 +1414,17 @@ export function NotificationCenter({
         @keyframes notifyIn {
           from { opacity: 0; transform: translateY(10px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes notifyDotPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 13px rgba(var(--notify-tone-rgb),0.38), 0 0 0 0 rgba(var(--notify-tone-rgb),0.24);
+          }
+          50% {
+            transform: scale(1.18);
+            box-shadow: 0 0 18px rgba(var(--notify-tone-rgb),0.58), 0 0 0 8px rgba(var(--notify-tone-rgb),0);
+          }
         }
 
         @media (max-width: 560px) {

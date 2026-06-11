@@ -179,12 +179,32 @@ const studyNodeInclude = {
   studyLogs: {
     orderBy: { logDate: "desc" as const },
     take: 10,
+    include: {
+      studyNode: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
   },
   testRecords: {
     orderBy: { testDate: "desc" as const },
     take: 10,
   },
 };
+
+type StudyNodeWithLoadedChildren = {
+  id: string;
+  children?: StudyNodeWithLoadedChildren[];
+};
+
+function collectStudyNodeIds(node: StudyNodeWithLoadedChildren): string[] {
+  return [
+    node.id,
+    ...(node.children ?? []).flatMap((child) => collectStudyNodeIds(child)),
+  ];
+}
 
 export async function getStudyNodeBySlug(slug: string) {
   await ensureSeeded();
@@ -194,7 +214,28 @@ export async function getStudyNodeBySlug(slug: string) {
     include: studyNodeInclude,
   });
 
-  if (node) return node;
+  if (node) {
+    if (node.type !== "PAPER") return node;
+
+    const studyNodeIds = collectStudyNodeIds(node);
+    const studyLogs = await db.studyLog.findMany({
+      where: {
+        studyNodeId: { in: studyNodeIds },
+      },
+      orderBy: { logDate: "desc" },
+      include: {
+        studyNode: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      take: 30,
+    });
+
+    return { ...node, studyLogs };
+  }
 
   // Self-heal: known syllabus slug missing from DB (partial seed) → seed
   // that paper branch and retry once instead of 404ing.
@@ -205,10 +246,31 @@ export async function getStudyNodeBySlug(slug: string) {
 
   if (!seeded) return null;
 
-  return db.studyNode.findUnique({
+  const healedNode = await db.studyNode.findUnique({
     where: { slug },
     include: studyNodeInclude,
   });
+
+  if (!healedNode || healedNode.type !== "PAPER") return healedNode;
+
+  const studyNodeIds = collectStudyNodeIds(healedNode);
+  const studyLogs = await db.studyLog.findMany({
+    where: {
+      studyNodeId: { in: studyNodeIds },
+    },
+    orderBy: { logDate: "desc" },
+    include: {
+      studyNode: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+    take: 30,
+  });
+
+  return { ...healedNode, studyLogs };
 }
 
 

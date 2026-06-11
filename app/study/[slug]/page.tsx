@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -184,9 +185,14 @@ export default async function StudyNodePage({
     : isSubject
       ? "Chapter or topic name"
       : "Sub-topic name";
+  const priorityChapters = children.slice(0, 6);
 
   return (
-    <main className="page-shell study-route-page" data-accent={accentKeyFor(node.slug, node.parent?.slug)}>
+    <main
+      className="page-shell study-route-page"
+      data-accent={accentKeyFor(node.slug, node.parent?.slug)}
+      data-node-kind={node.type.toLowerCase()}
+    >
       <section className="study-command-hero">
         <div className="study-hero-ambient" aria-hidden="true" />
         <div className="study-hero-copy">
@@ -285,6 +291,35 @@ export default async function StudyNodePage({
             ))}
           </div>
         </section>
+
+        {isChecklist && hasSyllabusChildren ? (
+          <section className="glass panel study-subject-focus-dock">
+            <div className="study-subject-focus-copy">
+              <div className="eyebrow">Subject routing</div>
+              <div className="display study-section-title">Pick a chapter, log the session, then close the loop.</div>
+              <p className="muted">
+                This page is now arranged for active study: session logging sits before the checklist, and the chapter map stays immediately below it.
+              </p>
+            </div>
+            <div className="study-focus-chip-grid">
+              {priorityChapters.map((chapter) => {
+                const pct = computePct(chapter);
+                return (
+                  <Link key={chapter.id} href={`/study/${chapter.slug}`} className="study-focus-chip">
+                    <span className="study-focus-chip-icon">
+                      <BookOpen size={14} />
+                    </span>
+                    <span className="study-focus-chip-copy">
+                      <strong>{chapter.title}</strong>
+                      <small>{pct}% complete - {chapter.children.length} topics</small>
+                    </span>
+                    <ArrowRight size={14} />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {isPaper && hasSyllabusChildren ? (
           <section className="glass panel study-paper-shell">
