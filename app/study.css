@@ -1,133 +1,161 @@
 /* ═══════════════════════════════════════════════════════════════════
-   STUDY WORKSPACE — GS papers / PSIR / CSAT / subject pages
-   Visual layer only: every class below is presentational; forms,
-   actions and checklist logic are untouched.
+   STUDY WORKSPACE  ·  sx-*  ·  premium-dark redesign
+   GS1-4 / PSIR / CSAT / Essay / Current Affairs + subject + module pages.
+   Presentational only — forms, server actions and checklist logic in
+   page.tsx / study-checklist.tsx are untouched. Theme tokens drive both
+   the dark (default) and light palettes automatically.
    ═══════════════════════════════════════════════════════════════════ */
 
-.study-route-page {
-  --study-accent: var(--gold);
-  --study-accent-soft: color-mix(in srgb, var(--study-accent) 16%, transparent);
-  --study-line: color-mix(in srgb, var(--text) 10%, transparent);
-  --study-ink-faint: color-mix(in srgb, var(--text) 4%, transparent);
+.sx-page {
+  --sx-accent: var(--gold);
+  --sx-accent-soft: color-mix(in srgb, var(--sx-accent) 14%, transparent);
+  --sx-accent-line: color-mix(in srgb, var(--sx-accent) 30%, transparent);
+  --sx-line: color-mix(in srgb, var(--text) 11%, transparent);
+  --sx-faint: color-mix(in srgb, var(--text) 4%, transparent);
+  --sx-surface: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.6vw, 24px);
 }
+
+/* Per-paper accent inheritance (nav accent vars). */
+.sx-page[data-accent="gs1"] { --sx-accent: var(--gs1); }
+.sx-page[data-accent="gs2"] { --sx-accent: var(--gs2); }
+.sx-page[data-accent="gs3"] { --sx-accent: var(--gs3); }
+.sx-page[data-accent="gs4"] { --sx-accent: var(--gs4); }
+.sx-page[data-accent="psir"] { --sx-accent: var(--psir); }
+.sx-page[data-accent="csat"] { --sx-accent: var(--csat); }
+.sx-page[data-accent="essay"] { --sx-accent: var(--lotus-bright); }
 
 /* ── Hero ─────────────────────────────────────────────────────────── */
 
-.study-command-hero {
+.sx-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr);
   gap: clamp(20px, 4vw, 44px);
   align-items: center;
-  padding: clamp(24px, 4vw, 44px);
-  margin-bottom: 22px;
-  border-radius: 26px;
-  border: 1px solid color-mix(in srgb, var(--study-accent) 22%, var(--study-line));
+  padding: clamp(22px, 3.4vw, 40px);
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--sx-accent) 20%, var(--sx-line));
   background:
-    radial-gradient(120% 180% at 0% 0%, color-mix(in srgb, var(--study-accent) 14%, transparent) 0%, transparent 55%),
-    radial-gradient(110% 160% at 100% 110%, color-mix(in srgb, var(--lotus, #9a7bd4) 12%, transparent) 0%, transparent 60%),
-    linear-gradient(150deg, var(--bg-raised, rgba(255, 255, 255, 0.02)) 0%, var(--bg-surface, rgba(255, 255, 255, 0.01)) 100%);
+    radial-gradient(130% 180% at 0% 0%, color-mix(in srgb, var(--sx-accent) 13%, transparent) 0%, transparent 55%),
+    radial-gradient(120% 150% at 100% 120%, color-mix(in srgb, var(--lotus) 11%, transparent) 0%, transparent 60%),
+    linear-gradient(150deg, var(--bg-raised) 0%, var(--bg-surface) 100%);
   overflow: hidden;
   isolation: isolate;
-  animation: study-rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  animation: sx-rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
 }
 
-.study-hero-ambient {
+.sx-hero-bg {
   position: absolute;
   inset: 0;
   z-index: -1;
   background-image:
     linear-gradient(color-mix(in srgb, var(--text) 3.5%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--text) 3.5%, transparent) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(85% 90% at 30% 20%, black 0%, transparent 75%);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(85% 95% at 28% 18%, black 0%, transparent 76%);
   pointer-events: none;
 }
 
-.study-hero-ambient::after {
+.sx-hero-bg::after {
   content: "";
   position: absolute;
-  inset: -40% -20%;
+  inset: -45% -25%;
   background: conic-gradient(
-    from 180deg at 70% 30%,
+    from 180deg at 72% 28%,
     transparent 0deg,
-    color-mix(in srgb, var(--study-accent) 7%, transparent) 90deg,
-    transparent 200deg
+    color-mix(in srgb, var(--sx-accent) 8%, transparent) 90deg,
+    transparent 210deg
   );
-  animation: study-aurora 14s linear infinite;
-  pointer-events: none;
+  animation: sx-aurora 16s linear infinite;
 }
 
-.study-hero-copy {
+.sx-hero-main {
   display: grid;
-  gap: 14px;
+  gap: 13px;
   min-width: 0;
 }
 
-.study-hero-copy > p {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-secondary, inherit);
-  max-width: 56ch;
-  margin: 0;
-}
-
-.study-hero-kicker {
+.sx-breadcrumb {
   display: flex;
   align-items: center;
+  gap: 7px;
   flex-wrap: wrap;
-  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sx-breadcrumb a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.sx-breadcrumb a:hover {
+  color: var(--sx-accent);
+}
+
+.sx-breadcrumb-current {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.sx-hero-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: max-content;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 680;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--study-accent) 78%, var(--text));
+  color: color-mix(in srgb, var(--sx-accent) 80%, var(--text));
 }
 
-.study-hero-kicker > span:not(.study-hero-sigil) {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--study-accent) 30%, transparent);
-  background: var(--study-accent-soft);
-}
-
-.study-hero-sigil {
+.sx-hero-sigil {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  color: var(--study-accent);
-  background: var(--study-accent-soft);
-  border: 1px solid color-mix(in srgb, var(--study-accent) 35%, transparent);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--study-accent) 25%, transparent);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--sx-accent);
+  background: var(--sx-accent-soft);
+  border: 1px solid var(--sx-accent-line);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--sx-accent) 24%, transparent);
 }
 
-.study-hero-title {
+.sx-title {
   margin: 0;
-  font-size: clamp(28px, 4.4vw, 46px);
-  line-height: 1.06;
-  letter-spacing: -0.02em;
-  font-weight: 760;
-  background: linear-gradient(
-    100deg,
-    var(--text) 30%,
-    color-mix(in srgb, var(--study-accent) 75%, var(--text)) 80%
-  );
+  font-size: clamp(28px, 4.6vw, 48px);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  font-weight: 780;
+  background: linear-gradient(100deg, var(--text) 28%, color-mix(in srgb, var(--sx-accent) 78%, var(--text)) 82%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.study-hero-actions {
+.sx-lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 58ch;
+}
+
+.sx-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 2px;
 }
 
-.study-hero-pill {
+.sx-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -135,290 +163,504 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text-secondary, inherit);
-  border: 1px solid var(--study-line);
-  background: var(--study-ink-faint);
-  backdrop-filter: blur(6px);
-  text-decoration: none;
-  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  color: var(--text-secondary);
+  border: 1px solid var(--sx-line);
+  background: var(--sx-faint);
 }
 
-.study-hero-pill.link:hover {
-  color: var(--study-accent);
-  border-color: color-mix(in srgb, var(--study-accent) 45%, transparent);
-  transform: translateY(-1px);
+.sx-chip.strong {
+  color: color-mix(in srgb, var(--sx-accent) 72%, var(--text));
+  border-color: var(--sx-accent-line);
+  background: var(--sx-accent-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 700;
 }
 
-/* ── Hero console: ring + quick stats ─────────────────────────────── */
+/* ── Hero side: progress orb + mini stats ─────────────────────────── */
 
-.study-hero-console {
+.sx-hero-side {
   display: flex;
   align-items: center;
-  gap: clamp(16px, 2.4vw, 28px);
-  padding: clamp(16px, 2.4vw, 24px);
+  gap: clamp(16px, 2.2vw, 26px);
+  padding: clamp(16px, 2.2vw, 22px);
   border-radius: 22px;
-  border: 1px solid var(--study-line);
-  background: color-mix(in srgb, var(--bg-surface, #11141a) 72%, transparent);
+  border: 1px solid var(--sx-line);
+  background: var(--sx-surface);
   backdrop-filter: blur(14px);
-  box-shadow: 0 18px 50px -28px color-mix(in srgb, var(--study-accent) 45%, transparent);
+  box-shadow: 0 18px 50px -30px color-mix(in srgb, var(--sx-accent) 50%, transparent);
 }
 
-.study-hero-ring,
-.study-route-ring {
-  --ring-size: 118px;
+.sx-orb {
+  --sx-orb-size: 116px;
   position: relative;
-  width: var(--ring-size);
-  height: var(--ring-size);
+  width: var(--sx-orb-size);
+  height: var(--sx-orb-size);
   flex-shrink: 0;
   display: grid;
   place-content: center;
   text-align: center;
   border-radius: 50%;
   background:
-    radial-gradient(closest-side, var(--bg-surface, #11141a) 78%, transparent 79% 100%),
+    radial-gradient(closest-side, var(--bg-surface) 77%, transparent 78%),
     conic-gradient(
-      var(--study-accent) 0%,
-      color-mix(in srgb, var(--study-accent) 55%, var(--lotus-bright, #b79ae8)) var(--study-pct, 0%),
-      color-mix(in srgb, var(--text) 9%, transparent) var(--study-pct, 0%)
+      var(--sx-accent) 0%,
+      color-mix(in srgb, var(--sx-accent) 55%, var(--lotus-bright)) var(--sx-pct, 0%),
+      color-mix(in srgb, var(--text) 9%, transparent) var(--sx-pct, 0%)
     );
   box-shadow:
-    inset 0 0 0 1px var(--study-line),
-    0 0 34px -10px color-mix(in srgb, var(--study-accent) 55%, transparent);
+    inset 0 0 0 1px var(--sx-line),
+    0 0 34px -12px color-mix(in srgb, var(--sx-accent) 58%, transparent);
 }
 
-.study-hero-ring > span,
-.study-route-ring > span {
-  font-size: 26px;
-  font-weight: 760;
+.sx-orb > span {
+  font-size: 27px;
+  font-weight: 770;
   letter-spacing: -0.02em;
   color: var(--text);
 }
 
-.study-hero-ring > small {
+.sx-orb > small {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
-  font-weight: 650;
+  font-size: 9.5px;
+  font-weight: 680;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-muted, inherit);
+  color: var(--text-muted);
 }
 
-.study-hero-console-grid {
+.sx-orb-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(86px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(74px, 1fr));
+  gap: 9px;
   flex: 1;
 }
 
-.study-hero-console-grid > div {
+.sx-orb-stats > div {
   display: grid;
   gap: 3px;
-  padding: 11px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--study-line);
-  background: var(--study-ink-faint);
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid var(--sx-line);
+  background: var(--sx-faint);
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.study-hero-console-grid > div:hover {
-  border-color: color-mix(in srgb, var(--study-accent) 40%, transparent);
+.sx-orb-stats > div:hover {
+  border-color: var(--sx-accent-line);
   transform: translateY(-2px);
 }
 
-.study-hero-console-grid span {
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.15em;
+.sx-orb-stats span {
+  font-size: 9.5px;
+  font-weight: 660;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-muted, inherit);
+  color: var(--text-muted);
 }
 
-.study-hero-console-grid strong {
-  font-size: 19px;
+.sx-orb-stats strong {
+  font-size: 18px;
   font-weight: 740;
   letter-spacing: -0.01em;
-  color: color-mix(in srgb, var(--study-accent) 60%, var(--text));
+  color: color-mix(in srgb, var(--sx-accent) 58%, var(--text));
 }
 
-/* ── Command forms (metadata / expand / study log) ────────────────── */
+/* ── Stat strip ───────────────────────────────────────────────────── */
 
-.study-command-form {
+.sx-stat-strip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.study-command-form .span-2 {
-  grid-column: span 2;
-}
-
-.study-command-field {
-  display: grid;
-  gap: 8px;
-  padding: 13px 14px 14px;
+.sx-stat {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 15px;
   border-radius: 16px;
-  border: 1px solid var(--study-line);
-  background: var(--study-ink-faint);
-  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+  border: 1px solid var(--sx-line);
+  background: linear-gradient(150deg, var(--bg-raised), var(--bg-surface));
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.study-command-field:focus-within {
-  border-color: color-mix(in srgb, var(--study-accent) 55%, transparent);
-  background: color-mix(in srgb, var(--study-accent) 5%, transparent);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--study-accent) 14%, transparent),
-    0 12px 30px -18px color-mix(in srgb, var(--study-accent) 50%, transparent);
+.sx-stat:hover {
+  border-color: var(--sx-accent-line);
+  transform: translateY(-2px);
+}
+
+.sx-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--sx-accent);
+  background: var(--sx-accent-soft);
+  border: 1px solid var(--sx-accent-line);
+}
+
+.sx-stat-body {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sx-stat-body small {
+  font-size: 10px;
+  font-weight: 640;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sx-stat-body strong {
+  font-size: 18px;
+  font-weight: 740;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+
+.sx-section {
+  display: grid;
+  gap: 16px;
+}
+
+.sx-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sx-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sx-section-title {
+  margin: 4px 0 0;
+  font-size: clamp(18px, 2.4vw, 23px);
+  font-weight: 720;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.sx-count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 660;
+  color: color-mix(in srgb, var(--sx-accent) 70%, var(--text));
+  border: 1px solid var(--sx-accent-line);
+  background: var(--sx-accent-soft);
+}
+
+/* ── Subject lanes ────────────────────────────────────────────────── */
+
+.sx-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 14px;
+}
+
+.sx-lane {
+  position: relative;
+}
+
+.sx-lane-link {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  height: 100%;
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--sx-line);
+  background: linear-gradient(160deg, var(--bg-raised), var(--bg-surface));
+  text-decoration: none;
+  transition: border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.sx-lane-link:hover {
+  border-color: var(--sx-accent-line);
+  transform: translateY(-3px);
+  box-shadow: 0 22px 50px -30px color-mix(in srgb, var(--sx-accent) 60%, transparent);
+}
+
+.sx-lane-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sx-lane-badge {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 640;
+  color: var(--text-muted);
+  border: 1px solid var(--sx-line);
+  background: var(--sx-faint);
+}
+
+.sx-lane-title {
+  font-size: 17px;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.sx-lane-copy {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sx-lane-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 12.5px;
+  font-weight: 660;
+  color: color-mix(in srgb, var(--sx-accent) 72%, var(--text));
+}
+
+.sx-lane-link:hover .sx-lane-cta {
+  gap: 9px;
+}
+
+.sx-lane-del {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sx-lane:hover .sx-lane-del,
+.sx-lane:focus-within .sx-lane-del {
+  opacity: 1;
+}
+
+.sx-lane-del button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-void) 60%, transparent);
+  border: 1px solid var(--sx-line);
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.sx-lane-del button:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* ── Jump chips (open child pages) ────────────────────────────────── */
+
+.sx-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sx-jump-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px solid var(--sx-line);
+  background: var(--sx-faint);
+  text-decoration: none;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.sx-jump-chip:hover {
+  color: var(--sx-accent);
+  border-color: var(--sx-accent-line);
   transform: translateY(-1px);
 }
 
-.study-command-label {
+/* ── Cards (forms, ledger) ────────────────────────────────────────── */
+
+.sx-card {
+  border-radius: 22px;
+}
+
+.sx-card-head {
+  margin-bottom: 4px;
+}
+
+.sx-card-head-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sx-log-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────── */
+
+.sx-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 16px;
+}
+
+.sx-form .span-2 {
+  grid-column: span 2;
+}
+
+.sx-field {
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px 13px;
+  border-radius: 15px;
+  border: 1px solid var(--sx-line);
+  background: var(--sx-faint);
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+.sx-field:focus-within {
+  border-color: color-mix(in srgb, var(--sx-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--sx-accent) 5%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--sx-accent) 13%, transparent),
+    0 12px 30px -20px color-mix(in srgb, var(--sx-accent) 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.sx-field-label {
   display: flex;
   align-items: center;
   gap: 9px;
   font-size: 11px;
   font-weight: 680;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-secondary, inherit);
+  color: var(--text-secondary);
 }
 
-.study-command-label em {
+.sx-field-label em {
   display: block;
   margin-top: 1px;
   font-size: 10px;
   font-style: normal;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: none;
-  color: var(--text-muted, inherit);
+  color: var(--text-muted);
 }
 
-.study-command-icon {
+.sx-field-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 27px;
-  height: 27px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
-  border-radius: 9px;
-  color: var(--study-accent);
-  background: var(--study-accent-soft);
-  border: 1px solid color-mix(in srgb, var(--study-accent) 28%, transparent);
+  border-radius: 8px;
+  color: var(--sx-accent);
+  background: var(--sx-accent-soft);
+  border: 1px solid var(--sx-accent-line);
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
-.study-command-field:focus-within .study-command-icon {
+.sx-field:focus-within .sx-field-icon {
   transform: scale(1.07);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--study-accent) 35%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--sx-accent) 32%, transparent);
 }
 
-/* Bare inputs inside the framed cell — the cell carries the chrome. */
-.study-command-field .field,
-.study-command-field .textarea,
-.study-command-field .select {
+/* Bare controls — the framed cell carries the chrome. */
+.sx-field .field,
+.sx-field .textarea,
+.sx-field .select {
   border: 0;
   border-radius: 8px;
-  padding: 4px 2px;
+  padding: 3px 2px;
   background: transparent;
   box-shadow: none;
   font-size: 14px;
 }
 
-.study-command-field .field:focus,
-.study-command-field .textarea:focus,
-.study-command-field .select:focus {
+.sx-field .field:focus,
+.sx-field .textarea:focus,
+.sx-field .select:focus {
   outline: none;
   box-shadow: none;
   border: 0;
 }
 
-.study-command-field .textarea {
-  min-height: 64px;
+.sx-field .textarea {
+  min-height: 62px;
   resize: vertical;
   line-height: 1.55;
 }
 
-.study-command-form .button {
+.sx-submit {
   grid-column: span 2;
   justify-self: start;
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 24px;
-  border-radius: 13px;
-  font-size: 13.5px;
-  font-weight: 680;
-  letter-spacing: 0.02em;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--study-accent) 50%, transparent);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--study-accent) 24%, transparent),
-    color-mix(in srgb, var(--study-accent) 10%, transparent)
-  );
-  color: color-mix(in srgb, var(--study-accent) 65%, var(--text));
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  margin-top: 2px;
 }
 
-.study-command-form .button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--text) 16%, transparent) 50%, transparent 70%);
-  transform: translateX(-110%);
-  transition: transform 0.55s ease;
-  pointer-events: none;
+/* ── Recent sessions ledger ───────────────────────────────────────── */
+
+.sx-readonly-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.study-command-form .button:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--study-accent) 75%, transparent);
-  box-shadow: 0 14px 34px -16px color-mix(in srgb, var(--study-accent) 60%, transparent);
-}
-
-.study-command-form .button:hover::after {
-  transform: translateX(110%);
-}
-
-/* ── Ops + log layout grids ───────────────────────────────────────── */
-
-.study-ops-grid,
-.study-log-command-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.study-log-command-grid {
-  align-items: start;
-}
-
-.study-form-panel {
-  border-radius: 22px;
-  animation: study-rise 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
-}
-
-/* ── Recent logs ledger ───────────────────────────────────────────── */
-
-.study-ledger-shell {
+.sx-ledger-shell {
   margin-top: 14px;
   border-radius: 16px;
-  border: 1px solid var(--study-line);
+  border: 1px solid var(--sx-line);
   overflow: auto;
-  max-height: 560px;
+  max-height: 540px;
 }
 
-.study-log-ledger {
+.sx-ledger {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-.study-log-ledger thead th {
+.sx-ledger thead th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -426,164 +668,215 @@
   text-align: left;
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-muted, inherit);
-  background: color-mix(in srgb, var(--bg-raised, #161a21) 92%, transparent);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--study-line);
+  border-bottom: 1px solid var(--sx-line);
 }
 
-.study-log-ledger tbody td {
+.sx-ledger tbody td {
   padding: 12px 14px;
   vertical-align: middle;
   border-bottom: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-.study-log-ledger tbody tr {
+.sx-ledger tbody tr {
   transition: background 0.18s ease;
 }
 
-.study-log-ledger tbody tr:hover {
-  background: color-mix(in srgb, var(--study-accent) 5%, transparent);
+.sx-ledger tbody tr:hover {
+  background: color-mix(in srgb, var(--sx-accent) 5%, transparent);
 }
 
-.study-log-ledger tbody tr:last-child td {
+.sx-ledger tbody tr:last-child td {
   border-bottom: 0;
 }
 
-.study-log-title {
+.sx-ledger-title {
   display: block;
   font-weight: 640;
   color: var(--text);
 }
 
-.study-log-subject {
+.sx-ledger-sub {
   display: block;
   margin-top: 2px;
   font-size: 11px;
-  color: var(--text-muted, inherit);
+  color: var(--text-muted);
 }
 
-.study-log-chip {
+.sx-ledger-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 26px 14px;
+}
+
+.sx-tag {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 11.5px;
   font-weight: 680;
-  letter-spacing: 0.02em;
   border: 1px solid transparent;
   white-space: nowrap;
 }
 
-.study-log-chip.gold {
+.sx-tag.gold {
   color: color-mix(in srgb, var(--gold) 72%, var(--text));
   background: color-mix(in srgb, var(--gold) 13%, transparent);
   border-color: color-mix(in srgb, var(--gold) 30%, transparent);
 }
 
-.study-log-chip.blue {
+.sx-tag.blue {
   color: color-mix(in srgb, var(--physics) 76%, var(--text));
   background: color-mix(in srgb, var(--physics) 13%, transparent);
   border-color: color-mix(in srgb, var(--physics) 30%, transparent);
 }
 
-.study-log-chip.green {
+.sx-tag.green {
   color: color-mix(in srgb, var(--botany) 76%, var(--text));
   background: color-mix(in srgb, var(--botany) 13%, transparent);
   border-color: color-mix(in srgb, var(--botany) 30%, transparent);
 }
 
-.study-log-ledger .icon-action-button {
+.sx-ledger-del {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 9px;
-  color: var(--text-muted, inherit);
+  color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
   transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
-.study-log-ledger .icon-action-button:hover {
-  color: var(--rose-bright, #f17e9a);
-  background: color-mix(in srgb, var(--rose, #d9577a) 12%, transparent);
-  border-color: color-mix(in srgb, var(--rose, #d9577a) 32%, transparent);
+.sx-ledger-del:hover {
+  color: var(--rose-bright);
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  border-color: color-mix(in srgb, var(--rose) 32%, transparent);
 }
 
-/* ── Accent inheritance per paper (uses nav accent vars) ──────────── */
+/* ── Manage drawer ────────────────────────────────────────────────── */
 
-.study-route-page[data-accent="gs1"] { --study-accent: var(--gs1); }
-.study-route-page[data-accent="gs2"] { --study-accent: var(--gs2); }
-.study-route-page[data-accent="gs3"] { --study-accent: var(--gs3); }
-.study-route-page[data-accent="gs4"] { --study-accent: var(--gs4); }
-.study-route-page[data-accent="psir"] { --study-accent: var(--psir); }
-.study-route-page[data-accent="csat"] { --study-accent: var(--csat); }
-.study-route-page[data-accent="essay"] { --study-accent: var(--lotus-bright); }
-
-/* ── Motion & responsive ──────────────────────────────────────────── */
-
-@keyframes study-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.sx-manage {
+  border-radius: 20px;
+  border: 1px solid var(--sx-line);
+  background: linear-gradient(150deg, var(--bg-raised), var(--bg-surface));
+  overflow: hidden;
 }
 
-@keyframes study-aurora {
-  to {
-    transform: rotate(1turn);
-  }
+.sx-manage-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 660;
+  color: var(--text-secondary);
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.sx-manage-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sx-manage-summary:hover {
+  color: var(--text);
+  background: var(--sx-faint);
+}
+
+.sx-manage-summary-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sx-manage-summary-main svg {
+  color: var(--sx-accent);
+}
+
+.sx-manage-chevron {
+  color: var(--text-muted);
+  transition: transform 0.24s ease;
+}
+
+.sx-manage[open] .sx-manage-chevron {
+  transform: rotate(90deg);
+}
+
+.sx-manage-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 4px 16px 18px;
+}
+
+/* ── Motion ───────────────────────────────────────────────────────── */
+
+@keyframes sx-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sx-aurora {
+  to { transform: rotate(1turn); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .study-command-hero,
-  .study-form-panel {
-    animation: none;
-  }
-  .study-hero-ambient::after {
-    animation: none;
+  .sx-hero { animation: none; }
+  .sx-hero-bg::after { animation: none; }
+}
+
+/* ── Responsive: tablet ───────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .sx-stat-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 980px) {
-  .study-command-hero {
+@media (max-width: 900px) {
+  .sx-hero {
     grid-template-columns: 1fr;
   }
-  .study-hero-console {
-    flex-direction: row;
+  .sx-log-grid {
+    grid-template-columns: 1fr;
   }
-  .study-ops-grid,
-  .study-log-command-grid {
+  .sx-manage-body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Responsive: phone ────────────────────────────────────────────── */
 
 @media (max-width: 560px) {
-  .study-hero-console {
+  .sx-hero-side {
     flex-direction: column;
     align-items: stretch;
-    text-align: left;
+    text-align: center;
   }
-  .study-hero-ring {
+  .sx-orb {
     justify-self: center;
   }
-  .study-command-form {
+  .sx-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sx-form {
     grid-template-columns: 1fr;
   }
-  .study-command-form .span-2,
-  .study-command-form .button {
+  .sx-form .span-2,
+  .sx-submit {
     grid-column: span 1;
   }
-  .study-ledger-shell {
+  .sx-ledger-shell {
     max-height: 420px;
   }
 }

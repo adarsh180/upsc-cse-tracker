@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Sparkles, RefreshCw, AlertTriangle, Flame, BookMarked, Compass, ShieldCheck, Target, Smartphone } from "lucide-react";
+import { useState, useTransition, type CSSProperties } from "react";
+import { AlertTriangle, BookMarked, Compass, Flame, RefreshCw, ShieldCheck, Smartphone, Target } from "lucide-react";
 
 import { generateGoalsInsightAction, type GoalsInsight } from "@/app/goals/actions";
 
 const VERDICT_TONE: Record<string, { color: string; label: string }> = {
-  PEAK: { color: "hsl(38, 96%, 60%)", label: "Peak momentum" },
-  STRONG: { color: "hsl(168, 70%, 54%)", label: "Strong momentum" },
-  BUILDING: { color: "hsl(199, 78%, 60%)", label: "Building" },
-  DRIFTING: { color: "hsl(28, 92%, 60%)", label: "Drifting" },
-  STALLED: { color: "var(--danger)", label: "Stalled" },
+  PEAK: { color: "var(--goals-gold)", label: "Peak momentum" },
+  STRONG: { color: "var(--goals-success-strong)", label: "Strong momentum" },
+  BUILDING: { color: "var(--goals-blue)", label: "Building" },
+  DRIFTING: { color: "var(--goals-warning)", label: "Drifting" },
+  STALLED: { color: "var(--goals-danger)", label: "Stalled" },
 };
 
 const PRIORITY_TONE: Record<string, string> = {
-  HIGH: "var(--danger)",
-  MEDIUM: "hsl(38, 92%, 62%)",
-  LOW: "hsl(199, 78%, 62%)",
+  HIGH: "var(--goals-danger)",
+  MEDIUM: "var(--goals-warning)",
+  LOW: "var(--goals-blue)",
 };
 
 export function GoalsSuggestionPanel() {
@@ -46,24 +46,24 @@ export function GoalsSuggestionPanel() {
   const verdict = m ? VERDICT_TONE[m.momentumVerdict] : null;
 
   return (
-    <article className="glass panel goals-suggest-panel">
+    <article className="glass panel goals-suggest-panel goals-ledger-card">
       <div className="goals-panel-head">
         <div>
-          <div className="eyebrow">AI revision radar</div>
-          <div className="display goals-panel-title">What to revise next</div>
+          <div className="eyebrow">Misti brief</div>
+          <div className="display goals-panel-title">Revision intelligence</div>
         </div>
         <button type="button" className="goals-suggest-trigger" onClick={run} disabled={pending}>
-          {pending ? <RefreshCw size={15} className="spin" /> : <Sparkles size={15} />}
-          {pending ? "Analysing…" : insight ? "Re-run" : "Run deep analysis"}
+          {pending ? <RefreshCw size={15} className="spin" /> : <Compass size={15} />}
+          {pending ? "Analysing..." : insight ? "Refresh brief" : "Generate brief"}
         </button>
       </div>
 
       {!insight && !pending && (
         <div className="goals-suggest-empty">
-          <Sparkles size={26} />
+          <Compass size={26} />
           <p>
-            Run a one-shot scan across your hours, revision history, weak subjects and stale topics. The model only fires
-            when you ask — it reads <b>all</b> your data and tells you exactly what is decaying and what to pick up next.
+            Generate a focused read across hours, stale subjects, weak revision zones, and distraction debt. Nothing runs
+            automatically; the brief appears only when you ask.
           </p>
         </div>
       )}
@@ -78,14 +78,19 @@ export function GoalsSuggestionPanel() {
 
       {insight && !pending && (
         <div className="goals-suggest-body">
-          {/* Deterministic momentum band — always shown, even if AI failed */}
           {m && (
             <div className="goals-momentum-band">
-              <div className="goals-momentum-score" style={{ "--mo-color": verdict?.color } as React.CSSProperties}>
-                <svg viewBox="0 0 100 100" width={92} height={92}>
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="9" />
+              <div className="goals-momentum-score" style={{ "--mo-color": verdict?.color } as CSSProperties}>
+                <svg viewBox="0 0 100 100" width={92} height={92} aria-hidden="true">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--goals-ring-track)" strokeWidth="9" />
                   <circle
-                    cx="50" cy="50" r="42" fill="none" stroke={verdict?.color} strokeWidth="9" strokeLinecap="round"
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke={verdict?.color}
+                    strokeWidth="9"
+                    strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 42}
                     strokeDashoffset={2 * Math.PI * 42 * (1 - m.momentumScore / 100)}
                     transform="rotate(-90 50 50)"
@@ -98,12 +103,30 @@ export function GoalsSuggestionPanel() {
                 </div>
               </div>
               <div className="goals-momentum-stats">
-                <div><strong>{m.avgHours}h</strong><span>avg / day</span></div>
-                <div><strong style={{ color: "hsl(148,62%,56%)" }}>{m.goodDays}</strong><span>8h+ days</span></div>
-                <div><strong style={{ color: "hsl(38,96%,62%)" }}>{m.peakDays}</strong><span>12h+ days</span></div>
-                <div><strong style={{ color: m.belowParDays > m.goodDays ? "var(--danger)" : "var(--text)" }}>{m.belowParDays}</strong><span>sub-8h days</span></div>
-                <div><strong>{m.consistencyPct}%</strong><span>good-day rate</span></div>
-                <div><strong style={{ color: "var(--danger)" }}>{m.hoursDebt}h</strong><span>hours debt</span></div>
+                <div>
+                  <strong>{m.avgHours}h</strong>
+                  <span>avg / day</span>
+                </div>
+                <div>
+                  <strong style={{ color: "var(--goals-success)" }}>{m.goodDays}</strong>
+                  <span>8h+ days</span>
+                </div>
+                <div>
+                  <strong style={{ color: "var(--goals-gold)" }}>{m.peakDays}</strong>
+                  <span>12h+ days</span>
+                </div>
+                <div>
+                  <strong style={{ color: m.belowParDays > m.goodDays ? "var(--goals-danger)" : "var(--goals-ink)" }}>{m.belowParDays}</strong>
+                  <span>sub-8h days</span>
+                </div>
+                <div>
+                  <strong>{m.consistencyPct}%</strong>
+                  <span>good-day rate</span>
+                </div>
+                <div>
+                  <strong style={{ color: "var(--goals-danger)" }}>{m.hoursDebt}h</strong>
+                  <span>hours debt</span>
+                </div>
               </div>
             </div>
           )}
@@ -120,13 +143,17 @@ export function GoalsSuggestionPanel() {
                 </div>
                 <div className="goals-distraction-stats">
                   {insight.distraction.topApp && (
-                    <span>Top sink · <b>{insight.distraction.topApp}</b> ({insight.distraction.topAppHours}h)</span>
+                    <span>
+                      Top sink: <b>{insight.distraction.topApp}</b> ({insight.distraction.topAppHours}h)
+                    </span>
                   )}
                   <span>{insight.distraction.highDays} heavy days (3h+)</span>
-                  <span>Study YT · <b style={{ color: "hsl(148,62%,56%)" }}>{insight.distraction.studyYouTube}h</b></span>
+                  <span>
+                    Study YT: <b style={{ color: "var(--goals-success)" }}>{insight.distraction.studyYouTube}h</b>
+                  </span>
                   {insight.distraction.onLowStudyDays > 0 && (
                     <span>
-                      On sub-8h days you scroll <b style={{ color: "var(--danger)" }}>{insight.distraction.onLowStudyDays}h</b> vs{" "}
+                      On sub-8h days you scroll <b style={{ color: "var(--goals-danger)" }}>{insight.distraction.onLowStudyDays}h</b> vs{" "}
                       {insight.distraction.onGoodStudyDays}h on good days
                     </span>
                   )}
@@ -159,10 +186,13 @@ export function GoalsSuggestionPanel() {
 
               <div className="goals-suggest-cols">
                 <section className="goals-suggest-col">
-                  <h4><BookMarked size={14} /> Revise now</h4>
+                  <h4>
+                    <BookMarked size={14} />
+                    Revise now
+                  </h4>
                   <ul>
                     {insight.ai.reviseNow?.map((r, i) => (
-                      <li key={i} style={{ "--p-tone": PRIORITY_TONE[r.priority] ?? "var(--text-muted)" } as React.CSSProperties}>
+                      <li key={`${r.area}-${i}`} style={{ "--p-tone": PRIORITY_TONE[r.priority] ?? "var(--goals-muted)" } as CSSProperties}>
                         <div className="goals-suggest-li-head">
                           <span className="goals-suggest-dot" />
                           <strong>{r.area}</strong>
@@ -175,10 +205,13 @@ export function GoalsSuggestionPanel() {
                 </section>
 
                 <section className="goals-suggest-col">
-                  <h4><Compass size={14} /> Study next</h4>
+                  <h4>
+                    <Compass size={14} />
+                    Study next
+                  </h4>
                   <ul>
                     {insight.ai.studyNext?.map((s, i) => (
-                      <li key={i} style={{ "--p-tone": "hsl(199,78%,62%)" } as React.CSSProperties}>
+                      <li key={`${s.area}-${i}`} style={{ "--p-tone": "var(--goals-blue)" } as CSSProperties}>
                         <div className="goals-suggest-li-head">
                           <span className="goals-suggest-dot" />
                           <strong>{s.area}</strong>
@@ -194,11 +227,17 @@ export function GoalsSuggestionPanel() {
                 <div className="goals-suggest-habit">
                   <div className="goals-suggest-habit-card good">
                     <ShieldCheck size={15} />
-                    <div><span>Protect</span><p>{insight.ai.habitFix.strength}</p></div>
+                    <div>
+                      <span>Protect</span>
+                      <p>{insight.ai.habitFix.strength}</p>
+                    </div>
                   </div>
                   <div className="goals-suggest-habit-card fix">
                     <Target size={15} />
-                    <div><span>Fix</span><p>{insight.ai.habitFix.fix}</p></div>
+                    <div>
+                      <span>Fix</span>
+                      <p>{insight.ai.habitFix.fix}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -206,7 +245,7 @@ export function GoalsSuggestionPanel() {
               {insight.ai.weeklyTargets?.length > 0 && (
                 <div className="goals-suggest-targets">
                   {insight.ai.weeklyTargets.map((t, i) => (
-                    <div key={i} className="goals-suggest-target">
+                    <div key={`${t.label}-${i}`} className="goals-suggest-target">
                       <span>{t.label}</span>
                       <strong>{t.target}</strong>
                     </div>
@@ -218,18 +257,17 @@ export function GoalsSuggestionPanel() {
             </>
           )}
 
-          {/* Deterministic stale areas — always available */}
           {insight.computedStale.length > 0 && (
             <details className="goals-suggest-stale" open={!insight.ai}>
-              <summary>Detected stale &amp; neglected zones ({insight.computedStale.length})</summary>
+              <summary>Detected stale and neglected zones ({insight.computedStale.length})</summary>
               <div className="goals-suggest-stale-list">
                 {insight.computedStale.map((s, i) => (
-                  <div key={i} className="goals-suggest-stale-item" style={{ "--p-tone": PRIORITY_TONE[s.priority] } as React.CSSProperties}>
+                  <div key={`${s.area}-${i}`} className="goals-suggest-stale-item" style={{ "--p-tone": PRIORITY_TONE[s.priority] } as CSSProperties}>
                     <div className="goals-suggest-stale-top">
                       <strong>{s.area}</strong>
                       <em>{s.priority}</em>
                     </div>
-                    <span>{s.signal} · {s.lastTouched}</span>
+                    <span>{s.signal} / {s.lastTouched}</span>
                   </div>
                 ))}
               </div>
@@ -238,7 +276,7 @@ export function GoalsSuggestionPanel() {
 
           <div className="goals-suggest-meta">
             Generated {new Date(insight.generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-            {insight.model !== "none" ? ` · ${insight.model}` : ""}
+            {insight.model !== "none" ? ` / ${insight.model}` : ""}
           </div>
         </div>
       )}

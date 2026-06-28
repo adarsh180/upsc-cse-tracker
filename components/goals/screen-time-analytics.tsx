@@ -11,6 +11,9 @@ export type ScreenTimeRow = { date: string } & Record<string, number | string>;
 const DISTRACTION_APPS = SCREEN_APPS.filter((a) => a.key !== "youtubeStudy");
 const STUDY_KEY = "youtubeStudy";
 const STUDY_APP = SCREEN_APPS.find((a) => a.key === STUDY_KEY)!;
+const chartGrid = "var(--goals-chart-grid)";
+const chartAxis = "var(--goals-chart-axis)";
+const chartCursor = "var(--goals-chart-cursor)";
 
 type ViewKey = "today" | "7d" | "monthly" | "yearly";
 const VIEWS: Array<{ key: ViewKey; label: string }> = [
@@ -46,6 +49,15 @@ function addDays(key: string, days: number) {
   return dt.toISOString().slice(0, 10);
 }
 
+function axisProps() {
+  return {
+    tickLine: false,
+    axisLine: false,
+    stroke: chartAxis,
+    tick: { fontSize: 11, fontWeight: 700, fill: chartAxis },
+  };
+}
+
 function StackTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   const b = payload[0]?.payload as Bucket | undefined;
@@ -57,7 +69,7 @@ function StackTooltip({ active, payload }: TooltipProps<number, string>) {
     <div className="goals-chart-tooltip">
       <strong>{b.label}</strong>
       <div>
-        <span style={{ color: "var(--text)" }}>Distraction: {b.distraction}h · Study YT: {b.study}h</span>
+        <span style={{ color: "var(--goals-ink)" }}>Distraction: {b.distraction}h / Study YT: {b.study}h</span>
         {parts.map((p) => (
           <span key={p.a.key} style={{ color: p.a.solid }}>
             <i style={{ background: p.a.solid }} />
@@ -78,7 +90,10 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
     return map;
   }, [rows]);
 
-  const todayBucket = useMemo(() => bucketFromRows("Today", [byDate.get(todayKey) ?? ({ date: todayKey } as ScreenTimeRow)]), [byDate, todayKey]);
+  const todayBucket = useMemo(
+    () => bucketFromRows("Today", [byDate.get(todayKey) ?? ({ date: todayKey } as ScreenTimeRow)]),
+    [byDate, todayKey],
+  );
 
   const buckets = useMemo<Bucket[]>(() => {
     if (view === "today") return [todayBucket];
@@ -93,7 +108,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
       }
       return out;
     }
-    // monthly / yearly grouping
+
     const groups = new Map<string, ScreenTimeRow[]>();
     for (const r of rows) {
       const k = view === "monthly" ? r.date.slice(0, 7) : r.date.slice(0, 4);
@@ -107,9 +122,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
       .map(([k, grp]) => {
         const label =
           view === "monthly"
-            ? new Intl.DateTimeFormat("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" }).format(
-                new Date(`${k}-01T00:00:00Z`),
-              )
+            ? new Intl.DateTimeFormat("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" }).format(new Date(`${k}-01T00:00:00Z`))
             : k;
         return bucketFromRows(label, grp);
       });
@@ -119,7 +132,6 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
     const totalDistraction = buckets.reduce((s, b) => s + b.distraction, 0);
     const totalStudy = buckets.reduce((s, b) => s + b.study, 0);
     const avg = buckets.length ? totalDistraction / buckets.length : 0;
-    const worst = buckets.reduce((m, b) => (b.distraction > m ? b.distraction : m), 0);
     const appTotals = DISTRACTION_APPS.map((a) => ({
       a,
       v: buckets.reduce((s, b) => s + (Number(b[a.key]) || 0), 0),
@@ -131,7 +143,6 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
       totalStudy: Number(totalStudy.toFixed(1)),
       avg: Number(avg.toFixed(1)),
       avgLabel,
-      worst: Number(worst.toFixed(1)),
       top: top && top.v > 0 ? top : null,
     };
   }, [buckets, view]);
@@ -146,7 +157,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
             role="tab"
             aria-selected={v.key === view}
             className={`goals-analytics-tab${v.key === view ? " active" : ""}`}
-            style={{ "--tab-accent": "var(--rose-bright)" } as CSSProperties}
+            style={{ "--tab-accent": "var(--goals-red)" } as CSSProperties}
             onClick={() => setView(v.key)}
           >
             {v.label}
@@ -157,7 +168,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
       <div className="screen-time-kpis">
         <div className="screen-time-kpi">
           <span>{view === "today" ? "Distraction today" : "Total distraction"}</span>
-          <strong style={{ color: kpi.totalDistraction >= (view === "today" ? 3 : 14) ? "var(--danger)" : "var(--text)" }}>
+          <strong style={{ color: kpi.totalDistraction >= (view === "today" ? 3 : 14) ? "var(--goals-danger)" : "var(--goals-ink)" }}>
             {kpi.totalDistraction}h
           </strong>
         </div>
@@ -169,7 +180,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
         )}
         <div className="screen-time-kpi">
           <span>Study YouTube</span>
-          <strong style={{ color: "hsl(148,62%,56%)" }}>{kpi.totalStudy}h</strong>
+          <strong style={{ color: "var(--goals-success)" }}>{kpi.totalStudy}h</strong>
         </div>
         <div className="screen-time-kpi">
           <span>Top sink</span>
@@ -180,7 +191,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
                 {kpi.top.a.label}
               </>
             ) : (
-              "—"
+              "None"
             )}
           </strong>
         </div>
@@ -189,7 +200,7 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
       {view === "today" ? (
         <div className="screen-time-today">
           {DISTRACTION_APPS.map((a) => ({ a, v: Number(todayBucket[a.key]) || 0 }))
-            .concat([{ a: SCREEN_APPS.find((x) => x.key === STUDY_KEY)!, v: todayBucket.study }])
+            .concat([{ a: STUDY_APP, v: todayBucket.study }])
             .filter((p) => p.v > 0)
             .sort((x, y) => y.v - x.v)
             .map((p) => {
@@ -205,38 +216,29 @@ export function ScreenTimeAnalytics({ rows, todayKey }: { rows: ScreenTimeRow[];
                 </div>
               );
             })}
-          {todayBucket.total === 0 && (
-            <div className="screen-time-empty">No screen time logged for today yet. Log it above to see the breakdown.</div>
-          )}
+          {todayBucket.total === 0 && <div className="screen-time-empty">No screen time logged for today yet. Log it above to see the breakdown.</div>}
         </div>
       ) : (
         <>
           <div className="screen-time-plot">
             <ResponsiveContainer>
               <BarChart data={buckets} margin={{ top: 14, right: 14, bottom: 4, left: -10 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} stroke="rgba(238,232,217,0.46)" tick={{ fontSize: 11, fontWeight: 700 }} minTickGap={10} />
-                <YAxis tickLine={false} axisLine={false} stroke="rgba(238,232,217,0.42)" tick={{ fontSize: 11, fontWeight: 700 }} width={32} tickFormatter={(v) => `${v}h`} />
-                <Tooltip content={<StackTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                <CartesianGrid stroke={chartGrid} vertical={false} />
+                <XAxis dataKey="label" minTickGap={10} {...axisProps()} />
+                <YAxis width={32} tickFormatter={(v) => `${v}h`} {...axisProps()} />
+                <Tooltip content={<StackTooltip />} cursor={{ fill: chartCursor }} />
                 {DISTRACTION_APPS.map((a, i) => (
                   <Bar
                     key={a.key}
                     dataKey={a.key}
                     stackId="distraction"
                     fill={a.solid}
-                    fillOpacity={0.92}
+                    fillOpacity={0.82}
                     radius={i === DISTRACTION_APPS.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
-                    animationDuration={680}
+                    animationDuration={620}
                   />
                 ))}
-                <Bar
-                  dataKey={STUDY_KEY}
-                  stackId="study"
-                  fill={STUDY_APP.solid}
-                  fillOpacity={0.82}
-                  radius={[6, 6, 0, 0]}
-                  animationDuration={760}
-                />
+                <Bar dataKey={STUDY_KEY} stackId="study" fill={STUDY_APP.solid} fillOpacity={0.86} radius={[6, 6, 0, 0]} animationDuration={720} />
               </BarChart>
             </ResponsiveContainer>
           </div>

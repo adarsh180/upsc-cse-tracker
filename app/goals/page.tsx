@@ -1,4 +1,5 @@
-import { Flame, Target } from "lucide-react";
+import { CalendarDays, Flame, Gauge, ShieldCheck, Smartphone, Target } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { DailyLogForm, type DailyLogDefaults } from "@/components/goals/daily-log-form";
 import { GoalsAnalytics } from "@/components/goals/goals-analytics";
@@ -181,16 +182,83 @@ export default async function GoalsPage() {
       }
     : {};
 
+  const recentScreenRows = screenTimeRows.slice(0, 7);
+  const distractionKeys = [
+    "instagram",
+    "whatsapp",
+    "youtube",
+    "facebook",
+    "netflix",
+    "hotstar",
+    "mxPlayer",
+    "google",
+    "other",
+  ] as const;
+  const screenDebt7 = recentScreenRows.reduce(
+    (sum, row) => sum + distractionKeys.reduce((inner, key) => inner + (Number(row[key]) || 0), 0),
+    0,
+  );
+  const studyYoutube7 = recentScreenRows.reduce((sum, row) => sum + (Number(row.youtubeStudy) || 0), 0);
+  const todayStatus =
+    dailyLogDefaults.totalHours >= 12
+      ? "Peak"
+      : dailyLogDefaults.totalHours >= 8
+        ? "Good"
+        : dailyLogDefaults.totalHours > 0
+          ? "Below bar"
+          : "Open";
+  const dailyReadiness = Math.round(
+    Math.min(
+      100,
+      dailyLogDefaults.totalHours * 5 +
+        dailyLogDefaults.completion * 0.28 +
+        dailyLogDefaults.disciplineScore * 0.22 +
+        Math.min(dailyLogDefaults.questionsSolved, 100) * 0.1,
+    ),
+  );
+
   return (
-    <main className="page-shell goals-page">
+    <main className="page-shell goals-page goals-command-page">
       <PageIntro
         eyebrow="Daily Goals"
-        title="Execution, beautifully measured."
-        description="Log the day, watch the grind ladder climb, and let the radar tell you exactly what to revise next."
+        title="Daily command ledger."
+        description="Close the day with clean numbers, distraction truth, and one precise revision brief."
         glyph="goals"
       />
 
       <section className="section-stack goals-v2-stack">
+        <section className="goals-command-hero" aria-label="Daily goals summary">
+          <div className="goals-command-hero-copy">
+            <div className="goals-command-kicker">
+              <CalendarDays size={15} />
+              {todayLabel}
+            </div>
+            <h2>Execution room</h2>
+            <p>
+              A quiet daily closeout for hours, output, subject coverage, and the exact places attention leaked.
+            </p>
+          </div>
+          <div className="goals-command-score" style={{ "--score": `${dailyReadiness}%` } as CSSProperties}>
+            <span>Today score</span>
+            <strong>{dailyReadiness}</strong>
+            <i aria-hidden="true" />
+          </div>
+          <div className="goals-command-stat-grid">
+            {[
+              { icon: <Flame size={16} />, label: "Today", value: todayStatus, tone: "var(--goals-success)" },
+              { icon: <Gauge size={16} />, label: "7d hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "var(--goals-blue)" },
+              { icon: <ShieldCheck size={16} />, label: "Discipline", value: `${avgDiscipline}/100`, tone: "var(--goals-gold)" },
+              { icon: <Smartphone size={16} />, label: "7d distraction", value: `${screenDebt7.toFixed(1)}h`, tone: "var(--goals-danger)" },
+            ].map((item) => (
+              <div key={item.label} className="goals-command-stat" style={{ "--stat-tone": item.tone } as CSSProperties}>
+                <i>{item.icon}</i>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="goals-v2-top">
           <DailyLogForm
             todayKey={todayKey}
@@ -202,7 +270,7 @@ export default async function GoalsPage() {
           />
 
           <div className="goals-snapshot-column">
-            <article className="glass panel goals-snapshot-panel">
+            <article className="glass panel goals-snapshot-panel goals-ledger-card">
               <div className="goals-panel-head">
                 <div>
                   <div className="eyebrow">7-day signal</div>
@@ -221,6 +289,7 @@ export default async function GoalsPage() {
                   { label: "12h+ days", value: `${peakDays7}/${recentLogs.length || 0}`, tone: "var(--gold)" },
                   { label: "Questions", value: sevenDayQuestions, tone: "var(--botany)" },
                   { label: "Discipline", value: `${avgDiscipline}/100`, tone: "var(--gold)" },
+                  { label: "Study YT", value: `${studyYoutube7.toFixed(1)}h`, tone: "var(--goals-success)" },
                 ].map((item) => (
                   <div key={item.label} className="goals-snapshot-card">
                     <span>{item.label}</span>
@@ -230,7 +299,7 @@ export default async function GoalsPage() {
               </div>
             </article>
 
-            <article className="glass panel goals-reflection-panel">
+            <article className="glass panel goals-reflection-panel goals-ledger-card">
               <div className="goals-panel-head">
                 <div>
                   <div className="eyebrow">Latest reflection</div>
