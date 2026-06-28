@@ -295,6 +295,8 @@ function TopicRow({
           )}
           <button
             type="button"
+            aria-pressed={isChecked}
+            aria-label={`${isChecked ? "Mark incomplete" : "Mark complete"}: ${topic.title}`}
             onClick={async () => {
               const nextChecked = !isChecked;
               const idsToUpdate = isContainer ? collectNodeIds(topic) : [topic.id];
@@ -307,7 +309,7 @@ function TopicRow({
             }}
             className="study-topic-main"
           >
-            <div className="topic-checkbox" />
+            <span className="topic-checkbox" aria-hidden="true" />
             {!editing ? (
               <div className="topic-label">
                 <span className={isChecked ? "done" : ""}>{topic.title}</span>
