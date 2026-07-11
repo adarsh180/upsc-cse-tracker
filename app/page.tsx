@@ -1,60 +1,38 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BarChart3,
+  BookOpen,
   BrainCircuit,
   CalendarClock,
+  Check,
   LineChart,
   Target,
   Trophy,
-  BookOpen,
 } from "lucide-react";
 
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { getSession } from "@/lib/auth";
 import { examCountdown } from "@/lib/utils";
 
-const features = [
-  {
-    icon: Target,
-    title: "Daily goals & discipline",
-    desc: "Hours, questions, blockers and completion — logged honestly, scored daily.",
-  },
-  {
-    icon: Trophy,
-    title: "Test tracking",
-    desc: "Every prelims and mains test with score curves and error analysis.",
-  },
-  {
-    icon: LineChart,
-    title: "Performance analytics",
-    desc: "Subject drift, readiness scores and trends from your real data.",
-  },
-  {
-    icon: BrainCircuit,
-    title: "UPSC Guru AI",
-    desc: "A strict mentor that reads your live data — coaching, essays, rank prediction.",
-  },
-  {
-    icon: BookOpen,
-    title: "Full study tree",
-    desc: "GS 1–4, PSIR, CSAT, Essay — chapter-level progress for every paper.",
-  },
-  {
-    icon: CalendarClock,
-    title: "Exam countdowns",
-    desc: "Prelims and Mains clocks with readiness signals, always in view.",
-  },
+const capabilities = [
+  { icon: Target, title: "Daily execution", desc: "Plan, log and score the work that moves the attempt forward." },
+  { icon: Trophy, title: "Stage-aware tests", desc: "Distinct prelims and mains workflows with relevant error analysis." },
+  { icon: LineChart, title: "Performance signals", desc: "See trend, readiness and subject drift without reading noisy reports." },
+  { icon: BrainCircuit, title: "Contextual AI mentor", desc: "Coaching grounded in your live preparation data, not generic advice." },
+  { icon: BookOpen, title: "Complete study tree", desc: "GS 1–4, Optional, CSAT and Essay organized down to every topic." },
+  { icon: CalendarClock, title: "Exam horizon", desc: "Countdown and readiness stay connected to the work behind them." },
 ];
 
 export default async function LandingPage() {
   const session = await getSession();
   const prelims = examCountdown(process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30");
   const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
+  const entryHref = session ? "/dashboard" : "/sign-in";
 
   return (
-    <main className="ld-shell editorial-landing">
-      {/* Nav */}
-      <header className="ld-nav anim-fade-up">
+    <main className="apex-landing">
+      <header className="apex-nav">
         <Link href="/" className="v2-brand">
           <SacredLogoMark size="sm" />
           <span>
@@ -62,100 +40,91 @@ export default async function LandingPage() {
             <span className="v2-brand-sub">UPSC CSE 2027</span>
           </span>
         </Link>
-        <Link href={session ? "/dashboard" : "/sign-in"} className="button-secondary">
-          {session ? "Dashboard" : "Sign in"}
+        <div className="apex-nav-status"><span /> Private preparation workspace</div>
+        <Link href={entryHref} className="apex-nav-action">
+          {session ? "Dashboard" : "Sign in"}<ArrowRight size={14} />
         </Link>
       </header>
 
-      {/* Hero */}
-      <section className="ld-hero ld-command-hero">
-        <div className="ld-hero-copy">
-          <div className="ld-hero-badge anim-fade-up">UPSC CSE 2027 · Third attempt</div>
-          <h1 className="ld-hero-title anim-fade-up">
-            The serious attempt deserves a <em>serious system</em>.
-          </h1>
-          <p className="ld-hero-sub anim-fade-up">
-            One private command centre for syllabus progress, daily discipline, prelims and mains tests,
-            mood, revision and AI coaching. Every signal comes from work you actually logged.
+      <section className="apex-hero">
+        <div className="apex-hero-copy">
+          <div className="apex-kicker">A personal operating system for UPSC CSE</div>
+          <h1>Prepare with evidence.<br /><span>Execute with clarity.</span></h1>
+          <p>
+            One focused workspace for syllabus mastery, daily discipline, tests, revision,
+            wellbeing and AI guidance—designed around the attempt that matters.
           </p>
-          <div className="ld-hero-cta anim-fade-up">
-            <Link href={session ? "/dashboard" : "/sign-in"} className="button ld-primary-cta">
-              {session ? "Open command centre" : "Enter workspace"}
-              <ArrowRight size={16} />
+          <div className="apex-hero-actions">
+            <Link href={entryHref} className="apex-primary-action">
+              {session ? "Open your workspace" : "Start your workspace"}<ArrowRight size={16} />
             </Link>
-            <span className="ld-private-note">Private by design · Evidence over optimism</span>
+            <div className="apex-proof"><Check size={14} /> Real data only <span>·</span> No vanity scores</div>
           </div>
         </div>
 
-        <aside className="ld-live-board anim-fade-up" aria-label="Live exam horizon">
-          <div className="ld-live-head">
-            <span><span className="ld-live-dot" />System online</span>
-            <span>IST · Live</span>
+        <div className="apex-product-frame" aria-label="Workspace preview">
+          <div className="apex-frame-bar">
+            <span>Today&apos;s command</span>
+            <span className="apex-live"><i /> Live</span>
           </div>
-          <div className="ld-live-title">
-            <span>Exam horizon</span>
-            <strong>2027</strong>
-          </div>
-          <div className="ld-countdown-row">
-            <div className="ld-countdown">
-              <div className="eyebrow">Prelims</div>
-              <div className="ld-countdown-days">{prelims.days}<small>days</small></div>
-              <div className="ld-countdown-rail"><span style={{ width: "62%" }} /></div>
+          <div className="apex-frame-focus">
+            <div>
+              <small>Primary focus</small>
+              <strong>Build the next honest day.</strong>
+              <p>Every plan, test and revision updates one connected preparation record.</p>
             </div>
-            <div className="ld-countdown mains">
-              <div className="eyebrow">Mains</div>
-              <div className="ld-countdown-days">{mains.days}<small>days</small></div>
-              <div className="ld-countdown-rail"><span style={{ width: "46%" }} /></div>
-            </div>
+            <div className="apex-frame-score"><span>Readiness</span><strong>72</strong><small>/100</small></div>
           </div>
-          <div className="ld-signal-list">
-            <span><Target size={14} /> Daily execution <strong>Mapped</strong></span>
-            <span><LineChart size={14} /> Readiness signals <strong>Live</strong></span>
-            <span><BrainCircuit size={14} /> Mentor context <strong>Connected</strong></span>
+          <div className="apex-frame-metrics">
+            <div><BarChart3 size={15} /><span>Discipline</span><strong>84%</strong></div>
+            <div><Target size={15} /><span>Completion</span><strong>76%</strong></div>
+            <div><Trophy size={15} /><span>Test trend</span><strong>+8.4</strong></div>
           </div>
-        </aside>
+          <div className="apex-frame-horizon">
+            <div><span>Prelims 2027</span><strong>{prelims.days}</strong><small>days</small></div>
+            <div><span>Mains 2027</span><strong>{mains.days}</strong><small>days</small></div>
+          </div>
+        </div>
       </section>
 
-      {/* Features */}
-      <section className="ld-section ld-system-section">
-        <div className="ld-section-head">
-          <div className="eyebrow">One preparation architecture</div>
-          <h2 className="ld-section-title">Nothing important lives in isolation.</h2>
-          <p className="ld-section-sub">
-            Six focused systems read from the same preparation history, keeping effort,
-            evidence and decisions synchronized without turning the workspace into clutter.
-          </p>
+      <div className="apex-paper-rail" aria-label="Supported papers">
+        <span>GS 1</span><span>GS 2</span><span>GS 3</span><span>GS 4</span>
+        <span>Optional</span><span>CSAT</span><span>Essay</span><span>Current Affairs</span>
+      </div>
+
+      <section className="apex-section apex-method">
+        <div className="apex-section-heading">
+          <div className="apex-kicker">The preparation loop</div>
+          <h2>A calmer way to stay accountable.</h2>
+          <p>Clarity comes from connecting the day&apos;s work with the larger attempt.</p>
         </div>
-        <div className="ld-system-grid">
-          {features.map((feat, index) => (
-            <article key={feat.title} className="ld-feature">
-              <span className="ld-feature-index">{String(index + 1).padStart(2, "0")}</span>
-              <div className="ld-feature-icon">
-                <feat.icon size={17} />
-              </div>
-              <div className="ld-feature-copy">
-                <div className="ld-feature-title">{feat.title}</div>
-                <p className="ld-feature-desc">{feat.desc}</p>
-              </div>
-              <ArrowRight className="ld-feature-arrow" size={15} />
+        <div className="apex-method-grid">
+          <article><span>01</span><Target size={20} /><h3>Decide</h3><p>Set the few outcomes that deserve today&apos;s attention.</p></article>
+          <article><span>02</span><BookOpen size={20} /><h3>Execute</h3><p>Study, revise and test inside one structured system.</p></article>
+          <article><span>03</span><LineChart size={20} /><h3>Adapt</h3><p>Let evidence reveal what tomorrow needs from you.</p></article>
+        </div>
+      </section>
+
+      <section className="apex-section apex-capabilities">
+        <div className="apex-section-heading compact">
+          <div className="apex-kicker">Connected by design</div>
+          <h2>Everything important. Nothing noisy.</h2>
+        </div>
+        <div className="apex-capability-grid">
+          {capabilities.map((item) => (
+            <article key={item.title}>
+              <div className="apex-capability-icon"><item.icon size={18} /></div>
+              <div><h3>{item.title}</h3><p>{item.desc}</p></div>
             </article>
           ))}
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="ld-final">
-        <div className="ld-final-mark"><SacredLogoMark size="lg" /></div>
-        <div className="ld-final-copy">
-          <div className="eyebrow">The operating principle</div>
-          <h2 className="ld-final-motto">सत्यमेव जयते</h2>
-          <p className="ld-section-sub">
-            Truth alone prevails. Real hours, real tests and real evidence—without inflation or self-deception.
-          </p>
-        </div>
-        <Link href={session ? "/dashboard" : "/sign-in"} className="button ld-final-cta">
-          {session ? "Go to dashboard" : "Begin the attempt"}
-          <ArrowRight size={16} />
+      <section className="apex-final">
+        <div className="apex-final-mark"><SacredLogoMark size="lg" /></div>
+        <div><div className="apex-kicker">Sacred Attempt</div><h2>Build the preparation you can trust.</h2></div>
+        <Link href={entryHref} className="apex-primary-action">
+          {session ? "Go to dashboard" : "Begin the attempt"}<ArrowRight size={16} />
         </Link>
       </section>
     </main>

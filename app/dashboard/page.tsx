@@ -251,13 +251,13 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <main className="page-shell editorial-page editorial-dashboard">
+    <main className="page-shell editorial-page editorial-dashboard apex-dashboard">
       {/* Header */}
       <div className="db-head db-command-deck anim-fade-up">
         <div className="db-head-copy">
-          <div className="eyebrow">Command center</div>
+          <div className="eyebrow">Preparation overview</div>
           <h1 className="db-greeting">
-            {recentLog ? "Keep the streak honest, Adarsh." : "Start logging. The system is ready."}
+            {recentLog ? "Good evening, Adarsh." : "Your workspace is ready."}
           </h1>
           <p className="db-context">
             {recentLog
