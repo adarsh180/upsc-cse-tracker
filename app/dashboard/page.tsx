@@ -253,8 +253,8 @@ export default async function DashboardPage() {
   return (
     <main className="page-shell editorial-page editorial-dashboard">
       {/* Header */}
-      <div className="db-head anim-fade-up">
-        <div>
+      <div className="db-head db-command-deck anim-fade-up">
+        <div className="db-head-copy">
           <div className="eyebrow">Command center</div>
           <h1 className="db-greeting">
             {recentLog ? "Keep the streak honest, Adarsh." : "Start logging. The system is ready."}
@@ -265,8 +265,8 @@ export default async function DashboardPage() {
               : "Everything on this page is computed from your real entries — no mock data."}
           </p>
         </div>
-        <form action={signOutAction}>
-          <button className="button-secondary" type="submit" style={{ minHeight: 38, fontSize: 13 }}>
+        <form action={signOutAction} className="db-signout">
+          <button className="button-secondary" type="submit">
             <LogOut size={14} />
             Sign out
           </button>
