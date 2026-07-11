@@ -218,7 +218,7 @@ export default async function GoalsPage() {
   );
 
   return (
-    <main className="page-shell goals-page goals-command-page">
+    <main className="page-shell editorial-page editorial-goals goals-page goals-command-page">
       <PageIntro
         eyebrow="Daily Goals"
         title="Daily command ledger."

@@ -59,7 +59,7 @@ export const navGroups = [
       { href: "/study/psir", label: "PSIR Optional", icon: FileText, accent: "var(--psir, hsl(185,72%,50%))" },
       { href: "/study/csat", label: "CSAT Paper II", icon: Zap, accent: "var(--csat, hsl(352,60%,60%))" },
       { href: "/study/essay", label: "Essay Paper", icon: PenSquare, accent: "var(--gold)" },
-      { href: "/study/current-affairs", label: "Current Affairs", icon: Newspaper, accent: "var(--lotus-bright)" },
+      { href: "/current-affairs", label: "Current Affairs", icon: Newspaper, accent: "var(--lotus-bright)" },
     ],
   },
 ] as const;

@@ -266,7 +266,7 @@ export function UpscMoodShell({ initialEntries }: { initialEntries: MoodEntry[] 
     }));
 
   return (
-    <main className="page-shell mood-page-v2">
+    <main className="page-shell editorial-page editorial-mood mood-page-v2">
       <PageIntro
         eyebrow="Mood Tracker"
         title="Mental state cockpit."

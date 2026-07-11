@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseTestRecordForm } from "@/lib/test-records";
 import {
   deleteQuestionLog,
   generateGlobalTestReport,
@@ -91,27 +92,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Test name is required" }, { status: 400 });
     }
 
-    const data = {
-      studyNodeId: String(test.studyNodeId ?? "").trim() || null,
-      title: title.slice(0, 180),
-      examStage: String(test.examStage ?? "PRELIMS").trim() || "PRELIMS",
-      testType: String(test.testType ?? "SECTIONAL").trim() || "SECTIONAL",
-      paperCode: String(test.paperCode ?? "").trim() || null,
-      paperName: String(test.paperName ?? "").trim() || null,
-      optionalSubject: String(test.optionalSubject ?? "").trim() || null,
-      testDate: new Date(String(test.testDate ?? new Date().toISOString())),
-      totalQuestions: Number(test.totalQuestions ?? 0) || 0,
-      totalMarks: Number(test.totalMarks ?? 0) || 0,
-      score: Number(test.score ?? 0) || 0,
-      negativeMarks: Number(test.negativeMarks ?? 0) || null,
-      cutoffTarget: Number(test.cutoffTarget ?? 0) || null,
-      correctQuestions: Number(test.correctQuestions ?? 0) || null,
-      incorrectQuestions: Number(test.incorrectQuestions ?? 0) || null,
-      attemptedQuestions: Number(test.attemptedQuestions ?? 0) || null,
-      percentile: Number(test.percentile ?? 0) || null,
-      timeMinutes: Number(test.timeMinutes ?? 0) || null,
-      notes: String(test.notes ?? "").trim(),
-    };
+    const formData = new FormData();
+    for (const [key, value] of Object.entries({ ...test, title })) {
+      if (value !== null && value !== undefined) formData.set(key, String(value));
+    }
+    const data = parseTestRecordForm(formData);
 
     const previous =
       body.action === "update_test" && testId

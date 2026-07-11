@@ -386,6 +386,16 @@ const errorTypeLabels: Record<string, string> = {
   NONE: "None",
 };
 
+const prelimsErrorKeys = new Set([
+  "CONCEPT_GAP", "FACTUAL_GAP", "SILLY_MISTAKE", "ELIMINATION_ERROR", "CURRENT_AFFAIRS_GAP",
+  "QUESTION_READING", "TIME_PRESSURE", "RESOURCE_GAP", "REVISION_GAP", "NONE",
+]);
+const mainsErrorKeys = new Set([
+  "CONCEPT_GAP", "FACTUAL_GAP", "CURRENT_AFFAIRS_GAP", "QUESTION_READING", "TIME_PRESSURE",
+  "RESOURCE_GAP", "REVISION_GAP", "ANSWER_STRUCTURE", "CONTENT_DEPTH", "INTRO_CONCLUSION",
+  "VALUE_ADDITION", "LANGUAGE_EXPRESSION", "WORD_LIMIT", "NONE",
+]);
+
 const mainsOutcomeLabels: Record<string, string> = {
   CORRECT: "High-value answer",
   INCORRECT: "Poor answer",
@@ -599,6 +609,9 @@ export function TestErrorAnalysisWorkspace({
   const plannedQuestions = snapshot?.test.totalQuestions || selectedTest?.totalQuestions || 0;
   const loggedPct = plannedQuestions ? Math.round((logs.length / plannedQuestions) * 100) : 0;
   const isMainsMode = (snapshot?.test.examStage ?? selectedTest?.examStage ?? testDraft.examStage) === "MAINS";
+  const activeErrorTypeLabels = Object.entries(errorTypeLabels).filter(([key]) =>
+    (isMainsMode ? mainsErrorKeys : prelimsErrorKeys).has(key),
+  );
   const paperOptions = testDraft.examStage === "MAINS" ? mainsPaperOptions : prelimsPaperOptions;
   const selectedPaper = paperOptions.find((paper) => paper.code === testDraft.paperCode) ?? paperOptions[0];
   const questionOutcomeLabels = isMainsMode ? mainsOutcomeLabels : outcomeLabels;
@@ -1779,7 +1792,7 @@ export function TestErrorAnalysisWorkspace({
                     <option value="UNKNOWN">Unknown</option>
                   </select>
                   <select className="select" value={questionDraft.errorType} onChange={(event) => updateQuestionDraft("errorType", event.target.value)}>
-                    {Object.entries(errorTypeLabels).map(([value, label]) => (
+                    {activeErrorTypeLabels.map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
@@ -1926,7 +1939,7 @@ export function TestErrorAnalysisWorkspace({
                             </td>
                             <td>
                               <select className="select error-analysis-grid-input" value={row.outcome} onChange={(event) => updateGridQuestionAndSync(index, "outcome", event.target.value)}>
-                                {Object.entries(outcomeLabels).map(([value, label]) => (
+                                {Object.entries(questionOutcomeLabels).map(([value, label]) => (
                                   <option key={value} value={value}>{label}</option>
                                 ))}
                               </select>
@@ -1941,7 +1954,7 @@ export function TestErrorAnalysisWorkspace({
                             </td>
                             <td>
                               <select className="select error-analysis-grid-input" value={row.errorType} onChange={(event) => updateGridQuestionAndSync(index, "errorType", event.target.value)}>
-                                {Object.entries(errorTypeLabels).map(([value, label]) => (
+                                {activeErrorTypeLabels.map(([value, label]) => (
                                   <option key={value} value={value}>{label}</option>
                                 ))}
                               </select>
@@ -2066,7 +2079,7 @@ export function TestErrorAnalysisWorkspace({
                           {isMainsMode ? <td>{log.wordCount ?? "-"}/{log.wordLimit ?? "-"}</td> : null}
                           <td>{log.subject ?? "-"}</td>
                           <td>{log.topic ?? "-"}</td>
-                          <td><span className={`ea-status ${log.outcome.toLowerCase()}`}>{outcomeLabels[log.outcome] ?? log.outcome}</span></td>
+                          <td><span className={`ea-status ${log.outcome.toLowerCase()}`}>{questionOutcomeLabels[log.outcome] ?? log.outcome}</span></td>
                           <td>{log.studiedTopic ? "Yes" : "No"}</td>
                           <td>{log.resourceCovered}</td>
                           <td>{log.currentAffairsLinked ? "Yes" : "No"}</td>

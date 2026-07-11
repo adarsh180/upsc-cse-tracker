@@ -10,7 +10,7 @@ export default async function SimulatorPage() {
   await requireSession();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-simulator">
       <PageIntro
         eyebrow="Prelims Simulator"
         title="Timed mocks built from your mistakes."

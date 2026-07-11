@@ -48,7 +48,7 @@ export default async function PerformancePage() {
     .sort((a, b) => b.hours - a.hours);
 
   return (
-    <RevealGroup as="main" className="page-shell">
+    <RevealGroup as="main" className="page-shell editorial-page editorial-analytics">
       <Reveal>
         <PageIntro
           eyebrow="Performance Analytics"

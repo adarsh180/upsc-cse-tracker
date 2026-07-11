@@ -12,6 +12,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createSession, destroySession, requireSession } from "@/lib/auth";
 import { refreshGuruMemoryProfile } from "@/lib/ai-context-builder";
 import { db } from "@/lib/db";
+import { parseTestRecordForm } from "@/lib/test-records";
 import { getDashboardSummary } from "@/lib/dashboard";
 import {
   activateMission,
@@ -313,27 +314,7 @@ export async function saveMoodAction(formData: FormData) {
 
 export async function saveTestAction(formData: FormData) {
   await requireSession();
-  const data = {
-    studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
-    title: String(formData.get("title") ?? "Untitled test"),
-    examStage: String(formData.get("examStage") ?? "PRELIMS"),
-    testType: String(formData.get("testType") ?? "SECTIONAL"),
-    paperCode: String(formData.get("paperCode") ?? "") || null,
-    paperName: String(formData.get("paperName") ?? "") || null,
-    optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
-    testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
-    totalQuestions: Number(formData.get("totalQuestions") ?? 0),
-    totalMarks: Number(formData.get("totalMarks") ?? 0),
-    score: Number(formData.get("score") ?? 0),
-    negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
-    cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
-    correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
-    incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
-    attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
-    percentile: Number(formData.get("percentile") ?? 0) || null,
-    timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
-    notes: String(formData.get("notes") ?? ""),
-  };
+  const data = parseTestRecordForm(formData);
 
   const test = await db.testRecord.create({
     data,
@@ -360,27 +341,7 @@ export async function updateTestAction(formData: FormData) {
   });
   if (!previous) return;
 
-  const data = {
-    studyNodeId: String(formData.get("studyNodeId") ?? "") || null,
-    title: String(formData.get("title") ?? "Untitled test"),
-    examStage: String(formData.get("examStage") ?? "PRELIMS"),
-    testType: String(formData.get("testType") ?? "SECTIONAL"),
-    paperCode: String(formData.get("paperCode") ?? "") || null,
-    paperName: String(formData.get("paperName") ?? "") || null,
-    optionalSubject: String(formData.get("optionalSubject") ?? "") || null,
-    testDate: new Date(String(formData.get("testDate") ?? new Date().toISOString())),
-    totalQuestions: Number(formData.get("totalQuestions") ?? 0),
-    totalMarks: Number(formData.get("totalMarks") ?? 0),
-    score: Number(formData.get("score") ?? 0),
-    negativeMarks: Number(formData.get("negativeMarks") ?? 0) || null,
-    cutoffTarget: Number(formData.get("cutoffTarget") ?? 0) || null,
-    correctQuestions: Number(formData.get("correctQuestions") ?? 0) || null,
-    incorrectQuestions: Number(formData.get("incorrectQuestions") ?? 0) || null,
-    attemptedQuestions: Number(formData.get("attemptedQuestions") ?? 0) || null,
-    percentile: Number(formData.get("percentile") ?? 0) || null,
-    timeMinutes: Number(formData.get("timeMinutes") ?? 0) || null,
-    notes: String(formData.get("notes") ?? ""),
-  };
+  const data = parseTestRecordForm(formData);
 
   const updated = await db.testRecord.update({
     where: { id },

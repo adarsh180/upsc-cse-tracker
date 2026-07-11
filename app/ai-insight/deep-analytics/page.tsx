@@ -45,7 +45,7 @@ export default async function DeepAnalyticsPage() {
     .slice(0, 8);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-analytics editorial-deep-analytics">
       <PageIntro
         eyebrow="Deep Analytics"
         title="Read the pattern, not just the number."

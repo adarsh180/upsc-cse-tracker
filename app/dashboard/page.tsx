@@ -251,7 +251,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-dashboard">
       {/* Header */}
       <div className="db-head anim-fade-up">
         <div>

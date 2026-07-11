@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { buildUPSCContext } from "@/lib/ai-context-builder";
 import { normalizeGoogleModelId } from "@/lib/ai-models";
 import { db } from "@/lib/db";
+import { MAINS_ERROR_TYPES, PRELIMS_ERROR_TYPES, type TestStage } from "@/lib/test-records";
 
 const google = createGoogleGenerativeAI({
   apiKey:
@@ -209,8 +210,8 @@ export function scoreQuestionSeverity(question: AnalyticsQuestion) {
   return { score: capped, severity, reasons };
 }
 
-export function normalizeQuestionInput(input: QuestionLogInput) {
-  return {
+export function normalizeQuestionInput(input: QuestionLogInput, stage: TestStage = "PRELIMS") {
+  const normalized = {
     testRecordId: cleanString(input.testRecordId, 120),
     questionNumber: clampNumber(input.questionNumber, 1, 500, 1) ?? 1,
     questionType: normalizeOption(input.questionType, QUESTION_TYPES, "OBJECTIVE"),
@@ -243,15 +244,46 @@ export function normalizeQuestionInput(input: QuestionLogInput) {
     actionFix: cleanLongText(input.actionFix, 4000) || null,
     notes: cleanLongText(input.notes, 4000) || null,
   };
+
+  if (stage === "PRELIMS") {
+    return {
+      ...normalized,
+      questionType: "OBJECTIVE" as const,
+      errorType: PRELIMS_ERROR_TYPES.has(normalized.errorType) ? normalized.errorType : "NONE",
+      marksAwarded: null,
+      maxMarks: null,
+      wordLimit: null,
+      wordCount: null,
+      structureScore: null,
+      contentScore: null,
+      presentationScore: null,
+      mainsApproach: null,
+      mainsExamples: null,
+      valueAddedPoints: null,
+    };
+  }
+
+  return {
+    ...normalized,
+    questionType: normalized.questionType === "OBJECTIVE" ? "DESCRIPTIVE" as const : normalized.questionType,
+    errorType: MAINS_ERROR_TYPES.has(normalized.errorType) ? normalized.errorType : "NONE",
+    selectedAnswer: null,
+    correctAnswer: null,
+    marksAwarded:
+      normalized.marksAwarded !== null && normalized.maxMarks !== null
+        ? Math.min(normalized.marksAwarded, normalized.maxMarks)
+        : normalized.marksAwarded,
+  };
 }
 
 export async function upsertQuestionLog(input: QuestionLogInput) {
-  const data = normalizeQuestionInput(input);
-
-  await db.testRecord.findUniqueOrThrow({
-    where: { id: data.testRecordId },
-    select: { id: true },
+  const safeTestId = cleanString(input.testRecordId, 120);
+  const test = await db.testRecord.findUniqueOrThrow({
+    where: { id: safeTestId },
+    select: { id: true, examStage: true },
   });
+  const stage: TestStage = test.examStage === "MAINS" ? "MAINS" : "PRELIMS";
+  const data = normalizeQuestionInput({ ...input, testRecordId: safeTestId }, stage);
 
   return db.testQuestionLog.upsert({
     where: {
@@ -268,14 +300,15 @@ export async function upsertQuestionLog(input: QuestionLogInput) {
 export async function upsertQuestionLogs(testRecordId: string, inputs: QuestionLogInput[]) {
   const safeTestId = cleanString(testRecordId, 120);
 
-  await db.testRecord.findUniqueOrThrow({
+  const test = await db.testRecord.findUniqueOrThrow({
     where: { id: safeTestId },
-    select: { id: true },
+    select: { id: true, examStage: true },
   });
+  const stage: TestStage = test.examStage === "MAINS" ? "MAINS" : "PRELIMS";
 
   const byQuestionNumber = new Map<number, ReturnType<typeof normalizeQuestionInput>>();
   for (const input of inputs) {
-    const data = normalizeQuestionInput({ ...input, testRecordId: safeTestId });
+    const data = normalizeQuestionInput({ ...input, testRecordId: safeTestId }, stage);
     byQuestionNumber.set(data.questionNumber, data);
   }
 

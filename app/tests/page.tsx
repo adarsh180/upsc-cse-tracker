@@ -100,7 +100,11 @@ export default async function TestsPage() {
     correct: test.correctQuestions ?? 0,
     incorrect: test.incorrectQuestions ?? 0,
     timeMinutes: test.timeMinutes ?? 0,
+    examStage: test.examStage,
   }));
+
+  const prelimsTests = tests.filter((test) => test.examStage === "PRELIMS");
+  const mainsTests = tests.filter((test) => test.examStage === "MAINS");
 
   const latestTest = tests.at(-1);
   const bestTest = tests.reduce<typeof tests[number] | null>((best, test) => {
@@ -110,20 +114,19 @@ export default async function TestsPage() {
   const averageScore = tests.length
     ? average(tests.map((test) => percent(test.score, test.totalMarks)))
     : 0;
-  const averageAccuracy = tests.length
-    ? average(tests.map((test) => accuracy(test.correctQuestions, test.attemptedQuestions)))
+  const averagePrelimsScore = average(prelimsTests.map((test) => percent(test.score, test.totalMarks)));
+  const averageMainsScore = average(mainsTests.map((test) => percent(test.score, test.totalMarks)));
+  const averageAccuracy = prelimsTests.length
+    ? average(prelimsTests.map((test) => accuracy(test.correctQuestions, test.attemptedQuestions)))
     : 0;
-  const averagePrecision = tests.length
-    ? average(tests.map((test) => precision(test.correctQuestions, test.incorrectQuestions, test.attemptedQuestions)))
+  const averagePrecision = prelimsTests.length
+    ? average(prelimsTests.map((test) => precision(test.correctQuestions, test.incorrectQuestions, test.attemptedQuestions)))
     : 0;
   const averagePercentile = average(tests.map((test) => Number(test.percentile ?? 0)).filter(Boolean));
   const totalMinutes = tests.reduce((sum, test) => sum + (test.timeMinutes ?? 0), 0);
   const latestPct = latestTest ? percent(latestTest.score, latestTest.totalMarks) : 0;
   const bestPct = bestTest ? percent(bestTest.score, bestTest.totalMarks) : 0;
-  const latestAccuracy = latestTest ? accuracy(latestTest.correctQuestions, latestTest.attemptedQuestions) : 0;
-  const latestPrecision = latestTest
-    ? precision(latestTest.correctQuestions, latestTest.incorrectQuestions, latestTest.attemptedQuestions)
-    : 0;
+  const latestPrelims = prelimsTests.at(-1);
   const sectionGroups = [
     { title: "Exam stage", label: "Prelims and mains", items: summarizeBy(tests, (test) => test.examStage) },
     { title: "Test type", label: "Mock format", items: summarizeBy(tests, (test) => test.testType.replaceAll("_", " ")) },
@@ -138,24 +141,27 @@ export default async function TestsPage() {
       color: "var(--gold-bright)",
       icon: Gauge,
       suffix: "%",
+      stage: null,
     },
     {
       label: "Accuracy control",
       value: `${averageAccuracy}%`,
-      meta: latestTest ? `Latest ${latestAccuracy}%` : "No attempts yet",
+      meta: latestPrelims ? `Latest ${accuracy(latestPrelims.correctQuestions, latestPrelims.attemptedQuestions)}%` : "No Prelims attempts yet",
       dataKey: "accuracy" as const,
       color: "var(--botany)",
       icon: Target,
       suffix: "%",
+      stage: "PRELIMS" as const,
     },
     {
       label: "Precision discipline",
       value: `${averagePrecision}%`,
-      meta: latestTest ? `Latest ${latestPrecision}%` : "No precision yet",
+      meta: latestPrelims ? `Latest ${precision(latestPrelims.correctQuestions, latestPrelims.incorrectQuestions, latestPrelims.attemptedQuestions)}%` : "No Prelims precision yet",
       dataKey: "precision" as const,
       color: "var(--physics)",
       icon: Crosshair,
       suffix: "%",
+      stage: "PRELIMS" as const,
     },
     {
       label: "Percentile rank",
@@ -165,6 +171,7 @@ export default async function TestsPage() {
       color: "var(--lotus-bright)",
       icon: Award,
       suffix: "",
+      stage: "PRELIMS" as const,
     },
     {
       label: "Time pressure",
@@ -174,11 +181,12 @@ export default async function TestsPage() {
       color: "var(--rose-bright)",
       icon: Clock3,
       suffix: "",
+      stage: null,
     },
   ];
 
   return (
-    <RevealGroup as="main" className="page-shell tests-page">
+    <RevealGroup as="main" className="page-shell editorial-page editorial-tests tests-page">
       <Reveal>
         <PageIntro
           eyebrow="Test Tracker"
@@ -194,9 +202,9 @@ export default async function TestsPage() {
         <section className="tests-metric-grid" data-reveal="">
           {[
             { label: "Tests logged", value: tests.length, hint: "records", icon: FileCheck2, tone: "var(--physics)" },
-            { label: "Average score", value: `${averageScore}%`, hint: "across all mocks", icon: Gauge, tone: "var(--gold)" },
-            { label: "Avg accuracy", value: `${averageAccuracy}%`, hint: "attempt quality", icon: Award, tone: "var(--botany)" },
-            { label: "Avg precision", value: `${averagePrecision}%`, hint: "clean hits only", icon: Crosshair, tone: "var(--lotus-bright)" },
+            { label: "Prelims score", value: prelimsTests.length ? `${averagePrelimsScore}%` : "—", hint: `${prelimsTests.length} objective tests`, icon: Gauge, tone: "var(--physics)" },
+            { label: "Mains score", value: mainsTests.length ? `${averageMainsScore}%` : "—", hint: `${mainsTests.length} descriptive tests`, icon: Award, tone: "var(--gold)" },
+            { label: "Prelims accuracy", value: prelimsTests.length ? `${averageAccuracy}%` : "—", hint: "objective attempts only", icon: Crosshair, tone: "var(--botany)" },
           ].map((metric) => (
             <article key={metric.label} className="glass panel tests-metric-card" style={{ color: metric.tone }}>
               <div className="tests-metric-icon">
@@ -226,7 +234,7 @@ export default async function TestsPage() {
               </div>
               <div className="tests-trend-meta">{card.meta}</div>
               <TestMetricTrendChart
-                data={chartData}
+                data={card.stage ? chartData.filter((point) => point.examStage === card.stage) : chartData}
                 dataKey={card.dataKey}
                 color={card.color}
                 domain={card.dataKey === "timeMinutes" ? [0, "auto"] : [0, 100]}

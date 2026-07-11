@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { format } from "date-fns";
-import { BookOpenCheck, CalendarDays, CheckCircle2, Clock3, Pencil, Save, Trash2, X } from "lucide-react";
+import { BookOpenCheck, CalendarDays, CheckCircle2, Clock3, FilePenLine, ListChecks, Pencil, Save, Trash2, X } from "lucide-react";
 
 import {
   deleteTestAction,
@@ -110,6 +110,19 @@ export function TestsClient({
     [tests],
   );
 
+  const stageCopy = formStage === "PRELIMS"
+    ? {
+        icon: ListChecks,
+        title: "Objective-paper evidence",
+        body: "Attempts, accuracy, negative marking, elimination and cutoff safety.",
+      }
+    : {
+        icon: FilePenLine,
+        title: "Descriptive-paper evidence",
+        body: "Marks conversion, answers attempted, time discipline and answer quality.",
+      };
+  const StageContextIcon = stageCopy.icon;
+
   useEffect(() => {
     const nextStage = editTest?.examStage === "MAINS" ? "MAINS" : "PRELIMS";
     setFormStage(nextStage);
@@ -163,6 +176,35 @@ export function TestsClient({
             </div>
           </div>
 
+          <div className="tests-stage-switch" role="tablist" aria-label="Exam stage">
+            {(["PRELIMS", "MAINS"] as const).map((stage) => {
+              const StageIcon = stage === "PRELIMS" ? ListChecks : FilePenLine;
+              const active = formStage === stage;
+              return (
+                <button
+                  key={stage}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={active ? "active" : ""}
+                  onClick={() => {
+                    setFormStage(stage);
+                    setPaperCode(paperDefaults[stage][0].code);
+                  }}
+                >
+                  <StageIcon size={17} />
+                  <span><strong>{stage === "PRELIMS" ? "Prelims" : "Mains"}</strong><small>{stage === "PRELIMS" ? "Objective" : "Descriptive"}</small></span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className={`tests-stage-context ${formStage.toLowerCase()}`}>
+            <StageContextIcon size={18} />
+            <div><strong>{stageCopy.title}</strong><span>{stageCopy.body}</span></div>
+          </div>
+          <input type="hidden" name="examStage" value={formStage} />
+
           <div className="tests-form-section" key={`result-${formStage}-${paperCode}-${editId ?? "new"}`}>
             <div className="tests-form-section-title">Paper identity</div>
             <div className="tests-field-grid">
@@ -175,21 +217,6 @@ export function TestsClient({
                   required
                 />
               </TestField>
-              <TestField label="Stage">
-                <select
-                  className="select"
-                  name="examStage"
-                  value={formStage}
-                  onChange={(event) => {
-                    const nextStage = event.target.value === "MAINS" ? "MAINS" : "PRELIMS";
-                    setFormStage(nextStage);
-                    setPaperCode(paperDefaults[nextStage][0].code);
-                  }}
-                >
-                  <option value="PRELIMS">Prelims</option>
-                  <option value="MAINS">Mains</option>
-                </select>
-              </TestField>
               <TestField label="Paper">
                 <select className="select" name="paperCode" value={activePaper.code} onChange={(event) => setPaperCode(event.target.value)}>
                   {paperChoices.map((paper) => (
@@ -199,7 +226,7 @@ export function TestsClient({
               </TestField>
               <input type="hidden" name="paperName" value={editTest?.paperName ?? activePaper.name} />
               <input type="hidden" name="testType" value={editTest?.testType ?? activePaper.type} />
-              <TestField label="Subject">
+              <TestField label={formStage === "PRELIMS" ? "Syllabus subject" : "Paper subject"}>
                 <select className="select" name="studyNodeId" defaultValue={editTest?.studyNode?.id ?? ""}>
                   <option value="">General</option>
                   {subjects.map((subject) => (

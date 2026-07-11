@@ -52,7 +52,7 @@ export default async function LandingPage() {
   const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
 
   return (
-    <main className="ld-shell">
+    <main className="ld-shell editorial-landing">
       {/* Nav */}
       <header className="ld-nav anim-fade-up">
         <Link href="/" className="v2-brand">

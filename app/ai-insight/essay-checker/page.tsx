@@ -17,7 +17,7 @@ export default async function EssayCheckerPage() {
   const latest = essays[0];
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-essay-checker">
       <PageIntro
         eyebrow="Essay Checker"
         title="Turn drafts into a review loop."

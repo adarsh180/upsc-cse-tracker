@@ -8,7 +8,7 @@ export default async function TodoPage() {
   const snapshot = await getTodoBoardSnapshot();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-todo">
       <PageIntro
         eyebrow="Todo Workspace"
         title="Execution Board"

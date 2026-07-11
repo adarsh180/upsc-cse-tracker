@@ -270,7 +270,7 @@ export default async function StudyNodePage({
 
   return (
     <main
-      className="page-shell sx-page"
+      className="page-shell editorial-page editorial-study sx-page"
       data-accent={accentKeyFor(node.slug, node.parent?.slug)}
       data-node-kind={node.type.toLowerCase()}
     >

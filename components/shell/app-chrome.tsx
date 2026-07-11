@@ -119,6 +119,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   // Guru is a full-screen chat surface on phones: it brings its own header,
   // so the global top bar + tab bar step aside below 860px.
   const isGuruPage = pathname.startsWith("/ai-insight/guru");
+  const keepsSpecializedVisuals = isGuruPage || pathname.startsWith("/ai-insight/rank-prediction");
   const [moreOpen, setMoreOpen] = useState(false);
   const closeMore = useCallback(() => setMoreOpen(false), []);
 
@@ -138,7 +139,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* Top bar */}
-      <header className={cn("v2-topbar", isGuruPage && "v2-mobile-hidden")}>
+      <header className={cn("v2-topbar", !keepsSpecializedVisuals && "editorial-chrome", isGuruPage && "v2-mobile-hidden")}>
         <div className="v2-topbar-inner">
           <Link href="/dashboard" className="v2-brand">
             <SacredLogoMark size="sm" />
@@ -177,7 +178,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Page content */}
-      <div className="app-shell">
+      <div className={cn("app-shell", !keepsSpecializedVisuals && "editorial-app")}>
         <div className="app-shell-inner">{children}</div>
       </div>
 

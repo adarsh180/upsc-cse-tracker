@@ -8,7 +8,7 @@ export default async function MissionControlPage() {
   const snapshot = await getMissionControlSnapshot();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-mission-control">
       <PageIntro
         eyebrow="Mission Control"
         title="Agentic Execution"

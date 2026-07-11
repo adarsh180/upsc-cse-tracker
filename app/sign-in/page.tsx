@@ -12,7 +12,7 @@ export default async function SignInPage({
   const params = await searchParams;
 
   return (
-    <div className="si-shell">
+    <div className="si-shell editorial-signin">
       <div>
         <div className="glass si-card">
           <div className="si-brand">

@@ -15,7 +15,7 @@ export default function AppError({
   }, [error]);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page">
       <section className="glass panel" style={{ maxWidth: 760, margin: "64px auto", borderRadius: 32 }}>
         <div className="eyebrow">Temporary sync issue</div>
         <h1 className="display" style={{ fontSize: "clamp(2.4rem, 5vw, 4rem)", margin: "14px 0" }}>

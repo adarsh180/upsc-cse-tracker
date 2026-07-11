@@ -72,7 +72,7 @@ export default async function ReportCardPage() {
   ]);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-report-card">
       <PageIntro
         eyebrow="Report Card"
         title="Your mentor's verdict, on the record."

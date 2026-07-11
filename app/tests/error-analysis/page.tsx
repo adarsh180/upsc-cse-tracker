@@ -42,7 +42,7 @@ export default async function TestErrorAnalysisPage() {
   ]);
 
   return (
-    <RevealGroup as="main" className="page-shell tests-page">
+    <RevealGroup as="main" className="page-shell editorial-page editorial-error-analysis tests-page">
       <Reveal>
       <TestErrorAnalysisWorkspace
         tests={tests.map((test) => ({

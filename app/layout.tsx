@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Serif_Devanagari } from "next/font/google";
+import { Inter, Newsreader, Noto_Serif_Devanagari } from "next/font/google";
 
 import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
@@ -10,6 +10,7 @@ import "./redesign.css";
 import "./premium.css";
 import "./theme.css";
 import "./study.css";
+import "./editorial.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -21,10 +22,15 @@ const devanagariFont = Noto_Serif_Devanagari({
   variable: "--font-devanagari",
 });
 
+const editorialFont = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-editorial",
+});
+
 export const metadata: Metadata = {
   title: "UPSC CSE Tracker",
   description:
-    "A premium sacred-glass UPSC preparation workspace for dashboarding, daily goals, mood, tests, performance and AI insight.",
+    "Sacred Attempt is an editorial UPSC preparation workspace for syllabus mastery, daily execution, stage-aware tests, revision and analytics.",
   applicationName: "UPSC CSE Tracker",
   appleWebApp: {
     capable: true,
@@ -65,7 +71,7 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
-      <body className={`${bodyFont.variable} ${devanagariFont.variable}`}>
+      <body className={`${bodyFont.variable} ${editorialFont.variable} ${devanagariFont.variable}`}>
         <script
           dangerouslySetInnerHTML={{
             __html:

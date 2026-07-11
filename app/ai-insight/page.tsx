@@ -85,7 +85,7 @@ export default async function AIInsightPage() {
   const summary = await getDashboardSummary();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell editorial-page editorial-ai-hub">
       <PageIntro
         eyebrow="AI Insight"
         title="Your AI workspaces."
