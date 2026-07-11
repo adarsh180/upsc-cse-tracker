@@ -68,79 +68,93 @@ export default async function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="ld-hero">
-        <div className="ld-hero-badge anim-fade-up">UPSC CSE 2027 · Third attempt</div>
-        <h1 className="ld-hero-title anim-fade-up">
-          Your preparation, run like an <em>operating system</em>.
-        </h1>
-        <p className="ld-hero-sub anim-fade-up">
-          Study trees, daily goals, tests, mood and AI coaching in one private workspace.
-          Real inputs, real signals — no wishful memory.
-        </p>
-        <div className="ld-hero-cta anim-fade-up">
-          <Link href={session ? "/dashboard" : "/sign-in"} className="button" style={{ minWidth: 190 }}>
-            {session ? "Open dashboard" : "Enter workspace"}
-            <ArrowRight size={16} />
-          </Link>
+      <section className="ld-hero ld-command-hero">
+        <div className="ld-hero-copy">
+          <div className="ld-hero-badge anim-fade-up">UPSC CSE 2027 · Third attempt</div>
+          <h1 className="ld-hero-title anim-fade-up">
+            The serious attempt deserves a <em>serious system</em>.
+          </h1>
+          <p className="ld-hero-sub anim-fade-up">
+            One private command centre for syllabus progress, daily discipline, prelims and mains tests,
+            mood, revision and AI coaching. Every signal comes from work you actually logged.
+          </p>
+          <div className="ld-hero-cta anim-fade-up">
+            <Link href={session ? "/dashboard" : "/sign-in"} className="button ld-primary-cta">
+              {session ? "Open command centre" : "Enter workspace"}
+              <ArrowRight size={16} />
+            </Link>
+            <span className="ld-private-note">Private by design · Evidence over optimism</span>
+          </div>
         </div>
 
-        <div className="ld-countdown-row anim-fade-up">
-          <div className="glass ld-countdown">
-            <div>
-              <div className="eyebrow">Prelims 2027</div>
-              <div className="ld-countdown-days" style={{ color: "var(--gold-bright)" }}>
-                {prelims.days}
-                <span style={{ fontSize: 13, fontWeight: 550, color: "var(--text-muted)", marginLeft: 6 }}>days</span>
-              </div>
-            </div>
-            <CalendarClock size={22} style={{ color: "var(--gold)", opacity: 0.8 }} />
+        <aside className="ld-live-board anim-fade-up" aria-label="Live exam horizon">
+          <div className="ld-live-head">
+            <span><span className="ld-live-dot" />System online</span>
+            <span>IST · Live</span>
           </div>
-          <div className="glass ld-countdown">
-            <div>
-              <div className="eyebrow">Mains 2027</div>
-              <div className="ld-countdown-days" style={{ color: "var(--physics)" }}>
-                {mains.days}
-                <span style={{ fontSize: 13, fontWeight: 550, color: "var(--text-muted)", marginLeft: 6 }}>days</span>
-              </div>
-            </div>
-            <CalendarClock size={22} style={{ color: "var(--physics)", opacity: 0.8 }} />
+          <div className="ld-live-title">
+            <span>Exam horizon</span>
+            <strong>2027</strong>
           </div>
-        </div>
+          <div className="ld-countdown-row">
+            <div className="ld-countdown">
+              <div className="eyebrow">Prelims</div>
+              <div className="ld-countdown-days">{prelims.days}<small>days</small></div>
+              <div className="ld-countdown-rail"><span style={{ width: "62%" }} /></div>
+            </div>
+            <div className="ld-countdown mains">
+              <div className="eyebrow">Mains</div>
+              <div className="ld-countdown-days">{mains.days}<small>days</small></div>
+              <div className="ld-countdown-rail"><span style={{ width: "46%" }} /></div>
+            </div>
+          </div>
+          <div className="ld-signal-list">
+            <span><Target size={14} /> Daily execution <strong>Mapped</strong></span>
+            <span><LineChart size={14} /> Readiness signals <strong>Live</strong></span>
+            <span><BrainCircuit size={14} /> Mentor context <strong>Connected</strong></span>
+          </div>
+        </aside>
       </section>
 
       {/* Features */}
-      <section className="ld-section">
+      <section className="ld-section ld-system-section">
         <div className="ld-section-head">
-          <div className="eyebrow">What&apos;s inside</div>
-          <h2 className="ld-section-title">Everything connected. Everything measured.</h2>
+          <div className="eyebrow">One preparation architecture</div>
+          <h2 className="ld-section-title">Nothing important lives in isolation.</h2>
           <p className="ld-section-sub">
-            Six systems that read from the same database, so effort, evidence and coaching
-            stay in sync.
+            Six focused systems read from the same preparation history, keeping effort,
+            evidence and decisions synchronized without turning the workspace into clutter.
           </p>
         </div>
-        <div className="grid grid-3">
-          {features.map((feat) => (
-            <article key={feat.title} className="glass ld-feature">
+        <div className="ld-system-grid">
+          {features.map((feat, index) => (
+            <article key={feat.title} className="ld-feature">
+              <span className="ld-feature-index">{String(index + 1).padStart(2, "0")}</span>
               <div className="ld-feature-icon">
                 <feat.icon size={17} />
               </div>
-              <div className="ld-feature-title">{feat.title}</div>
-              <p className="ld-feature-desc">{feat.desc}</p>
+              <div className="ld-feature-copy">
+                <div className="ld-feature-title">{feat.title}</div>
+                <p className="ld-feature-desc">{feat.desc}</p>
+              </div>
+              <ArrowRight className="ld-feature-arrow" size={15} />
             </article>
           ))}
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="glass ld-final">
-        <SacredLogoMark size="lg" />
-        <h2 className="ld-final-motto">सत्यमेव जयते</h2>
-        <p className="ld-section-sub" style={{ maxWidth: "46ch", margin: "0 auto 26px" }}>
-          Truth alone prevails. Real hours, real tests, real evidence — no inflation,
-          no self-deception.
-        </p>
-        <Link href={session ? "/dashboard" : "/sign-in"} className="button" style={{ minWidth: 200 }}>
-          {session ? "Go to dashboard" : "Start your journey"}
+      <section className="ld-final">
+        <div className="ld-final-mark"><SacredLogoMark size="lg" /></div>
+        <div className="ld-final-copy">
+          <div className="eyebrow">The operating principle</div>
+          <h2 className="ld-final-motto">सत्यमेव जयते</h2>
+          <p className="ld-section-sub">
+            Truth alone prevails. Real hours, real tests and real evidence—without inflation or self-deception.
+          </p>
+        </div>
+        <Link href={session ? "/dashboard" : "/sign-in"} className="button ld-final-cta">
+          {session ? "Go to dashboard" : "Begin the attempt"}
           <ArrowRight size={16} />
         </Link>
       </section>
