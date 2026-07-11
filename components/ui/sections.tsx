@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock, Sparkles } from "lucide-react";
 
 import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icons";
+import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { cn } from "@/lib/utils";
 
 export function PageIntro({
@@ -10,20 +11,20 @@ export function PageIntro({
   description,
   actions,
   glyph = "dashboard",
+  icon,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   actions?: React.ReactNode;
   glyph?: MotionGlyphName;
+  icon?: React.ReactNode;
 }) {
   return (
     <section className="pi2">
       <div className="pi2-copy">
         <div className="pi2-kicker">
-          <span className="pi2-glyph">
-            <MotionGlyph name={glyph} size={26} />
-          </span>
+          <span className="pi2-glyph">{icon ?? <MotionGlyph name={glyph} size={26} />}</span>
           <span className="eyebrow">{eyebrow}</span>
         </div>
         <h1 className="pi2-title">{title}</h1>
@@ -175,7 +176,12 @@ export function StudyCard({
     <Link href={href} className="glass panel card-link study-card-shell">
       <div className="study-card-head">
         <div className="study-card-label-row">
-          <MotionGlyph name="study" size={38} style={{ color: accentColor }} />
+          <StudySubjectIcon
+            slug={href.split("/").filter(Boolean).at(-1) ?? title}
+            title={title}
+            size={24}
+            className="study-card-semantic"
+          />
           <div className="tag study-card-tag">
             {badge ?? "Open workspace"}
           </div>

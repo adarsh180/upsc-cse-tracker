@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DigestGenerateButton } from "@/components/ai/digest-generate-button";
 import { DigestQuiz } from "@/components/ai/digest-quiz";
 import { PageIntro } from "@/components/ui/sections";
+import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { requireSession } from "@/lib/auth";
 import { getLatestDigest, istDayKey, type DigestItem, type EditorialPick } from "@/lib/current-affairs";
 import { db } from "@/lib/db";
@@ -50,7 +51,7 @@ export default async function CurrentAffairsPage() {
         eyebrow="Current Affairs"
         title="Daily UPSC-filtered digest."
         description="A calm daily briefing with precise facts, prelims pointers, mains angles, editorial arguments and a five-question self-check."
-        glyph="essay"
+        icon={<StudySubjectIcon slug="current-affairs" title="Current Affairs" size={22} className="pi2-semantic-icon" />}
         actions={
           <div className="ca-header-actions">
             <div className="pill"><Newspaper size={14} />{digest ? format(digest.digestDate, "d MMM yyyy") : "No digest yet"}</div>

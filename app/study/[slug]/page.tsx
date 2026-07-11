@@ -16,7 +16,6 @@ import {
   Plus,
   Route,
   Settings2,
-  Sparkles,
   Target,
   Trash2,
 } from "lucide-react";
@@ -31,6 +30,7 @@ import {
 import { requireSession } from "@/lib/auth";
 import { getStudyNodeBySlug, getStudyTree } from "@/lib/dashboard";
 import { CircularProgress } from "@/components/ui/sections";
+import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { StudyPageClient } from "@/components/ui/study-checklist";
 
 type ProgressRecord = {
@@ -292,9 +292,7 @@ export default async function StudyNodePage({
           </nav>
 
           <div className="sx-hero-kind">
-            <span className="sx-hero-sigil">
-              <Sparkles size={15} />
-            </span>
+            <StudySubjectIcon slug={node.slug} title={node.title} size={17} className="sx-hero-sigil sx-hero-semantic" />
             {pageMode}
           </div>
 
@@ -379,7 +377,10 @@ export default async function StudyNodePage({
                 <div key={subject.id} className="sx-lane">
                   <Link href={`/study/${subject.slug}`} className="sx-lane-link">
                     <div className="sx-lane-top">
-                      <CircularProgress pct={pct} size={50} stroke={5} color="var(--sx-accent)" />
+                      <div className="sx-lane-identity">
+                        <StudySubjectIcon slug={subject.slug} title={subject.title} size={22} className="sx-lane-semantic" />
+                        <CircularProgress pct={pct} size={50} stroke={5} color="var(--sx-accent)" />
+                      </div>
                       <span className="sx-lane-badge">
                         {subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}
                       </span>

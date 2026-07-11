@@ -958,6 +958,95 @@
   .editorial-study .sx-title { font-size: clamp(2.25rem, 13vw, 2.75rem); overflow-wrap: anywhere; }
 }
 
+/* Semantic syllabus iconography. One academic symbol follows each paper or
+   subject from overview cards into its page hero. */
+.study-semantic-icon {
+  --study-icon-color: var(--ed-brass);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--study-icon-color) 28%, var(--ed-line));
+  border-radius: 13px;
+  color: var(--study-icon-color);
+  background: color-mix(in srgb, var(--study-icon-color) 9%, var(--ed-surface));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
+}
+.study-semantic-icon::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -45%;
+  border: 1px solid color-mix(in srgb, var(--study-icon-color) 16%, transparent);
+  border-radius: 42% 58% 55% 45% / 58% 44% 56% 42%;
+  opacity: .72;
+  animation: studyIconOrbit 11s linear infinite;
+}
+.study-semantic-icon svg { transition: transform 420ms var(--ed-liquid); }
+:is(.sx-hero, .sx-lane, .study-card-shell, .pi2):hover .study-semantic-icon svg { transform: translateY(-1px) scale(1.06); }
+
+.study-semantic-icon[data-study-visual="geography"],
+.study-semantic-icon[data-study-visual="terrain"],
+.study-semantic-icon[data-study-visual="india-map"] { --study-icon-color: #54b993; }
+.study-semantic-icon[data-study-visual="heritage"],
+.study-semantic-icon[data-study-visual="history"],
+.study-semantic-icon[data-study-visual="modern-history"],
+.study-semantic-icon[data-study-visual="ancient-history"],
+.study-semantic-icon[data-study-visual="medieval-history"],
+.study-semantic-icon[data-study-visual="culture"] { --study-icon-color: #d0a654; }
+.study-semantic-icon[data-study-visual="polity"],
+.study-semantic-icon[data-study-visual="governance"],
+.study-semantic-icon[data-study-visual="psir"],
+.study-semantic-icon[data-study-visual="political-theory"],
+.study-semantic-icon[data-study-visual="comparative-politics"] { --study-icon-color: #6f9ee8; }
+.study-semantic-icon[data-study-visual="international-relations"] { --study-icon-color: #62a9d8; }
+.study-semantic-icon[data-study-visual="society"],
+.study-semantic-icon[data-study-visual="social-justice"] { --study-icon-color: #d78691; }
+.study-semantic-icon[data-study-visual="development"],
+.study-semantic-icon[data-study-visual="economy"],
+.study-semantic-icon[data-study-visual="industry"] { --study-icon-color: #d8a24e; }
+.study-semantic-icon[data-study-visual="science"],
+.study-semantic-icon[data-study-visual="space"] { --study-icon-color: #8f87e8; }
+.study-semantic-icon[data-study-visual="disaster"] { --study-icon-color: #df7868; }
+.study-semantic-icon[data-study-visual="security"] { --study-icon-color: #c17b68; }
+.study-semantic-icon[data-study-visual="environment"] { --study-icon-color: #61ad6d; }
+.study-semantic-icon[data-study-visual="ethics"] { --study-icon-color: #c89bdb; }
+.study-semantic-icon[data-study-visual="csat"],
+.study-semantic-icon[data-study-visual="reasoning"],
+.study-semantic-icon[data-study-visual="reading"],
+.study-semantic-icon[data-study-visual="quantitative"] { --study-icon-color: #5fa8c6; }
+.study-semantic-icon[data-study-visual="essay"] { --study-icon-color: #d084a6; }
+.study-semantic-icon[data-study-visual="current-affairs"] { --study-icon-color: #db9161; }
+
+.editorial-study .sx-hero-sigil.study-semantic-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--study-icon-color) 10%, var(--ed-surface));
+  box-shadow: 0 0 26px color-mix(in srgb, var(--study-icon-color) 15%, transparent);
+}
+.editorial-study .sx-lane-identity { display: inline-flex; align-items: center; gap: 10px; }
+.editorial-study .sx-lane-semantic { width: 48px; height: 48px; border-radius: 15px; }
+.editorial-study .sx-lane-semantic + .circ-wrap { margin-left: -7px; box-shadow: 0 0 0 3px var(--ed-surface); border-radius: 50%; }
+.study-card-semantic { width: 44px; height: 44px; border-radius: 14px; }
+.pi2-semantic-icon { width: 38px; height: 38px; border-radius: 13px; }
+.pi2-glyph:has(.pi2-semantic-icon) { overflow: visible; background: transparent; border: 0; box-shadow: none; }
+
+@keyframes studyIconOrbit { to { transform: rotate(1turn); } }
+
+@media (max-width: 560px) {
+  .editorial-study .sx-lane-semantic { width: 42px; height: 42px; }
+  .study-card-semantic { width: 40px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-semantic-icon::before { animation: none; }
+}
+
 /* ========================================================================== */
 /* Whole-product editorial pass                                                */
 /* ========================================================================== */
