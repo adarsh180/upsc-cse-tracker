@@ -876,6 +876,88 @@
   .apex-live i { animation: none; }
 }
 
+/* Study hero: intrinsic sizing keeps the progress console inside its card at
+   every intermediate width, not only at phone/tablet breakpoints. */
+.editorial-study .sx-hero {
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, .8fr);
+  gap: clamp(18px, 3vw, 38px);
+  padding: clamp(20px, 3vw, 36px);
+}
+.editorial-study .sx-hero-main,
+.editorial-study .sx-hero-side,
+.editorial-study .sx-orb-stats,
+.editorial-study .sx-orb-stats > div { min-width: 0; }
+.editorial-study .sx-hero-side {
+  container: sx-console / inline-size;
+  display: grid;
+  grid-template-columns: minmax(84px, 116px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(12px, 1.8vw, 22px);
+  width: 100%;
+  padding: clamp(12px, 1.8vw, 20px);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.editorial-study .sx-orb {
+  --sx-orb-size: clamp(84px, 9.5vw, 116px);
+  width: min(100%, var(--sx-orb-size));
+  height: auto;
+  aspect-ratio: 1;
+  justify-self: center;
+}
+.editorial-study .sx-orb > span { font-size: clamp(22px, 2.5vw, 27px); }
+.editorial-study .sx-orb-stats {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(7px, 1vw, 9px);
+}
+.editorial-study .sx-orb-stats > div {
+  min-height: 64px;
+  padding: clamp(8px, 1.15vw, 11px);
+  overflow: hidden;
+}
+.editorial-study .sx-orb-stats span {
+  overflow: hidden;
+  font-size: clamp(8px, .82vw, 9.5px);
+  letter-spacing: clamp(.06em, .1vw, .12em);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editorial-study .sx-orb-stats strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(15px, 1.6vw, 18px);
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container sx-console (max-width: 360px) {
+  .editorial-study .sx-orb { --sx-orb-size: 82px; }
+  .editorial-study .sx-orb-stats > div { min-height: 58px; padding: 8px; }
+}
+
+@media (max-width: 1040px) {
+  .editorial-study .sx-hero { grid-template-columns: 1fr; }
+  .editorial-study .sx-hero-side { grid-template-columns: minmax(88px, 110px) minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  .editorial-study .sx-hero { padding: 18px; border-radius: 22px; }
+  .editorial-study .sx-hero-side { grid-template-columns: 1fr; gap: 14px; padding: 14px; }
+  .editorial-study .sx-orb { --sx-orb-size: 94px; }
+  .editorial-study .sx-orb-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .editorial-study .sx-meta { gap: 6px; }
+  .editorial-study .sx-chip { max-width: 100%; padding-inline: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@media (max-width: 380px) {
+  .editorial-study .sx-hero { padding: 14px; }
+  .editorial-study .sx-orb-stats { grid-template-columns: 1fr; }
+  .editorial-study .sx-orb-stats > div { min-height: 54px; }
+  .editorial-study .sx-title { font-size: clamp(2.25rem, 13vw, 2.75rem); overflow-wrap: anywhere; }
+}
+
 /* ========================================================================== */
 /* Whole-product editorial pass                                                */
 /* ========================================================================== */
