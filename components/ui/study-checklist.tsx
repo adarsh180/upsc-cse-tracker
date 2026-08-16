@@ -207,6 +207,8 @@ function TopicRow({
   onDelete,
   onRevisionChange,
   onAddSubTopic,
+  expandedIds,
+  onExpandedChange,
   isDragging,
   isDropTarget,
   onDragStart,
@@ -224,6 +226,8 @@ function TopicRow({
   onDelete: (id: string) => void;
   onRevisionChange: (id: string, delta: number) => void;
   onAddSubTopic: (topicId: string, title: string) => Promise<void>;
+  expandedIds: Set<string>;
+  onExpandedChange: (id: string, open: boolean) => void;
   isDragging: boolean;
   isDropTarget: boolean;
   onDragStart: () => void;
@@ -235,11 +239,12 @@ function TopicRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newSubTopic, setNewSubTopic] = useState("");
-  const [subtopicsOpen, setSubtopicsOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
   const subTopics = nodeChildren(topic);
   const leafIds = collectLeafIds([topic]);
   const isContainer = subTopics.length > 0;
+  const subtopicsOpen = isContainer && expandedIds.has(topic.id);
+  const subtopicRegionId = `study-children-${topic.id}`;
   const doneCount = leafIds.filter((id) => optimisticMap[id] ?? false).length;
   const isChecked = leafIds.length ? doneCount === leafIds.length : optimisticMap[topic.id] ?? false;
   const pct = leafIds.length ? Math.round((doneCount / leafIds.length) * 100) : 0;
@@ -262,13 +267,15 @@ function TopicRow({
       await onAddSubTopic(topic.id, title);
       setNewSubTopic("");
       setAddOpen(false);
+      onExpandedChange(topic.id, true);
     });
   };
 
   return (
     <div className={level > 0 ? "study-subtopic-block" : undefined}>
       <div
-        className={`study-topic-row${level > 0 ? " subtopic" : ""}${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+        className={`study-topic-row${level > 0 ? " subtopic" : ""}${subtopicsOpen ? " is-open" : ""}${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+        data-level={level}
         draggable={level === 0 && !editing}
         onDragStart={() => {
           if (level === 0) onDragStart();
@@ -312,6 +319,7 @@ function TopicRow({
             <span className="topic-checkbox" aria-hidden="true" />
             {!editing ? (
               <div className="topic-label">
+                <small className="study-level-label">{level > 0 ? "Sub-topic" : "Topic"}</small>
                 <span className={isChecked ? "done" : ""}>{topic.title}</span>
                 {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
               </div>
@@ -367,8 +375,10 @@ function TopicRow({
               <button
                 type="button"
                 className="study-chevron-btn"
-                onClick={() => setSubtopicsOpen((current) => !current)}
+                onClick={() => onExpandedChange(topic.id, !subtopicsOpen)}
                 title={subtopicsOpen ? "Collapse sub-topics" : "Expand sub-topics"}
+                aria-expanded={subtopicsOpen}
+                aria-controls={subtopicRegionId}
               >
                 <ChevronDown size={12} className={`chapter-accord-chevron${subtopicsOpen ? " open" : ""}`} />
               </button>
@@ -397,7 +407,7 @@ function TopicRow({
       ) : null}
 
       {subTopics.length && subtopicsOpen ? (
-        <div className="study-subtopic-stack">
+        <div className="study-subtopic-stack" id={subtopicRegionId}>
           {subTopics.map((subTopic) => (
             <TopicRow
               key={subTopic.id}
@@ -411,6 +421,8 @@ function TopicRow({
               onDelete={onDelete}
               onRevisionChange={onRevisionChange}
               onAddSubTopic={onAddSubTopic}
+              expandedIds={expandedIds}
+              onExpandedChange={onExpandedChange}
               isDragging={false}
               isDropTarget={false}
               onDragStart={() => {}}
@@ -450,6 +462,9 @@ function ChapterAccordion({
   setDragState,
   setDropState,
   onMoveTopic,
+  expandedIds,
+  open,
+  onExpandedChange,
 }: {
   chapter: ChapterNode;
   pathname: string;
@@ -475,8 +490,10 @@ function ChapterAccordion({
   setDragState: (state: DragState) => void;
   setDropState: (state: DragState) => void;
   onMoveTopic: (fromTopicId: string, toTopicId: string) => void;
+  expandedIds: Set<string>;
+  open: boolean;
+  onExpandedChange: (id: string, open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(chapterIndex === 0);
   const [addOpen, setAddOpen] = useState(false);
   const [newTopic, setNewTopic] = useState("");
   const [editingChapter, setEditingChapter] = useState(false);
@@ -495,6 +512,7 @@ function ChapterAccordion({
   const avgRevision = allIds.length
     ? Math.round(allIds.reduce((sum, id) => sum + (revisionMap[id] ?? 0), 0) / allIds.length)
     : 0;
+  const chapterRegionId = `study-chapter-${chapter.id}`;
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -510,13 +528,13 @@ function ChapterAccordion({
       await onAddTopic(chapter.id, title);
       setNewTopic("");
       setAddOpen(false);
-      setOpen(true);
+      onExpandedChange(chapter.id, true);
     });
   };
 
   return (
     <div
-      className={`chapter-accordion study-chapter-card${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+      className={`chapter-accordion study-chapter-card${open ? " is-open" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
       draggable={!editingChapter}
       onDragStart={() => onDragStart()}
       onDragOver={(event) => {
@@ -530,10 +548,17 @@ function ChapterAccordion({
       onDragEnd={onDragEnd}
     >
       <div className="chapter-accord-head study-chapter-head">
-        <button type="button" onClick={() => setOpen((current) => !current)} className="study-chapter-main">
+        <button
+          type="button"
+          onClick={() => onExpandedChange(chapter.id, !open)}
+          className="study-chapter-main"
+          aria-expanded={open}
+          aria-controls={chapterRegionId}
+        >
           <span className="study-drag-chip study-chapter-drag-chip" aria-hidden="true" title="Drag to reorder">
             <GripVertical size={13} />
           </span>
+          <span className="study-chapter-index" aria-hidden="true">{String(chapterIndex + 1).padStart(2, "0")}</span>
           <div className="study-chapter-progress">
             <CircularProgress pct={pct} size={42} stroke={4} color={accentColor} />
           </div>
@@ -590,7 +615,14 @@ function ChapterAccordion({
             >
               {confirmDelete ? "Sure?" : <Trash2 size={12} />}
             </button>
-            <button type="button" className="study-chevron-btn" onClick={() => setOpen((current) => !current)} title="Toggle chapter">
+            <button
+              type="button"
+              className="study-chevron-btn"
+              onClick={() => onExpandedChange(chapter.id, !open)}
+              title={open ? "Collapse chapter" : "Expand chapter"}
+              aria-expanded={open}
+              aria-controls={chapterRegionId}
+            >
               <ChevronDown size={16} className={`chapter-accord-chevron${open ? " open" : ""}`} />
             </button>
           </div>
@@ -617,7 +649,7 @@ function ChapterAccordion({
       ) : null}
 
       {open ? (
-        <div className="chapter-accord-body study-topic-stack">
+        <div className="chapter-accord-body study-topic-stack" id={chapterRegionId}>
           {topics.map((topic) => (
             <TopicRow
               key={topic.id}
@@ -628,6 +660,8 @@ function ChapterAccordion({
               onToggle={onToggle}
               onRevisionChange={onRevisionChange}
               onAddSubTopic={onAddSubTopic}
+              expandedIds={expandedIds}
+              onExpandedChange={onExpandedChange}
               onRename={async (id, title) => {
                 await onRenameTopic(id, title);
               }}
@@ -666,6 +700,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const [chapters, setChapters] = useState<ChapterNode[]>(initialChapters);
   const [dragState, setDragState] = useState<DragState>(null);
   const [dropState, setDropState] = useState<DragState>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [optimisticMap, setOptimisticMap] = useState<Record<string, boolean>>(() => {
     const next: Record<string, boolean> = {};
     const revisions: Record<string, number> = {};
@@ -703,6 +738,10 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   }, [initialChapters]);
 
   useEffect(() => {
+    setExpandedIds(new Set());
+  }, [nodeId]);
+
+  useEffect(() => {
     fetch(`/api/topic-progress?parentId=${nodeId}`)
       .then((response) => response.json())
       .then((data: { progress?: Record<string, boolean>; revisions?: Record<string, number> }) => {
@@ -715,6 +754,29 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const clearDragState = () => {
     setDragState(null);
     setDropState(null);
+  };
+
+  const handleExpandedChange = (id: string, open: boolean) => {
+    const branchIds = [id];
+    for (const chapter of chapters) {
+      if (chapter.id === id) {
+        branchIds.push(...chapter.children.flatMap((topic) => collectNodeIds(topic)));
+        break;
+      }
+
+      const topic = findTopicTreeNode(chapter.children, id);
+      if (topic) {
+        branchIds.push(...nodeChildren(topic).flatMap((child) => collectNodeIds(child)));
+        break;
+      }
+    }
+
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (open) next.add(id);
+      else for (const branchId of branchIds) next.delete(branchId);
+      return next;
+    });
   };
 
   const syncOrder = async (parentId: string, orderedIds: string[]) => {
@@ -886,7 +948,14 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   };
 
   const handleDeleteChapter = async (id: string) => {
+    const chapter = chapters.find((item) => item.id === id);
+    const deletedIds = chapter ? [chapter.id, ...chapter.children.flatMap((topic) => collectNodeIds(topic))] : [id];
     setChapters((current) => current.filter((chapter) => chapter.id !== id));
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      for (const deletedId of deletedIds) next.delete(deletedId);
+      return next;
+    });
     await fetch(`/api/study-node?id=${encodeURIComponent(id)}&pathname=${encodeURIComponent(pathname)}`, { method: "DELETE" });
   };
 
@@ -926,6 +995,11 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
     setRevisionMap((current) => {
       const next = { ...current };
       for (const deletedId of deletedIds) delete next[deletedId];
+      return next;
+    });
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      for (const deletedId of deletedIds) next.delete(deletedId);
       return next;
     });
     await fetch(`/api/study-node?id=${encodeURIComponent(id)}&pathname=${encodeURIComponent(pathname)}`, { method: "DELETE" });
@@ -1020,6 +1094,9 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
             setDragState={setDragState}
             setDropState={setDropState}
             onMoveTopic={(fromTopicId, toTopicId) => void handleMoveTopic(chapter.id, fromTopicId, toTopicId)}
+            expandedIds={expandedIds}
+            open={expandedIds.has(chapter.id)}
+            onExpandedChange={handleExpandedChange}
           />
         ))}
       </div>
