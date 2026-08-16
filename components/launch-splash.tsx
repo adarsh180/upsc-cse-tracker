@@ -3,10 +3,18 @@
 import { useEffect, useState } from "react";
 
 export function LaunchSplash() {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("upsc-launch-seen-v2")) return;
+      window.sessionStorage.setItem("upsc-launch-seen-v2", "1");
+    } catch {
+      // A blocked storage API should not prevent the app from opening.
+    }
+
+    setVisible(true);
     const leaveTimer = window.setTimeout(() => setLeaving(true), 1550);
     const hideTimer = window.setTimeout(() => setVisible(false), 2000);
     return () => {

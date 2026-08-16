@@ -170,6 +170,12 @@ const studyNodeInclude = {
             orderBy: { sortOrder: "asc" as const },
             include: {
               topicProgress: true,
+              children: {
+                orderBy: { sortOrder: "asc" as const },
+                include: {
+                  topicProgress: true,
+                },
+              },
             },
           },
         },

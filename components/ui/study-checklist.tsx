@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  BookOpen,
   Check,
   ChevronDown,
+  Focus,
   GripVertical,
   Pencil,
   Plus,
   RefreshCw,
+  Search,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,6 +21,8 @@ type TopicNode = {
   id: string;
   title: string;
   overview: string | null;
+  nodeKind?: string | null;
+  curriculumKey?: string | null;
   topicProgress: { checked: boolean; revisionCount: number } | null;
   children?: TopicNode[];
 };
@@ -25,6 +31,8 @@ type ChapterNode = {
   id: string;
   title: string;
   overview: string | null;
+  nodeKind?: string | null;
+  curriculumKey?: string | null;
   topicProgress: { checked: boolean; revisionCount: number } | null;
   children: TopicNode[];
 };
@@ -42,7 +50,7 @@ type DragState =
   | null;
 
 function revisionColor(n: number): string {
-  if (n === 0) return "rgba(255,255,255,0.18)";
+  if (n === 0) return "hsl(40 7% 52%)";
   if (n <= 2) return "hsl(218 84% 62%)";
   if (n <= 5) return "hsl(142 60% 48%)";
   if (n <= 10) return "hsl(38 88% 54%)";
@@ -126,6 +134,26 @@ function addProgressFromTopics(
 
 function normalizeTitle(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function filterTopicTree(nodes: TopicNode[], query: string): TopicNode[] {
+  if (!query) return nodes;
+  return nodes.flatMap((node) => {
+    const children = filterTopicTree(nodeChildren(node), query);
+    const matches = `${node.title} ${node.overview ?? ""}`.toLowerCase().includes(query);
+    return matches || children.length ? [{ ...node, children }] : [];
+  });
+}
+
+function nodeKindLabel(node: Pick<TopicNode, "nodeKind">, fallback: string) {
+  const labels: Record<string, string> = {
+    PAPER_SECTION: "Section",
+    PART: "Part",
+    CHAPTER: "Chapter",
+    TOPIC: "Topic",
+    CUSTOM: "My topic",
+  };
+  return node.nodeKind ? labels[node.nodeKind] ?? fallback : fallback;
 }
 
 function RevisionBadge({
@@ -215,6 +243,7 @@ function TopicRow({
   onDragOver,
   onDrop,
   onDragEnd,
+  manageMode,
 }: {
   topic: TopicNode;
   level?: number;
@@ -234,6 +263,7 @@ function TopicRow({
   onDragOver: () => void;
   onDrop: () => void;
   onDragEnd: () => void;
+  manageMode: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -276,7 +306,7 @@ function TopicRow({
       <div
         className={`study-topic-row${level > 0 ? " subtopic" : ""}${subtopicsOpen ? " is-open" : ""}${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
         data-level={level}
-        draggable={level === 0 && !editing}
+        draggable={manageMode && level === 0 && !editing}
         onDragStart={() => {
           if (level === 0) onDragStart();
         }}
@@ -293,13 +323,13 @@ function TopicRow({
         onDragEnd={onDragEnd}
       >
         <div className="study-row-leading">
-          {level === 0 ? (
+          {manageMode && level === 0 ? (
             <span className="study-drag-chip" aria-hidden="true" title="Drag to reorder">
               <GripVertical size={12} />
             </span>
-          ) : (
+          ) : level > 0 ? (
             <span className="study-subtopic-dot" aria-hidden="true" />
-          )}
+          ) : null}
           <button
             type="button"
             aria-pressed={isChecked}
@@ -319,7 +349,10 @@ function TopicRow({
             <span className="topic-checkbox" aria-hidden="true" />
             {!editing ? (
               <div className="topic-label">
-                <small className="study-level-label">{level > 0 ? "Sub-topic" : "Topic"}</small>
+                <small className="study-level-label">
+                  {nodeKindLabel(topic, level > 0 ? "Sub-topic" : "Topic")}
+                  {!topic.curriculumKey ? " · personal" : ""}
+                </small>
                 <span className={isChecked ? "done" : ""}>{topic.title}</span>
                 {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
               </div>
@@ -348,29 +381,33 @@ function TopicRow({
                 avg {avgRevision}x
               </span>
             ) : null}
-            {level === 0 ? (
+            {manageMode && level === 0 ? (
               <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add sub-topic">
                 <Plus size={12} />
               </button>
             ) : null}
-            <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title={level > 0 ? "Rename sub-topic" : "Rename topic"}>
-              <Pencil size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirmDelete) {
-                  setConfirmDelete(true);
-                  return;
-                }
-                onDelete(topic.id);
-                setConfirmDelete(false);
-              }}
-              className="study-icon-btn danger"
-              title={confirmDelete ? "Confirm delete" : level > 0 ? "Delete sub-topic" : "Delete topic"}
-            >
-              {confirmDelete ? "Sure?" : <Trash2 size={12} />}
-            </button>
+            {manageMode ? (
+              <>
+                <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title={level > 0 ? "Rename sub-topic" : "Rename topic"}>
+                  <Pencil size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!confirmDelete) {
+                      setConfirmDelete(true);
+                      return;
+                    }
+                    onDelete(topic.id);
+                    setConfirmDelete(false);
+                  }}
+                  className="study-icon-btn danger"
+                  title={confirmDelete ? "Confirm delete" : level > 0 ? "Delete sub-topic" : "Delete topic"}
+                >
+                  {confirmDelete ? "Sure?" : <Trash2 size={12} />}
+                </button>
+              </>
+            ) : null}
             {isContainer ? (
               <button
                 type="button"
@@ -387,7 +424,7 @@ function TopicRow({
         )}
       </div>
 
-      {addOpen ? (
+      {manageMode && addOpen ? (
         <div className="study-inline-creator study-subtopic-creator">
           <input
             autoFocus
@@ -429,6 +466,7 @@ function TopicRow({
               onDragOver={() => {}}
               onDrop={() => {}}
               onDragEnd={() => {}}
+              manageMode={manageMode}
             />
           ))}
         </div>
@@ -465,6 +503,9 @@ function ChapterAccordion({
   expandedIds,
   open,
   onExpandedChange,
+  manageMode,
+  focused,
+  onFocus,
 }: {
   chapter: ChapterNode;
   pathname: string;
@@ -493,6 +534,9 @@ function ChapterAccordion({
   expandedIds: Set<string>;
   open: boolean;
   onExpandedChange: (id: string, open: boolean) => void;
+  manageMode: boolean;
+  focused: boolean;
+  onFocus: () => void;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [newTopic, setNewTopic] = useState("");
@@ -535,7 +579,7 @@ function ChapterAccordion({
   return (
     <div
       className={`chapter-accordion study-chapter-card${open ? " is-open" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
-      draggable={!editingChapter}
+      draggable={manageMode && !editingChapter}
       onDragStart={() => onDragStart()}
       onDragOver={(event) => {
         event.preventDefault();
@@ -555,9 +599,11 @@ function ChapterAccordion({
           aria-expanded={open}
           aria-controls={chapterRegionId}
         >
-          <span className="study-drag-chip study-chapter-drag-chip" aria-hidden="true" title="Drag to reorder">
-            <GripVertical size={13} />
-          </span>
+          {manageMode ? (
+            <span className="study-drag-chip study-chapter-drag-chip" aria-hidden="true" title="Drag to reorder">
+              <GripVertical size={13} />
+            </span>
+          ) : null}
           <span className="study-chapter-index" aria-hidden="true">{String(chapterIndex + 1).padStart(2, "0")}</span>
           <div className="study-chapter-progress">
             <CircularProgress pct={pct} size={42} stroke={4} color={accentColor} />
@@ -566,6 +612,8 @@ function ChapterAccordion({
             <div className="chapter-accord-title study-chapter-copy">
               <span>{chapter.title}</span>
               <div className="study-chapter-meta-line">
+                <span className="study-soft-pill">{nodeKindLabel(chapter, "Chapter")}</span>
+                {!chapter.curriculumKey ? <span className="study-soft-pill personal">personal</span> : null}
                 <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{allIds.length}</span>
                 {avgRevision > 0 ? (
                   <span className="study-soft-pill" style={{ color: revisionColor(avgRevision), borderColor: `${revisionColor(avgRevision)}44` }}>
@@ -592,29 +640,38 @@ function ChapterAccordion({
 
         {!editingChapter ? (
           <div className="chapter-accord-meta study-chapter-actions">
-            <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add topic">
-              <Plus size={12} />
-            </button>
-            <button type="button" onClick={() => setEditingChapter(true)} className="study-icon-btn" title="Rename chapter">
-              <Pencil size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirmDelete) {
-                  setConfirmDelete(true);
-                  return;
-                }
-                startTransition(async () => {
-                  await onDeleteChapter(chapter.id);
-                  setConfirmDelete(false);
-                });
-              }}
-              className="study-icon-btn danger"
-              title={confirmDelete ? "Confirm delete" : "Delete chapter"}
-            >
-              {confirmDelete ? "Sure?" : <Trash2 size={12} />}
-            </button>
+            {!focused ? (
+              <button type="button" onClick={onFocus} className="study-icon-btn" title="Focus this chapter">
+                <Focus size={12} />
+              </button>
+            ) : null}
+            {manageMode ? (
+              <>
+                <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add topic">
+                  <Plus size={12} />
+                </button>
+                <button type="button" onClick={() => setEditingChapter(true)} className="study-icon-btn" title="Rename chapter">
+                  <Pencil size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!confirmDelete) {
+                      setConfirmDelete(true);
+                      return;
+                    }
+                    startTransition(async () => {
+                      await onDeleteChapter(chapter.id);
+                      setConfirmDelete(false);
+                    });
+                  }}
+                  className="study-icon-btn danger"
+                  title={confirmDelete ? "Confirm delete" : "Delete chapter"}
+                >
+                  {confirmDelete ? "Sure?" : <Trash2 size={12} />}
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               className="study-chevron-btn"
@@ -629,7 +686,7 @@ function ChapterAccordion({
         ) : null}
       </div>
 
-      {addOpen ? (
+      {manageMode && addOpen ? (
         <div className="study-inline-creator">
           <input
             autoFocus
@@ -686,6 +743,7 @@ function ChapterAccordion({
                 onDragEnd();
               }}
               onDragEnd={onDragEnd}
+              manageMode={manageMode}
             />
           ))}
 
@@ -698,6 +756,9 @@ function ChapterAccordion({
 
 export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }: StudyPageClientProps) {
   const [chapters, setChapters] = useState<ChapterNode[]>(initialChapters);
+  const [manageMode, setManageMode] = useState(false);
+  const [query, setQuery] = useState("");
+  const [focusedChapterId, setFocusedChapterId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState>(null);
   const [dropState, setDropState] = useState<DragState>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
@@ -739,6 +800,9 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
 
   useEffect(() => {
     setExpandedIds(new Set());
+    setFocusedChapterId(null);
+    setQuery("");
+    setManageMode(false);
   }, [nodeId]);
 
   useEffect(() => {
@@ -778,6 +842,17 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
       return next;
     });
   };
+
+  const visibleChapters = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    let visible = focusedChapterId ? chapters.filter((chapter) => chapter.id === focusedChapterId) : chapters;
+    if (!normalizedQuery) return visible;
+    return visible.flatMap((chapter) => {
+      const children = filterTopicTree(chapter.children, normalizedQuery);
+      const chapterMatches = `${chapter.title} ${chapter.overview ?? ""}`.toLowerCase().includes(normalizedQuery);
+      return chapterMatches || children.length ? [{ ...chapter, children }] : [];
+    });
+  }, [chapters, focusedChapterId, query]);
 
   const syncOrder = async (parentId: string, orderedIds: string[]) => {
     await fetch("/api/study-node", {
@@ -1025,7 +1100,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const wellRevisedCount = allRevisions.filter((value) => value >= 5).length;
 
   return (
-    <article className="glass panel study-control-shell">
+    <article className={`glass panel study-control-shell${manageMode ? " is-managing" : ""}`}>
       <div className="study-control-header">
         <div className="study-control-progress">
           <CircularProgress pct={overallPct} size={68} stroke={6} color="var(--gold)" />
@@ -1035,7 +1110,34 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
             <div className="muted study-control-copy">Current completion and revision state.</div>
           </div>
         </div>
-        <div className="study-head-note">Chapter order, topic order and revision heat stay together.</div>
+        <div className="study-mode-switch" role="group" aria-label="Syllabus workspace mode">
+          <button type="button" className={!manageMode ? "active" : ""} onClick={() => setManageMode(false)}>
+            <BookOpen size={14} /> Study
+          </button>
+          <button type="button" className={manageMode ? "active" : ""} onClick={() => setManageMode(true)}>
+            <Settings2 size={14} /> Manage
+          </button>
+        </div>
+      </div>
+
+      <div className="study-findbar">
+        <label className="study-search-field">
+          <Search size={15} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find a chapter or topic"
+            aria-label="Find a chapter or topic"
+          />
+          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button> : null}
+        </label>
+        {focusedChapterId ? (
+          <button type="button" className="study-focus-exit" onClick={() => setFocusedChapterId(null)}>
+            <Focus size={14} /> Show all chapters
+          </button>
+        ) : (
+          <span className="study-find-count">{visibleChapters.length} chapters</span>
+        )}
       </div>
 
       <div className="study-summary-grid">
@@ -1055,14 +1157,16 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
       </div>
 
       <div className="chapter-grid study-chapter-grid">
-        {chapters.map((chapter, index) => (
+        {visibleChapters.map((chapter) => {
+          const chapterIndex = chapters.findIndex((item) => item.id === chapter.id);
+          return (
           <ChapterAccordion
             key={chapter.id}
             chapter={chapter}
             pathname={pathname}
             optimisticMap={optimisticMap}
             revisionMap={revisionMap}
-            chapterIndex={index}
+            chapterIndex={chapterIndex}
             onToggle={handleToggle}
             onRevisionChange={handleRevisionChange}
             onAddTopic={handleAddTopic}
@@ -1097,8 +1201,22 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
             expandedIds={expandedIds}
             open={expandedIds.has(chapter.id)}
             onExpandedChange={handleExpandedChange}
+            manageMode={manageMode}
+            focused={focusedChapterId === chapter.id}
+            onFocus={() => {
+              setFocusedChapterId(chapter.id);
+              setExpandedIds((current) => new Set(current).add(chapter.id));
+            }}
           />
-        ))}
+          );
+        })}
+        {!visibleChapters.length ? (
+          <div className="study-empty-search">
+            <Search size={18} />
+            <span>No matching chapter or topic.</span>
+            <button type="button" onClick={() => setQuery("")}>Clear search</button>
+          </div>
+        ) : null}
       </div>
 
       <div className="study-legend">

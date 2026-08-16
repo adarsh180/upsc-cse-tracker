@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { createStudyNode, deleteStudyNode, reorderStudyNodes, updateStudyNode } from "@/lib/study-tree";
 
 function revalidateStudySurfaces(pathname?: string) {
@@ -16,6 +17,69 @@ async function requireApiSession() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return null;
+}
+
+type SearchParent = { title: string; parent: SearchParent | null };
+
+function parentTrail(parent: SearchParent | null) {
+  const trail: string[] = [];
+  let current = parent;
+  while (current) {
+    trail.unshift(current.title);
+    current = current.parent;
+  }
+  return trail;
+}
+
+// GET - global curriculum search for the command palette
+export async function GET(req: NextRequest) {
+  const unauthorized = await requireApiSession();
+  if (unauthorized) return unauthorized;
+
+  const query = new URL(req.url).searchParams.get("q")?.replace(/\s+/g, " ").trim() ?? "";
+  if (query.length < 2) return NextResponse.json({ results: [] });
+
+  const results = await db.studyNode.findMany({
+    where: { title: { contains: query } },
+    orderBy: [{ curriculumKey: "desc" }, { title: "asc" }],
+    take: 24,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+      nodeKind: true,
+      curriculumKey: true,
+      parent: {
+        select: {
+          title: true,
+          parent: {
+            select: {
+              title: true,
+              parent: {
+                select: {
+                  title: true,
+                  parent: { select: { title: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return NextResponse.json({
+    results: results.map((result) => ({
+      id: result.id,
+      title: result.title,
+      slug: result.slug,
+      type: result.type,
+      nodeKind: result.nodeKind,
+      canonical: Boolean(result.curriculumKey),
+      path: parentTrail(result.parent as SearchParent | null),
+    })),
+  });
 }
 
 // POST — create a new child node

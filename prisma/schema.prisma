@@ -21,6 +21,11 @@ model StudyNode {
   title         String
   slug          String          @unique
   type          String
+  nodeKind          String?
+  curriculumKey     String? @unique
+  curriculumVersion String?
+  curriculumTitle   String?
+  userEditedAt      DateTime?
   overview      String?         @db.Text
   details       String?         @db.LongText
   accent        String?

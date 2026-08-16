@@ -333,6 +333,7 @@ export async function createStudyNode(input: {
       title: cleanTitle,
       slug: await uniqueStudySlug(cleanTitle),
       type: nextType,
+      nodeKind: "CUSTOM",
       overview: input.overview?.trim() || null,
       sortOrder: (await db.studyNode.count({ where: { parentId: input.parentId } })) + 1,
     },
@@ -369,6 +370,7 @@ export async function updateStudyNode(input: {
       title,
       overview: input.overview !== undefined ? input.overview?.trim() || null : existing.overview,
       details: input.details !== undefined ? input.details?.trim() || null : existing.details,
+      userEditedAt: new Date(),
     },
   });
 }

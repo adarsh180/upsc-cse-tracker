@@ -16,6 +16,7 @@ import { SacredLogoMark } from "@/components/shell/sacred-brand";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { navGroups } from "@/components/shell/nav-config";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { SyllabusCommand } from "@/components/ui/syllabus-command";
 import { cn } from "@/lib/utils";
 
 /* Primary destinations — desktop top nav + mobile bottom tabs */
@@ -164,6 +165,10 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="v2-topbar-actions">
+            <SyllabusCommand />
+            <div className={cn("notify-host-inline", isGuruPage && "notify-host-guru")}>
+              <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
+            </div>
             <button
               type="button"
               className="v2-iconbtn"
@@ -180,11 +185,6 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       {/* Page content */}
       <div className={cn("app-shell", !keepsSpecializedVisuals && "editorial-app")}>
         <div className="app-shell-inner">{children}</div>
-      </div>
-
-      {/* Notifications (renders its own floating UI; hidden on Guru mobile) */}
-      <div className={cn(isGuruPage && "notify-host-guru")}>
-        <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
       </div>
 
       {/* Bottom tab bar — mobile */}

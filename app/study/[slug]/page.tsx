@@ -35,13 +35,15 @@ import { StudyPageClient } from "@/components/ui/study-checklist";
 
 type ProgressRecord = {
   checked: boolean;
-  revisionCount?: number;
+  revisionCount: number;
 } | null;
 
 type TopicEntry = {
   id: string;
   title: string;
   overview: string | null;
+  nodeKind: string | null;
+  curriculumKey: string | null;
   topicProgress: ProgressRecord;
   children?: TopicEntry[];
 };
@@ -53,6 +55,8 @@ type ChildWithProgress = {
   type: string;
   overview: string | null;
   accent: string | null;
+  nodeKind: string | null;
+  curriculumKey: string | null;
   topicProgress: ProgressRecord;
   children: TopicEntry[];
 };
@@ -84,6 +88,18 @@ function summarizeProgress(nodes: ChildWithProgress[]) {
     done,
     pct: leaves.length ? Math.round((done / leaves.length) * 100) : 0,
     revisions,
+  };
+}
+
+function mapChecklistNode(node: TopicEntry): TopicEntry {
+  return {
+    id: node.id,
+    title: node.title,
+    overview: node.overview,
+    nodeKind: node.nodeKind,
+    curriculumKey: node.curriculumKey,
+    topicProgress: node.topicProgress,
+    children: (node.children ?? []).map(mapChecklistNode),
   };
 }
 
@@ -233,7 +249,7 @@ export default async function StudyNodePage({
   // Affairs) that have no subjects to delegate logging to. Papers-with-subjects
   // and module pages show progress/checklist but no session form.
   const isLeafPaper = isPaper && !hasSyllabusChildren;
-  const showLogForm = isSubject || isLeafPaper;
+  const showLogForm = isSubject || isLeafPaper || node.slug === "essay" || node.slug === "current-affairs";
 
   const studyLogs = node.studyLogs ?? [];
   const loggedHours = studyLogs.reduce((sum, log) => sum + log.hours, 0);
@@ -429,23 +445,8 @@ export default async function StudyNodePage({
             nodeType={node.type}
             chapters={
               children.map((chapter) => ({
-                id: chapter.id,
-                title: chapter.title,
-                overview: chapter.overview,
-                topicProgress: chapter.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["topicProgress"],
-                children: chapter.children.map((topic) => ({
-                  id: topic.id,
-                  title: topic.title,
-                  overview: topic.overview,
-                  topicProgress: topic.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["children"][number]["topicProgress"],
-                  children: (topic.children ?? []).map((subTopic) => ({
-                    id: subTopic.id,
-                    title: subTopic.title,
-                    overview: subTopic.overview,
-                    topicProgress: subTopic.topicProgress as Parameters<typeof StudyPageClient>[0]["chapters"][number]["children"][number]["topicProgress"],
-                    children: [],
-                  })),
-                })),
+                ...mapChecklistNode(chapter),
+                children: chapter.children.map(mapChecklistNode),
               }))
             }
             pathname={pathname}

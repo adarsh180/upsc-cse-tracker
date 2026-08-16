@@ -11,7 +11,10 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts",
-    "db:seed-pyq": "tsx scripts/seed-pyq.ts"
+    "db:seed-pyq": "tsx scripts/seed-pyq.ts",
+    "db:backup-study": "tsx scripts/backup-study-data.ts",
+    "db:curriculum:dry-run": "tsx scripts/import-curriculum.ts",
+    "db:curriculum:audit": "tsx scripts/audit-curriculum.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.0",
