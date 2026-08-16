@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronRight, Command, Search, X } from "lucide-react";
+import { BookOpen, ChevronRight, Search, X } from "lucide-react";
 
 type SearchResult = {
   id: string;
@@ -75,9 +75,14 @@ export function SyllabusCommand() {
 
   return (
     <>
-      <button type="button" className="v2-iconbtn syllabus-command-trigger" onClick={() => setOpen(true)} aria-label="Search the syllabus">
-        <Search size={17} />
-        <span className="syllabus-command-key"><Command size={9} />K</span>
+      <button
+        type="button"
+        className="v2-iconbtn syllabus-command-trigger"
+        onClick={() => setOpen(true)}
+        aria-label="Search the syllabus"
+        title="Search syllabus (Ctrl/Command + K)"
+      >
+        <Search size={18} aria-hidden="true" />
       </button>
       {open ? (
         <div className="syllabus-command-backdrop" role="presentation" onMouseDown={() => setOpen(false)}>

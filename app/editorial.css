@@ -615,25 +615,13 @@
   .editorial-current-affairs .db-section > div[style*="display: grid"] > article { padding: 18px !important; }
 }
 
-.syllabus-command-trigger { position: relative; }
-.syllabus-command-key {
-  position: absolute;
-  right: -4px;
-  bottom: -5px;
-  display: inline-flex;
-  min-width: 22px;
-  height: 15px;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  border: 1px solid var(--ed-line-strong);
-  border-radius: 5px;
-  background: var(--ed-surface-2);
-  color: var(--ed-faint);
-  font-size: 8px;
-  font-weight: 850;
-  line-height: 1;
+.syllabus-command-trigger {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
 }
+
+.syllabus-command-trigger > svg { display: block; }
 
 .syllabus-command-backdrop {
   position: fixed;
@@ -747,7 +735,6 @@
 @keyframes commandPanelIn { from { opacity: 0; transform: translateY(-12px) scale(.98); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 560px) {
-  .syllabus-command-key { display: none; }
   .syllabus-command-backdrop { place-items: end center; padding: 10px; }
   .syllabus-command-panel { max-height: calc(100svh - 20px); border-radius: 22px; }
   .syllabus-command-results { max-height: calc(100svh - 94px); }
