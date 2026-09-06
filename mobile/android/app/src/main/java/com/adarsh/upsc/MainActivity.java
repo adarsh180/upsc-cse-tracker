@@ -12,8 +12,10 @@ import android.view.*;
 import android.webkit.*;
 import android.widget.*;
 import java.util.Locale;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ComponentActivity {
     private WebView web;
     private LinearLayout errorPanel;
     private ProgressBar progress;
@@ -70,6 +72,11 @@ public class MainActivity extends Activity {
         errorPanel.setVisibility(View.GONE);
         content.addView(errorPanel, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack(); else finish();
+            }
+        });
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(false);
@@ -219,7 +226,6 @@ public class MainActivity extends Activity {
             upload.onReceiveValue(values); upload = null;
         }
     }
-    @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
     @Override protected void onResume() { super.onResume(); handler.post(tick); }
     @Override protected void onPause() { handler.removeCallbacks(tick); CookieManager.getInstance().flush(); super.onPause(); }
     @Override protected void onDestroy() { handler.removeCallbacks(tick); if (upload != null) upload.onReceiveValue(null); web.destroy(); super.onDestroy(); }

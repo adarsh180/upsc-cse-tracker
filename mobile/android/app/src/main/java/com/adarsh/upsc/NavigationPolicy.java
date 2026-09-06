@@ -7,6 +7,7 @@ public final class NavigationPolicy {
     public static final String HOST = "upsc-cse-tracker-adarsh.vercel.app";
     public static final String HOME = "https://" + HOST + "/dashboard";
     public static boolean isHttps(String value) {
+        if (value == null) return false;
         try {
             URI uri = URI.create(value);
             return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null

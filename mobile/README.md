@@ -12,7 +12,7 @@ No web application code, database schema, production configuration or user data 
 
 ## Get an Android test app
 
-The **Android and iOS apps** GitHub Actions workflow builds an APK on the mobile branch and on relevant pull requests. Open its successful run, download `sacred-attempt-android-test-apk`, unzip and install `app-debug.apk` on Android 8 or newer. It is a **debug-signed testing build**, not a Play Store release. Android may require permission for the specific app used to open the APK. Sign in with the existing tracker credentials inside the app; credentials are never bundled.
+The **Android and iOS apps** GitHub Actions workflow builds an APK on relevant pull requests (and manually once the workflow is on the default branch). Open its successful run, download `sacred-attempt-android-test-apk`, unzip and install `app-debug.apk` on Android 8 or newer. It is a **debug-signed testing build**, not a Play Store release. Android may require permission for the specific app used to open the APK. Sign in with the existing tracker credentials inside the app; credentials are never bundled.
 
 A new CI runner may generate a different debug signing key. If a subsequent test APK cannot update the previous test install, uninstall the old test app first (this clears local login/timer state). A release must use one securely retained owner signing key so updates preserve app data.
 

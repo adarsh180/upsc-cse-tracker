@@ -1,9 +1,6 @@
 name: Android and iOS apps
 
 on:
-  push:
-    branches: [mobile/android-ios-apps]
-    paths: ['mobile/**', 'public/icon-192.png', 'public/icon-512.png', '.github/workflows/mobile-build.yml']
   pull_request:
     paths: ['mobile/**', 'public/icon-192.png', 'public/icon-512.png', '.github/workflows/mobile-build.yml']
   workflow_dispatch:
