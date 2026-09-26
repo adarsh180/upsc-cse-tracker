@@ -180,11 +180,11 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
     var(--sheet);
   box-shadow: var(--nv-shadow);
 }
-.nv-goals .gm > :not(.nv-chakra) { position: relative; z-index: 1; }
-.nv-goals .gm-chakra { top: -190px; right: -170px; }
+.nv-goals .gm > * { position: relative; z-index: 1; }
 
 .nv-goals .gm-dateline {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px 18px;
   padding-bottom: 14px;
@@ -294,35 +294,55 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 .nv-root .gm-line .is-peak dd { color: var(--g-peak, var(--nv-a1)); }
 .nv-root .gm-line .is-bad dd { color: var(--nv-rose); }
 
-/* Hours dial */
-.nv-goals .hd { position: relative; width: clamp(230px, 24vw, 290px); }
+/* Hours dial — smooth arc, travelling tip, sheen, pins for 8h / 12h */
+.nv-goals .hd { position: relative; width: clamp(240px, 25vw, 300px); padding-bottom: 20px; }
 .nv-goals .hd svg { display: block; width: 100%; overflow: visible; }
-.nv-goals .hd-track { fill: none; stroke: color-mix(in srgb, var(--nv-ink) 8%, transparent); stroke-width: 12; stroke-linecap: round; }
+.nv-goals .hd-track { fill: none; stroke: color-mix(in srgb, var(--nv-ink) 7%, transparent); stroke-width: 14; stroke-linecap: round; }
 .nv-goals .hd-fill {
   fill: none;
-  stroke: var(--tier);
-  stroke-width: 12;
+  stroke-width: 14;
   stroke-linecap: round;
   stroke-dasharray: 100 100;
   stroke-dashoffset: calc(100 - var(--pct));
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tier) 45%, transparent));
-  animation: hd-draw 1.6s var(--nv-ease) 0.3s both;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--tier) 40%, transparent));
+  animation: hd-draw 1.8s var(--nv-ease) 0.3s both;
 }
+.nv-goals .hd:not(.is-live) .hd-track { animation: hd-breathe 3.2s ease-in-out infinite; }
+@keyframes hd-breathe { 50% { stroke: color-mix(in srgb, var(--nv-ink) 13%, transparent); } }
 @keyframes hd-draw { from { stroke-dashoffset: 100; } }
-.nv-goals .hd-tick { stroke: color-mix(in srgb, var(--nv-ink) 22%, transparent); stroke-width: 1.2; stroke-linecap: round; }
-.nv-goals .hd-tick.good { stroke: var(--g-good); stroke-width: 2.2; }
-.nv-goals .hd-tick.peak { stroke: var(--g-peak); stroke-width: 2.2; }
-.nv-goals .hd-num { fill: var(--nv-faint); font: 500 9px var(--font-mono), monospace; }
-.nv-goals .hd-num.good { fill: var(--g-good); }
-.nv-goals .hd-num.peak { fill: var(--g-peak); }
-.nv-goals .hd-tip { fill: var(--nv-bg); stroke: var(--tier); stroke-width: 2.5; animation: hd-tip 1.6s var(--nv-ease) 0.3s both; }
-@keyframes hd-tip { from { opacity: 0; } }
-.nv-goals .hd-core { position: absolute; left: 0; right: 0; bottom: 2px; display: grid; justify-items: center; gap: 3px; text-align: center; }
-.nv-goals .hd-core strong { color: var(--nv-ink); font: 600 clamp(2.2rem, 3.6vw, 2.9rem)/1 var(--font-mono), monospace; letter-spacing: -0.05em; }
-.nv-goals .hd-core strong em { margin-left: 2px; color: var(--nv-faint); font-size: 0.45em; font-style: normal; }
+.nv-goals .hd-sheen {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 5 200;
+  stroke-dashoffset: 5;
+  opacity: 0;
+  animation: hd-sheen 3.6s ease-in-out 2.2s infinite;
+}
+@keyframes hd-sheen {
+  0% { stroke-dashoffset: 5; opacity: 0; }
+  15% { opacity: 0.8; }
+  70% { opacity: 0.8; }
+  85%, 100% { stroke-dashoffset: calc(5 - var(--pct)); opacity: 0; }
+}
+.nv-goals .hd-tip { transform-box: view-box; transform-origin: 120px 124px; transform: rotate(var(--deg)); animation: hd-turn 1.8s var(--nv-ease) 0.3s both; }
+@keyframes hd-turn { from { transform: rotate(0deg); } }
+.nv-goals .hd-tip-dot { fill: var(--nv-surface-solid); stroke: var(--tier); stroke-width: 3; }
+.nv-goals .hd-tip-halo { fill: var(--tier); opacity: 0.25; transform-box: fill-box; transform-origin: center; animation: hd-pulse 2.4s ease-out 2.1s infinite; }
+@keyframes hd-pulse { 0% { transform: scale(0.6); opacity: 0.45; } 100% { transform: scale(1.9); opacity: 0; } }
+.nv-goals .hd-mark circle { fill: var(--nv-bg); stroke: var(--c); stroke-width: 2; transition: fill 400ms ease; }
+.nv-goals .hd-mark text { fill: var(--c); font: 600 10px var(--font-mono), monospace; }
+.nv-goals .hd-mark.good { --c: var(--g-good); }
+.nv-goals .hd-mark.peak { --c: var(--g-peak); }
+.nv-goals .hd-mark.is-hit circle { fill: var(--c); }
+.nv-goals .hd-core { position: absolute; left: 0; right: 0; bottom: 18px; display: grid; justify-items: center; gap: 3px; text-align: center; }
+.nv-goals .hd-core strong { color: var(--nv-ink); font: 600 clamp(2.3rem, 3.8vw, 3rem)/1 var(--font-mono), monospace; letter-spacing: -0.05em; }
+.nv-goals .hd-core strong em { margin-left: 2px; color: var(--nv-faint); font-size: 0.42em; font-style: normal; }
 .nv-goals .hd-core span { color: var(--nv-muted); font-size: 12.5px; font-weight: 600; }
 .nv-goals .hd-core small { color: var(--nv-faint); font: 500 10.5px/1 var(--font-mono), monospace; letter-spacing: 0.06em; text-transform: uppercase; }
 .nv-goals .hd-core small b { color: var(--nv-a1); font-weight: 600; }
+.nv-goals .hd-ends { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 0 4%; color: var(--nv-faint); font: 500 10px var(--font-mono), monospace; }
 
 /* ==========================================================================
    Page layout
@@ -1048,7 +1068,6 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 @media (max-width: 860px) {
   .nv-goals .gm-grid { grid-template-columns: 1fr; }
   .nv-goals .hd { justify-self: center; width: min(300px, 86%); }
-  .nv-goals .gm-chakra { top: -120px; right: -220px; }
   .nv-goals .gh-row-head { display: none; }
   .nv-goals .gh-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));

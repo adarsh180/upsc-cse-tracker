@@ -16,6 +16,7 @@ import { getStudyNodeBySlug } from "@/lib/dashboard";
 import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { StudyPageClient } from "@/components/ui/study-checklist";
 import { Chakra } from "@/components/ui/chakra";
+import { LiquidMeter } from "@/components/ui/liquid-meter";
 import { CountUp, NovaStage } from "@/components/ui/nova-fx";
 
 type ProgressRecord = {
@@ -261,9 +262,8 @@ export default async function StudyNodePage({
     >
       {/* ── Masthead ─────────────────────────────────────────────── */}
       <header className="sm nv-rise" style={{ "--d": 0 } as CSSProperties}>
-        <Chakra className="sm-chakra" size={520} />
-
         <nav className="sm-crumbs nv-mono" aria-label="Breadcrumb">
+          <Chakra className="nv-chakra-mark" size={18} />
           <Link href="/dashboard">Study</Link>
           <span aria-hidden="true">/</span>
           {node.parent ? (
@@ -293,32 +293,19 @@ export default async function StudyNodePage({
             </div>
           </div>
 
-          <div className="sm-meter" style={{ "--p": progressSummary.pct } as CSSProperties} aria-label={`${progressSummary.pct}% syllabus completion`}>
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle className="sm-meter-track" cx="60" cy="60" r="50" />
-              <circle className="sm-meter-fill" cx="60" cy="60" r="50" pathLength={100} />
-              {Array.from({ length: 24 }, (_, i) => (
-                <line
-                  key={i}
-                  className={i / 24 < progressSummary.pct / 100 ? "is-lit" : ""}
-                  x1="60"
-                  y1="3"
-                  x2="60"
-                  y2="7"
-                  transform={`rotate(${i * 15 + 90} 60 60)`}
-                />
-              ))}
-            </svg>
-            <div className="sm-meter-core">
-              <strong>
-                <CountUp value={progressSummary.pct} />
-                <em>%</em>
-              </strong>
-              <span>
-                {progressSummary.done}/{progressSummary.total} topics
-              </span>
-            </div>
-          </div>
+          <LiquidMeter
+            pct={progressSummary.pct}
+            id={node.id}
+            label={`${progressSummary.pct}% syllabus completion`}
+          >
+            <strong>
+              <CountUp value={progressSummary.pct} />
+              <em>%</em>
+            </strong>
+            <span>
+              {progressSummary.done}/{progressSummary.total} topics
+            </span>
+          </LiquidMeter>
         </div>
 
         <dl className="gm-line sm-line">

@@ -138,6 +138,8 @@ html[data-theme="light"] .nv-root.nv-app::after { opacity: 0.06; mix-blend-mode:
 
 html[data-theme="light"] .nv-chakra { opacity: 0.15; }
 
+.nv-chakra.nv-chakra-mark { position: static; flex: none; opacity: 0.85; color: var(--nv-a1); animation-duration: 30s; }
+
 @keyframes nv-turn { to { transform: rotate(360deg); } }
 
 /* Devanagari marginalia + mono figures */

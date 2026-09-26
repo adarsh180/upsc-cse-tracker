@@ -244,8 +244,8 @@ export default async function GoalsPage() {
     <NovaStage className="page-shell editorial-page editorial-goals nv-root nv-app nv-goals">
       {/* ── Masthead ─────────────────────────────────────────── */}
       <header className="gm nv-rise" style={{ "--d": 0 } as CSSProperties}>
-        <Chakra className="gm-chakra" size={560} />
         <div className="gm-dateline nv-mono">
+          <Chakra className="nv-chakra-mark" size={18} />
           <span>{weekdayLong}</span>
           <span>{formatIstFullDate(new Date())}</span>
           <span>Day {dayNumber} of the ledger</span>
