@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { MOMENTUM_TIERS, tierForHours } from "@/components/goals/momentum-tiers";
+import { Chakra } from "@/components/ui/chakra";
 
 const MAX = 14;
 const CX = 120;
@@ -33,7 +34,9 @@ export function HoursDial({ hours, score }: { hours: number; score: number }) {
       className={`hd${hours > 0 ? " is-live" : ""}`}
       style={{ "--tier": tone, "--pct": pct, "--deg": `${pct * 1.8}deg` } as CSSProperties}
     >
-      <svg viewBox="0 0 240 142" aria-hidden="true">
+      <div className="hd-stage">
+      <Chakra className="hd-halo" size={520} />
+      <svg className="hd-gauge" viewBox="0 0 240 142" aria-hidden="true">
         <defs>
           <linearGradient id="hd-grad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor={tone} stopOpacity="0.35" />
@@ -65,6 +68,7 @@ export function HoursDial({ hours, score }: { hours: number; score: number }) {
           </g>
         ) : null}
       </svg>
+      </div>
 
       <div className="hd-core">
         <strong>

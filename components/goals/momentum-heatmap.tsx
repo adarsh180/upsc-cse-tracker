@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * Momentum Heatmap — an emoji-tier "grind ladder" replacement for the old
- * GitHub-style colour grid. Intensity is rigorous and hours-driven:
+ * Momentum Heatmap — a dot-matrix field: each day is a dot whose size grows
+ * with hours and whose colour is its tier, with weekly totals underneath.
+ * Intensity is rigorous and hours-driven:
  *   < 4h  drift · 4–6h warming · 6–8h close · 8–10h GOOD · 10–12h strong · 12h+ PEAK.
  * Only 8h+ counts as a genuinely good day; 12h+ is the peak target.
  *
@@ -82,7 +83,6 @@ function weekdayMonFirst(dateKey: string) {
 }
 
 
-type ViewMode = "fill" | "emoji";
 
 export function MomentumHeatmap({
   data,
@@ -101,7 +101,6 @@ export function MomentumHeatmap({
   const [activeBlock, setActiveBlock] = useState(currentBlock);
   const [hovered, setHovered] = useState<MomentumDay | null>(null);
   const [pinned, setPinned] = useState<MomentumDay | null>(null);
-  const [mode, setMode] = useState<ViewMode>("fill");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Global stats — drawn from every logged day, independent of the visible block.
@@ -212,8 +211,21 @@ export function MomentumHeatmap({
   const shown = pinned ?? hovered;
   const shownTier = shown ? MOMENTUM_TIERS[shown.tier] : null;
 
+  // Weekly totals under the grid — one bar per column, coloured by the week's
+  // average logged day so a strong week reads at a glance.
+  const weekBars = useMemo(() => {
+    const rows = weeks.map((week) => {
+      const days = week.filter((d) => !d.isFuture);
+      const total = days.reduce((sum, d) => sum + (d.data?.hours ?? 0), 0);
+      const logged = days.filter((d) => (d.data?.hours ?? 0) > 0).length;
+      return { key: week[0]?.dateKey ?? "", total, avgTier: logged ? tierForHours(total / logged) : 0, future: days.length === 0 };
+    });
+    const max = Math.max(1, ...rows.map((r) => r.total));
+    return rows.map((r) => ({ ...r, h: r.total / max }));
+  }, [weeks]);
+
   return (
-    <article className="mh" data-mode={mode}>
+    <article className="mh">
       <header className="mh-head">
         <dl className="mh-stats">
           <div className="is-streak">
@@ -254,44 +266,34 @@ export function MomentumHeatmap({
           </div>
         </dl>
 
-        <div className="mh-tools">
-          <div className="nv-seg" style={{ "--n": 2, "--i": mode === "fill" ? 0 : 1 } as CSSProperties} role="tablist" aria-label="Heatmap view">
-            <button type="button" role="tab" aria-selected={mode === "fill"} className={mode === "fill" ? "is-on" : ""} onClick={() => setMode("fill")}>
-              Fill
-            </button>
-            <button type="button" role="tab" aria-selected={mode === "emoji"} className={mode === "emoji" ? "is-on" : ""} onClick={() => setMode("emoji")}>
-              Emoji
-            </button>
+        <div className="mh-block">
+          <button
+            type="button"
+            className="mh-block-btn"
+            onClick={() => setActiveBlock((b) => Math.max(0, b - 1))}
+            disabled={activeBlock === 0}
+            aria-label="Previous 500-day block"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <div className="mh-block-meta">
+            <strong>
+              Block {activeBlock + 1}
+              <span> / {blockCount}</span>
+            </strong>
+            <small>
+              {formatKey(blockStart, "range")} – {formatKey(blockEnd, "range")}
+            </small>
           </div>
-          <div className="mh-block">
-            <button
-              type="button"
-              className="mh-block-btn"
-              onClick={() => setActiveBlock((b) => Math.max(0, b - 1))}
-              disabled={activeBlock === 0}
-              aria-label="Previous 500-day block"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <div className="mh-block-meta">
-              <strong>
-                Block {activeBlock + 1}
-                <span> / {blockCount}</span>
-              </strong>
-              <small>
-                {formatKey(blockStart, "range")} – {formatKey(blockEnd, "range")}
-              </small>
-            </div>
-            <button
-              type="button"
-              className="mh-block-btn"
-              onClick={() => setActiveBlock((b) => Math.min(blockCount - 1, b + 1))}
-              disabled={activeBlock >= blockCount - 1}
-              aria-label="Next 500-day block"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="mh-block-btn"
+            onClick={() => setActiveBlock((b) => Math.min(blockCount - 1, b + 1))}
+            disabled={activeBlock >= blockCount - 1}
+            aria-label="Next 500-day block"
+          >
+            <ChevronRight size={15} />
+          </button>
         </div>
       </header>
 
@@ -309,6 +311,7 @@ export function MomentumHeatmap({
           {["M", "", "W", "", "F", "", "S"].map((d, i) => (
             <span key={i}>{d}</span>
           ))}
+          <span className="mh-weekdays-sum">wk</span>
         </div>
         <div className="mh-scroll" ref={scrollRef}>
           <div className="mh-months" aria-hidden="true">
@@ -325,14 +328,14 @@ export function MomentumHeatmap({
                   if (day.isFuture) {
                     return <span key={day.dateKey} className={`mh-cell is-future${day.isPad ? " is-pad" : ""}`} aria-hidden="true" />;
                   }
-                  const level = day.data ? Math.min(1, day.data.hours / 14) : 0;
+                  const size = day.data && day.data.hours > 0 ? 0.34 + Math.min(1, day.data.hours / 13) * 0.66 : 0;
                   const isPinned = pinned?.dateKey === day.dateKey;
                   return (
                     <button
                       key={day.dateKey}
                       type="button"
                       className={`mh-cell t${day.tier}${day.isToday ? " is-today" : ""}${isPinned ? " is-pinned" : ""}`}
-                      style={{ "--c": t.accent, "--lvl": level } as CSSProperties}
+                      style={{ "--c": t.accent, "--sz": size } as CSSProperties}
                       onMouseEnter={() => setHovered(day)}
                       onFocus={() => setHovered(day)}
                       onMouseLeave={() => setHovered((cur) => (cur?.dateKey === day.dateKey ? null : cur))}
@@ -340,12 +343,23 @@ export function MomentumHeatmap({
                       aria-pressed={isPinned}
                       aria-label={`${day.displayDate}: ${day.data ? `${day.data.hours.toFixed(1)} hours, ${t.label}` : "no log"}`}
                     >
-                      <i className="mh-fill" />
-                      <span className="mh-emoji">{day.tier ? t.emoji : ""}</span>
+                      <i className="mh-dot" />
                     </button>
                   );
                 })}
               </div>
+            ))}
+          </div>
+          <div className="mh-weekbars" aria-hidden="true">
+            {weekBars.map((bar, wIdx) => (
+              <span
+                key={bar.key || wIdx}
+                className={bar.future ? "is-future" : undefined}
+                style={{ "--h": bar.h, "--c": MOMENTUM_TIERS[bar.avgTier].accent, "--w": Math.min(wIdx, 80) } as CSSProperties}
+                title={bar.future ? undefined : `${bar.total.toFixed(1)}h this week`}
+              >
+                <i />
+              </span>
             ))}
           </div>
         </div>
@@ -355,8 +369,8 @@ export function MomentumHeatmap({
         <div className="mh-readout" data-empty={!shown || undefined}>
           {shown && shownTier ? (
             <>
-              <span className="mh-readout-badge" style={{ "--c": shownTier.accent } as CSSProperties}>
-                {shownTier.emoji === "·" ? "–" : shownTier.emoji}
+              <span className="mh-readout-badge" style={{ "--c": shown.tier ? shownTier.accent : "var(--nv-faint)" } as CSSProperties}>
+                <i />
               </span>
               <div>
                 <strong>
@@ -381,23 +395,16 @@ export function MomentumHeatmap({
               ) : null}
             </>
           ) : (
-            <span className="mh-hint">
-              Hover or tap a day to read it · {stats.activeDays} days logged
-            </span>
+            <span className="mh-hint">Hover or tap a day to read it · {stats.activeDays} days logged</span>
           )}
         </div>
         <div className="mh-legend" aria-label="Tiers">
-          <span className="mh-legend-cap">less</span>
           {MOMENTUM_TIERS.slice(1).map((t) => (
             <span key={t.tier} className="mh-legend-item" title={`${t.label} — ${t.min >= 1 ? `${t.min}h+` : "under 4h"}`}>
-              <i className={`mh-cell t${t.tier}`} style={{ "--c": t.accent, "--lvl": Math.min(1, Math.max(t.min, 2) / 14) } as CSSProperties}>
-                <i className="mh-fill" />
-                <span className="mh-emoji">{t.emoji}</span>
-              </i>
+              <i style={{ "--c": t.accent, "--sz": 0.34 + Math.min(1, Math.max(t.min, 2) / 13) * 0.66 } as CSSProperties} />
               <span>{t.label}</span>
             </span>
           ))}
-          <span className="mh-legend-cap">more</span>
         </div>
       </footer>
     </article>

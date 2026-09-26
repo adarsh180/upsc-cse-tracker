@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
+import { Chakra } from "@/components/ui/chakra";
+
 /**
  * Completion meter: a smooth progress ring with a glowing head, and a liquid
  * fill inside that rises to the completion level and ripples gently.
@@ -30,7 +32,8 @@ export function LiquidMeter({
       role="img"
       aria-label={label ?? `${p}% complete`}
     >
-      <svg viewBox="0 0 120 120" aria-hidden="true">
+      <Chakra className="lm-halo" size={360} />
+      <svg className="lm-gauge" viewBox="0 0 120 120" aria-hidden="true">
         <defs>
           <clipPath id={clip}>
             <circle cx="60" cy="60" r="44" />

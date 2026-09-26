@@ -296,7 +296,28 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 
 /* Hours dial — smooth arc, travelling tip, sheen, pins for 8h / 12h */
 .nv-goals .hd { position: relative; width: clamp(240px, 25vw, 300px); padding-bottom: 20px; }
-.nv-goals .hd svg { display: block; width: 100%; overflow: visible; }
+.nv-goals .hd-stage { position: relative; }
+.nv-goals .hd-gauge { position: relative; z-index: 1; display: block; width: 100%; overflow: visible; }
+/* Chakra halo: centred on the arc's pivot, only the outer spokes + rim show,
+   upper half only — a slow "rising sun" behind the gauge. */
+.nv-goals .hd-halo {
+  position: absolute;
+  left: 50%;
+  top: 87.3%;
+  width: 170%;
+  max-width: none;
+  height: auto;
+  aspect-ratio: 1;
+  margin: -85% 0 0 -85%;
+  color: var(--nv-a1);
+  opacity: 0.2;
+  -webkit-mask-image: radial-gradient(closest-side, transparent 67%, #000 75%, #000 90%, transparent 100%), linear-gradient(180deg, #000 40%, transparent 50%);
+  -webkit-mask-composite: source-in;
+  mask-image: radial-gradient(closest-side, transparent 67%, #000 75%, #000 90%, transparent 100%), linear-gradient(180deg, #000 40%, transparent 50%);
+  mask-composite: intersect;
+  animation-duration: 90s;
+}
+html[data-theme="light"] .nv-goals .hd-halo { opacity: 0.24; }
 .nv-goals .hd-track { fill: none; stroke: color-mix(in srgb, var(--nv-ink) 7%, transparent); stroke-width: 14; stroke-linecap: round; }
 .nv-goals .hd-fill {
   fill: none;
@@ -712,8 +733,7 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 /* ==========================================================================
    Momentum heatmap
    ========================================================================== */
-.nv-goals .mh { --cell: 17px; --gap: 4px; display: grid; gap: 16px; padding: clamp(16px, 2.4vw, 24px); min-width: 0; }
-.nv-goals .mh[data-mode="emoji"] { --cell: 24px; }
+.nv-goals .mh { --cell: 18px; --gap: 5px; display: grid; gap: 18px; padding: clamp(16px, 2.4vw, 24px); min-width: 0; }
 .nv-goals .mh-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .nv-goals .mh-stats { display: flex; flex-wrap: wrap; margin: 0; }
 .nv-goals .mh-stats div { display: grid; gap: 5px; padding: 0 18px; border-left: 1px solid var(--nv-line); }
@@ -724,7 +744,6 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 .nv-goals .mh-stats .is-streak dd { color: var(--nv-a1); }
 .nv-goals .mh-stats .is-good dd { color: var(--g-good); }
 .nv-goals .mh-stats .is-peak dd { color: var(--g-peak); }
-.nv-goals .mh-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .nv-goals .mh-block { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--nv-line); border-radius: 12px; }
 .nv-goals .mh-block-btn { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; background: none; color: var(--nv-muted); cursor: pointer; }
 .nv-goals .mh-block-btn:not(:disabled):hover { background: color-mix(in srgb, var(--nv-ink) 6%, transparent); color: var(--nv-ink); }
@@ -739,71 +758,144 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
 .nv-goals .mh-progress small { color: var(--nv-muted); font: 500 11px/1 var(--font-mono), monospace; white-space: nowrap; }
 .nv-goals .mh-progress small em { color: var(--nv-faint); font-style: normal; }
 
-.nv-goals .mh-field { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
-.nv-goals .mh-weekdays { display: grid; grid-template-rows: 16px repeat(7, var(--cell)); gap: var(--gap); padding-top: 6px; }
+/* Field: dot matrix + weekly totals */
+.nv-goals .mh-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 14px 10px 8px 12px;
+  border: 1px solid var(--nv-line);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--nv-a1) 5%, transparent), transparent 60%),
+    var(--field);
+}
+.nv-goals .mh-weekdays { display: grid; grid-template-rows: 16px repeat(7, var(--cell)) 34px; gap: var(--gap); padding-top: 6px; }
 .nv-goals .mh-weekdays span:first-child { grid-row: 2; }
 .nv-goals .mh-weekdays span { display: grid; place-items: center end; color: var(--nv-faint); font: 500 9.5px/1 var(--font-mono), monospace; }
-.nv-goals .mh-scroll { min-width: 0; padding: 0 2px 10px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--nv-ink) 18%, transparent) transparent; -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); }
+.nv-goals .mh-weekdays .mh-weekdays-sum { grid-row: 9; place-items: end end; padding-bottom: 2px; }
+.nv-goals .mh-scroll {
+  min-width: 0;
+  padding: 0 2px 6px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--nv-ink) 18%, transparent) transparent;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+}
 .nv-goals .mh-months,
-.nv-goals .mh-grid { display: grid; grid-auto-flow: column; grid-auto-columns: var(--cell); gap: var(--gap); width: max-content; padding: 0 12px; }
+.nv-goals .mh-grid,
+.nv-goals .mh-weekbars { display: grid; grid-auto-flow: column; grid-auto-columns: var(--cell); gap: var(--gap); width: max-content; padding: 0 12px; }
 .nv-goals .mh-months { height: 16px; margin: 6px 0 var(--gap); }
 .nv-goals .mh-months span { overflow: visible; color: var(--nv-muted); font: 500 10px/16px var(--font-mono), monospace; white-space: nowrap; }
 .nv-goals .mh-week { display: grid; grid-template-rows: repeat(7, var(--cell)); gap: var(--gap); }
-.nv-goals [data-nv].is-in .mh-week { animation: mh-col 700ms var(--nv-ease) calc(var(--w) * 12ms) both; }
-@keyframes mh-col { from { opacity: 0; transform: translateY(8px) scaleY(0.6); } }
+.nv-goals [data-nv].is-in .mh-week { animation: mh-col 760ms var(--nv-ease) calc(var(--w) * 11ms) both; }
+@keyframes mh-col { from { opacity: 0; transform: translateY(10px); } }
 
 .nv-goals .mh-cell {
   --c: transparent;
+  --sz: 0;
   position: relative;
   display: grid;
   place-items: center;
   width: var(--cell);
   height: var(--cell);
   padding: 0;
-  overflow: hidden;
   border: 0;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--nv-ink) 5.5%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+  border-radius: 50%;
+  background: none;
   cursor: pointer;
-  transition: transform 220ms var(--nv-spring), box-shadow 220ms ease;
 }
-.nv-goals .mh-cell.is-future { background: color-mix(in srgb, var(--nv-ink) 2.5%, transparent); cursor: default; }
-.nv-goals .mh-cell.is-pad { background: none; }
-.nv-goals .mh-fill {
+/* Empty past day: a faint seed dot */
+.nv-goals .mh-cell::before {
+  content: "";
   position: absolute;
-  inset: auto 0 0;
-  height: calc(var(--lvl, 0) * 100%);
-  background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 70%, black 10%));
-  transition: height 500ms var(--nv-ease), opacity 300ms ease;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--nv-ink) 16%, transparent);
 }
-.nv-goals .mh-cell.t0 { box-shadow: none; }
-.nv-goals .mh-cell.t6 { box-shadow: inset 0 0 0 1px var(--c), 0 0 10px -2px var(--c); }
-.nv-goals .mh-cell.t6::after { content: ""; position: absolute; top: 2px; right: 2px; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: 0.9; }
-.nv-goals .mh-emoji { position: relative; display: none; font-size: calc(var(--cell) * 0.58); line-height: 1; }
-.nv-goals .mh[data-mode="emoji"] .mh-emoji { display: block; }
-.nv-goals .mh[data-mode="emoji"] .mh-fill { opacity: 0.22; }
-.nv-goals .mh[data-mode="emoji"] .mh-cell.t6::after { display: none; }
-.nv-goals button.mh-cell:hover,
-.nv-goals button.mh-cell:focus-visible { z-index: 2; outline: none; transform: scale(1.35); box-shadow: inset 0 0 0 1px var(--c), 0 6px 16px -4px rgba(0, 0, 0, 0.6); }
-.nv-goals .mh-cell.is-today { outline: 1.5px solid var(--nv-ink); outline-offset: 1.5px; animation: mh-today 2.4s ease-in-out infinite; }
-@keyframes mh-today { 50% { outline-color: color-mix(in srgb, var(--nv-ink) 30%, transparent); } }
-.nv-goals .mh-cell.is-pinned { z-index: 2; outline: 2px solid var(--nv-a1); outline-offset: 2px; }
+.nv-goals .mh-cell.is-future::before { width: 3px; height: 3px; background: color-mix(in srgb, var(--nv-ink) 7%, transparent); }
+.nv-goals .mh-cell.is-pad::before { display: none; }
+.nv-goals .mh-cell.is-future { cursor: default; }
 
-.nv-goals .mh-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding-top: 12px; border-top: 1px solid var(--nv-line); }
+.nv-goals .mh-dot {
+  position: relative;
+  width: calc(var(--cell) * var(--sz));
+  height: calc(var(--cell) * var(--sz));
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 55%, white), var(--c) 62%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent);
+  transition: transform 260ms var(--nv-spring), box-shadow 260ms ease;
+}
+.nv-goals [data-nv].is-in .mh-dot { animation: mh-dot 620ms var(--nv-spring) calc(0.2s + var(--w, 0) * 11ms) backwards; }
+@keyframes mh-dot { from { transform: scale(0); } }
+.nv-goals .mh-cell.t5 .mh-dot { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent), 0 0 8px -2px var(--c); }
+.nv-goals .mh-cell.t6 .mh-dot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent), 0 0 12px -1px var(--c); }
+.nv-goals .mh-cell.t6::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: mh-peak 3.2s ease-out infinite;
+  animation-delay: calc(var(--w, 0) * 90ms);
+}
+@keyframes mh-peak { 0% { transform: scale(0.7); opacity: 0.8; } 70%, 100% { transform: scale(1.35); opacity: 0; } }
+.nv-goals button.mh-cell:hover .mh-dot,
+.nv-goals button.mh-cell:focus-visible .mh-dot { transform: scale(1.35); }
+.nv-goals button.mh-cell:hover::before,
+.nv-goals button.mh-cell:focus-visible::before { background: var(--nv-ink); }
+.nv-goals button.mh-cell:focus-visible { outline: none; }
+.nv-goals .mh-cell.is-today { box-shadow: 0 0 0 1.5px var(--nv-ink); animation: mh-today 2.4s ease-in-out infinite; }
+@keyframes mh-today { 50% { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--nv-ink) 25%, transparent); } }
+.nv-goals .mh-cell.is-pinned { z-index: 2; box-shadow: 0 0 0 2px var(--nv-a1); }
+
+/* Weekly totals */
+.nv-goals .mh-weekbars { height: 34px; margin-top: var(--gap); align-items: end; }
+.nv-goals .mh-weekbars span { display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+.nv-goals .mh-weekbars i {
+  display: block;
+  width: 60%;
+  height: max(2px, calc(var(--h) * 100%));
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 35%, transparent));
+  opacity: 0.85;
+  transform-origin: bottom;
+}
+.nv-goals [data-nv].is-in .mh-weekbars i { animation: gm-bar 900ms var(--nv-ease) calc(0.3s + var(--w) * 11ms) both; }
+.nv-goals .mh-weekbars .is-future i { height: 2px; background: color-mix(in srgb, var(--nv-ink) 7%, transparent); }
+
+.nv-goals .mh-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
 .nv-goals .mh-readout { display: flex; align-items: center; gap: 12px; min-height: 40px; min-width: 0; }
-.nv-goals .mh-readout-badge { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 11px; background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent); font-size: 18px; animation: lg-pop 380ms var(--nv-spring); }
+.nv-goals .mh-readout-badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
+  animation: lg-pop 380ms var(--nv-spring);
+}
+.nv-goals .mh-readout-badge i { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 55%, white), var(--c) 62%); box-shadow: 0 0 10px -1px var(--c); }
 .nv-goals .mh-readout > div { display: grid; gap: 2px; }
 .nv-goals .mh-readout strong { color: var(--nv-ink); font-size: 14px; font-weight: 700; }
 .nv-goals .mh-readout strong em { color: var(--nv-a1); font-style: normal; font-weight: 600; }
 .nv-goals .mh-readout span { color: var(--nv-muted); font: 500 12px/1.3 var(--font-mono), monospace; }
 .nv-goals .mh-unpin { margin-left: 4px; border: 0; background: none; color: var(--nv-faint); font: 500 11px var(--font-mono), monospace; text-decoration: underline; cursor: pointer; }
 .nv-goals .mh-hint { color: var(--nv-faint); font: 500 12px/1.3 var(--font-mono), monospace; }
-.nv-goals .mh-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.nv-goals .mh-legend-cap { color: var(--nv-faint); font: 500 10px var(--font-mono), monospace; }
-.nv-goals .mh-legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--nv-muted); font-size: 11.5px; font-weight: 600; }
-.nv-goals .mh-legend-item > .mh-cell { --cell: 14px; cursor: default; }
-.nv-goals .mh[data-mode="emoji"] .mh-legend-item > .mh-cell { --cell: 20px; }
+.nv-goals .mh-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.nv-goals .mh-legend-item { display: inline-flex; align-items: center; gap: 7px; color: var(--nv-muted); font-size: 11.5px; font-weight: 600; }
+.nv-goals .mh-legend-item > i {
+  width: calc(16px * var(--sz));
+  height: calc(16px * var(--sz));
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 55%, white), var(--c) 62%);
+}
 
 /* ==========================================================================
    Screen time
@@ -1122,13 +1214,13 @@ html[data-theme="light"] .nv-root .nv-seg::before { box-shadow: 0 1px 3px rgba(2
   .nv-goals .tp-group { grid-template-columns: 1fr; gap: 6px; }
   .nv-goals .tp-groups { max-height: 320px; }
 
-  .nv-goals .mh { --cell: 15px; --gap: 3px; }
-  .nv-goals .mh[data-mode="emoji"] { --cell: 22px; }
+  .nv-goals .mh { --cell: 15px; --gap: 4px; }
+  .nv-goals .mh-field { padding: 10px 4px 6px 8px; }
   .nv-goals .mh-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 0; width: 100%; }
   .nv-goals .mh-stats div { padding: 0 10px; }
   .nv-goals .mh-stats div:nth-child(3n + 1) { padding-left: 0; border: 0; }
   .nv-goals .mh-stats dd { font-size: 1.2rem; }
-  .nv-goals .mh-tools { width: 100%; justify-content: space-between; }
+  .nv-goals .mh-block { width: 100%; justify-content: space-between; }
   .nv-goals .mh-legend-item span { display: none; }
 
   .nv-goals .st-budget-top { grid-template-columns: 1fr auto; }
