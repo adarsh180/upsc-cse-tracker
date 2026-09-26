@@ -79,11 +79,16 @@ html[data-theme="light"] .nv-study { --field: #fbfaf7; }
   font: 500 11.5px/1.2 var(--font-mono), monospace;
 }
 
-/* Completion meter — smooth ring + rising liquid */
+/* Completion meter — a glass vessel of liquid inside a smooth ring, with the
+   chakra turning around it. Choreography: halo settles (0.1s) → ring draws and
+   liquid rises together (0.3s) → the surface overshoots and sloshes → steady
+   waves, bubbles and a slow sway take over. */
 .nv-root .lm { --acc: var(--sx-accent, var(--nv-a1)); position: relative; display: grid; place-items: center; width: clamp(160px, 16vw, 196px); aspect-ratio: 1; }
 .nv-root .lm-gauge { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
 /* Chakra halo: concentric with the ring; the hub and inner spokes are masked
-   away so only the outer wheel turns around the meter. */
+   away so only the outer wheel turns around the meter. It eases in, then
+   turns at a steady, regal pace. */
 .nv-root .lm-halo {
   position: absolute;
   left: 50%;
@@ -97,27 +102,124 @@ html[data-theme="light"] .nv-study { --field: #fbfaf7; }
   opacity: 0.22;
   -webkit-mask-image: radial-gradient(closest-side, transparent 56%, #000 64%, #000 86%, transparent 100%);
   mask-image: radial-gradient(closest-side, transparent 56%, #000 64%, #000 86%, transparent 100%);
-  animation-duration: 90s;
+  animation: lm-halo-in 2.6s var(--nv-ease) 0.1s both, nv-turn 90s linear 2.7s infinite;
 }
 html[data-theme="light"] .nv-root .lm-halo { opacity: 0.26; }
-.nv-root .lm-bowl { fill: color-mix(in srgb, var(--nv-ink) 3%, transparent); stroke: color-mix(in srgb, var(--nv-ink) 8%, transparent); stroke-width: 1; }
-.nv-root .lm-level { transform: translateY(var(--lvl)); animation: lm-rise 2.2s var(--nv-ease) 0.3s both; }
-@keyframes lm-rise { from { transform: translateY(112px); } }
-.nv-root .lm-wave-front { fill: color-mix(in srgb, var(--acc) 45%, transparent); animation: lm-flow 5.5s linear infinite; }
-.nv-root .lm-wave-back { fill: color-mix(in srgb, var(--acc) 22%, transparent); animation: lm-flow-back 8s linear infinite; }
+@keyframes lm-halo-in { from { opacity: 0; transform: rotate(-36deg) scale(0.9); } }
+
+/* The completed share of the wheel: a fixed sector (matching the ring) that the
+   spokes brighten as they turn through it. */
+@property --lm-sweep { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+.nv-root .lm-lit {
+  --lm-sweep: calc(var(--p) * 1%);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 178%;
+  aspect-ratio: 1;
+  margin: -89% 0 0 -89%;
+  pointer-events: none;
+  opacity: 0.55;
+  -webkit-mask-image: radial-gradient(closest-side, transparent 58%, #000 68%, #000 84%, transparent 97%), conic-gradient(#000 0 var(--lm-sweep), transparent calc(var(--lm-sweep) + 5%));
+  -webkit-mask-composite: source-in;
+  mask-image: radial-gradient(closest-side, transparent 58%, #000 68%, #000 84%, transparent 97%), conic-gradient(#000 0 var(--lm-sweep), transparent calc(var(--lm-sweep) + 5%));
+  mask-composite: intersect;
+  animation: lm-sweep 2s var(--nv-ease) 0.3s both;
+}
+html[data-theme="light"] .nv-root .lm-lit { opacity: 0.5; }
+.nv-root .lm-lit .lm-halo { left: 0; top: 0; width: 100%; margin: 0; opacity: 1; -webkit-mask-image: none; mask-image: none; }
+@keyframes lm-sweep { from { --lm-sweep: 0%; } }
+
+/* Vessel */
+.nv-root .lm-bowl { stroke: color-mix(in srgb, var(--nv-ink) 9%, transparent); stroke-width: 1; }
+.nv-root .lm-v0 { stop-color: var(--nv-ink); stop-opacity: 0; }
+.nv-root .lm-v1 { stop-color: var(--nv-ink); stop-opacity: 0.025; }
+.nv-root .lm-v2 { stop-color: var(--nv-ink); stop-opacity: 0.09; }
+.nv-root .lm-glint { fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; opacity: 0.13; }
+.nv-root .lm-glint-dot { fill: #fff; opacity: 0.16; }
+html[data-theme="light"] .nv-root .lm-glint { opacity: 0.55; }
+html[data-theme="light"] .nv-root .lm-glint-dot { opacity: 0.6; }
+.nv-root .lm-dregs { fill: var(--acc); opacity: 0.2; animation: lm-dregs 3.2s ease-in-out infinite alternate; }
+@keyframes lm-dregs { to { opacity: 0.42; } }
+
+/* Liquid */
+.nv-root .lm.is-empty .lm-slosh { display: none; }
+.nv-root .lm-slosh {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: lm-slosh 2.8s ease-out 1.25s both, lm-sway 11s ease-in-out 4.05s infinite;
+}
+@keyframes lm-slosh {
+  0% { transform: rotate(0deg); }
+  22% { transform: rotate(-5deg); }
+  45% { transform: rotate(3.2deg); }
+  66% { transform: rotate(-1.6deg); }
+  84% { transform: rotate(0.6deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes lm-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1.4deg); }
+  75% { transform: rotate(-1.4deg); }
+}
+.nv-root .lm-level { transform: translateY(var(--lvl)); animation: lm-rise 2.4s 0.3s both; }
+@keyframes lm-rise {
+  0% { transform: translateY(112px); animation-timing-function: cubic-bezier(0.3, 0.6, 0.35, 1); }
+  60% { transform: translateY(calc(var(--lvl) - 4px)); animation-timing-function: ease-in-out; }
+  82% { transform: translateY(calc(var(--lvl) + 1.2px)); animation-timing-function: ease-in-out; }
+  100% { transform: translateY(var(--lvl)); }
+}
+/* Wave amplitude breathes, each layer on its own clock, so it never loops visibly. */
+.nv-root .lm-swell { transform-box: view-box; transform-origin: 0 6px; animation: lm-breathe 7s ease-in-out infinite alternate; }
+.nv-root .lm-swell-back { animation-duration: 9.5s; animation-delay: -3s; }
+.nv-root .lm-swell-mid { animation-duration: 6.2s; animation-delay: -1.4s; }
+@keyframes lm-breathe { 0% { transform: scaleY(1.15); } 100% { transform: scaleY(0.55); } }
+.nv-root .lm-wave-back { fill: color-mix(in srgb, var(--acc) 20%, transparent); animation: lm-flow-back 9s linear infinite; }
+.nv-root .lm-wave-mid { fill: color-mix(in srgb, var(--acc) 16%, transparent); animation: lm-flow-mid 6.5s linear infinite; }
+.nv-root .lm-flow-front { animation: lm-flow 4.8s linear infinite; }
 @keyframes lm-flow { from { transform: translateX(0); } to { transform: translateX(60px); } }
-@keyframes lm-flow-back { from { transform: translate(-22px, -3px); } to { transform: translate(-82px, -3px); } }
-.nv-root .lm.is-empty .lm-level { display: none; }
+@keyframes lm-flow-mid { from { transform: translate(-10px, -1.5px); } to { transform: translate(30px, -1.5px); } }
+@keyframes lm-flow-back { from { transform: translate(-22px, -3.2px); } to { transform: translate(-82px, -3.2px); } }
+.nv-root .lm-d0 { stop-color: color-mix(in srgb, var(--acc) 72%, #fff); stop-opacity: 0.66; }
+.nv-root .lm-d1 { stop-color: var(--acc); stop-opacity: 0.46; }
+.nv-root .lm-d2 { stop-color: color-mix(in srgb, var(--acc) 62%, #000); stop-opacity: 0.6; }
+html[data-theme="light"] .nv-root .lm-d0 { stop-opacity: 0.6; }
+html[data-theme="light"] .nv-root .lm-d1 { stop-opacity: 0.32; }
+html[data-theme="light"] .nv-root .lm-d2 { stop-color: var(--acc); stop-opacity: 0.44; }
+/* Meniscus: a fine bright line riding the front crest. */
+.nv-root .lm-crest { fill: none; stroke: color-mix(in srgb, var(--acc) 35%, #fff); stroke-width: 0.9; stroke-linecap: round; opacity: 0.7; }
+html[data-theme="light"] .nv-root .lm-crest { stroke: color-mix(in srgb, var(--acc) 80%, #fff); opacity: 0.9; }
+.nv-root .lm-bubble {
+  fill: color-mix(in srgb, var(--acc) 30%, #fff);
+  opacity: 0;
+  animation: lm-bubble 5s cubic-bezier(0.4, 0, 0.7, 1) infinite;
+}
+@keyframes lm-bubble {
+  0% { transform: translate(0, var(--deep)); opacity: 0; }
+  15% { opacity: 0.55; }
+  40% { transform: translate(1.6px, calc(var(--deep) * 0.6)); }
+  70% { transform: translate(-1.2px, calc(var(--deep) * 0.3)); opacity: 0.45; }
+  100% { transform: translate(0.6px, 0); opacity: 0; }
+}
+
+/* Ring */
+.nv-root .lm-g0 { stop-color: var(--acc); stop-opacity: 0.55; }
+.nv-root .lm-g1 { stop-color: var(--acc); stop-opacity: 1; }
 .nv-root .lm-track { fill: none; stroke: color-mix(in srgb, var(--nv-ink) 8%, transparent); stroke-width: 6; }
 .nv-root .lm-ring { fill: none; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 100 100; stroke-dashoffset: calc(100 - var(--p)); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acc) 45%, transparent)); animation: lm-draw 2s var(--nv-ease) 0.3s both; }
 @keyframes lm-draw { from { stroke-dashoffset: 100; } }
 .nv-root .lm-head { transform-box: view-box; transform-origin: 60px 60px; transform: rotate(var(--turn)); animation: lm-turn 2s var(--nv-ease) 0.3s both; }
 @keyframes lm-turn { from { transform: rotate(0deg); } }
 .nv-root .lm-head-dot { fill: var(--nv-surface-solid); stroke: var(--acc); stroke-width: 2.4; }
-.nv-root .lm-head-halo { fill: var(--acc); transform-box: fill-box; transform-origin: center; animation: lm-pulse 2.4s ease-out 2.3s infinite; }
-@keyframes lm-pulse { 0% { transform: scale(0.5); opacity: 0.5; } 100% { transform: scale(1.8); opacity: 0; } }
+.nv-root .lm-head-halo { fill: var(--acc); transform-box: fill-box; transform-origin: center; animation: lm-pulse 2.8s ease-out 2.3s infinite; }
+@keyframes lm-pulse { 0% { transform: scale(0.5); opacity: 0.45; } 100% { transform: scale(1.8); opacity: 0; } }
+
+/* Complete: the ring turns green and sends out two calm ripples, once. */
 .nv-root .lm.is-full .lm-ring { stroke: var(--nv-green); }
-.nv-root .lm-core { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.nv-root .lm-ripple { fill: none; stroke: var(--nv-green); stroke-width: 1.2; opacity: 0; transform-box: view-box; transform-origin: 60px 60px; animation: lm-ripple 2.2s var(--nv-ease) 2.3s; }
+.nv-root .lm-ripple-2 { animation-delay: 2.75s; }
+@keyframes lm-ripple { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.28); opacity: 0; } }
+.nv-root .lm-core { position: relative; z-index: 2; display: grid; justify-items: center; gap: 4px; text-align: center; }
 .nv-root .lm-core strong { color: var(--nv-ink); font: 600 clamp(2.1rem, 3.4vw, 2.7rem)/1 var(--font-mono), monospace; letter-spacing: -0.06em; text-shadow: 0 2px 14px color-mix(in srgb, var(--nv-bg) 80%, transparent); }
 .nv-root .lm-core strong em { color: var(--nv-faint); font-size: 0.45em; font-style: normal; }
 .nv-root .lm-core > span { color: var(--nv-muted); font: 500 10.5px/1 var(--font-mono), monospace; }
