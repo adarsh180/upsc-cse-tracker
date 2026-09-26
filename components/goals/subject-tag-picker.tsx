@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
-import { Check, Plus, Search, Tag, X } from "lucide-react";
+import { Check, Plus, Search, X } from "lucide-react";
 
 export type SubjectGroup = { paper: string; accent: string; subjects: string[] };
 
@@ -50,53 +50,48 @@ export function SubjectTagPicker({
     .filter((g) => g.subjects.length > 0);
 
   return (
-    <div className="subject-picker">
+    <div className="tp">
       <input type="hidden" name={name} value={selected.join(", ")} />
 
-      <div className="subject-picker-head">
-        <span className="subject-picker-label">
-          <Tag size={13} />
-          Subjects covered today
-        </span>
-        <div className="subject-picker-head-right">
-          <span className="subject-picker-count">{selected.length} selected</span>
-          {selected.length > 0 && (
-            <button type="button" className="subject-picker-clear" onClick={() => setSelected([])}>
-              Clear
-            </button>
-          )}
+      <div className="tp-tray" data-empty={selected.length === 0 || undefined}>
+        <div className="tp-tray-head">
+          <span className="lg-label">Covered today</span>
+          <span className="tp-count">
+            {selected.length}
+            {selected.length > 0 ? (
+              <button type="button" onClick={() => setSelected([])}>
+                clear
+              </button>
+            ) : null}
+          </span>
         </div>
+        {selected.length > 0 ? (
+          <div className="tp-tray-chips">
+            {selected.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className="tp-chip is-on"
+                style={{ "--c": accentFor.get(s.toLowerCase()) ?? "var(--nv-a3)" } as CSSProperties}
+                onClick={() => remove(s)}
+                title="Remove"
+              >
+                {s}
+                <X size={12} />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="tp-tray-empty">Tap the subjects you actually touched. They feed the staleness radar.</p>
+        )}
       </div>
 
-      {selected.length > 0 && (
-        <div className="subject-picker-selected">
-          {selected.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className="subject-chip selected removable"
-              style={{ "--chip-accent": accentFor.get(s.toLowerCase()) ?? "var(--lotus-bright)" } as CSSProperties}
-              onClick={() => remove(s)}
-              title="Remove"
-            >
-              {s}
-              <X size={12} />
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="subject-picker-controls">
-        <label className="subject-picker-search">
+      <div className="tp-controls">
+        <label className="tp-search">
           <Search size={14} />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter subjects…"
-          />
+          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter subjects" />
         </label>
-        <div className="subject-picker-add">
+        <div className="tp-add">
           <input
             type="text"
             value={custom}
@@ -107,34 +102,32 @@ export function SubjectTagPicker({
                 addCustom();
               }
             }}
-            placeholder="Add custom area…"
+            placeholder="Add a custom area"
           />
-          <button type="button" onClick={addCustom} title="Add custom tag" aria-label="Add custom tag">
+          <button type="button" onClick={addCustom} aria-label="Add custom tag">
             <Plus size={15} />
           </button>
         </div>
       </div>
 
-      <div className="subject-picker-groups">
+      <div className="tp-groups">
         {filteredGroups.map((g) => (
-          <div key={g.paper} className="subject-picker-group" style={{ "--group-accent": g.accent } as CSSProperties}>
-            <div className="subject-picker-group-label">
-              <i />
-              {g.paper}
-            </div>
-            <div className="subject-picker-chip-row">
+          <div key={g.paper} className="tp-group" style={{ "--c": g.accent } as CSSProperties}>
+            <div className="tp-group-label">{g.paper}</div>
+            <div className="tp-group-chips">
               {g.subjects.map((s) => {
                 const on = selectedSet.has(s.toLowerCase());
                 return (
                   <button
                     key={s}
                     type="button"
-                    className={`subject-chip${on ? " selected" : ""}`}
-                    style={{ "--chip-accent": g.accent } as CSSProperties}
+                    className={`tp-chip${on ? " is-on" : ""}`}
                     onClick={() => toggle(s)}
                     aria-pressed={on}
                   >
-                    {on ? <Check size={12} /> : null}
+                    <span className="tp-tick" aria-hidden="true">
+                      <Check size={11} strokeWidth={3} />
+                    </span>
                     {s}
                   </button>
                 );
@@ -142,9 +135,9 @@ export function SubjectTagPicker({
             </div>
           </div>
         ))}
-        {filteredGroups.length === 0 && (
-          <div className="subject-picker-empty">No subjects match "{query}". Add it as a custom area above.</div>
-        )}
+        {filteredGroups.length === 0 ? (
+          <div className="tp-none">No subjects match &ldquo;{query}&rdquo;. Add it as a custom area.</div>
+        ) : null}
       </div>
     </div>
   );

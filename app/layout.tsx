@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Newsreader, Noto_Serif_Devanagari } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Newsreader, Noto_Serif_Devanagari } from "next/font/google";
 
 import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
 import { AppChrome } from "@/components/shell/app-chrome";
+import { PaletteCycler } from "@/components/shell/palette-cycler";
 
 import "./globals.css";
 import "./redesign.css";
@@ -12,6 +13,8 @@ import "./theme.css";
 import "./study.css";
 import "./editorial.css";
 import "./nova.css";
+import "./nova-goals.css";
+import "./nova-study.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -21,6 +24,12 @@ const bodyFont = Inter({
 const devanagariFont = Noto_Serif_Devanagari({
   subsets: ["latin"],
   variable: "--font-devanagari",
+});
+
+const monoFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
 });
 
 const editorialFont = Newsreader({
@@ -72,15 +81,16 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
-      <body className={`${bodyFont.variable} ${editorialFont.variable} ${devanagariFont.variable}`}>
+      <body className={`${bodyFont.variable} ${editorialFont.variable} ${devanagariFont.variable} ${monoFont.variable}`}>
         <script
           dangerouslySetInnerHTML={{
             __html:
-              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t}catch(e){}',
+              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t;var P=["brass","saffron","lotus","banyan","monsoon","terracotta"];d.dataset.palette=P[Math.floor(Date.now()/60000)%P.length]}catch(e){}',
           }}
         />
         <LaunchSplash />
         <PwaRegister />
+        <PaletteCycler />
         <AppChrome>{children}</AppChrome>
       </body>
     </html>

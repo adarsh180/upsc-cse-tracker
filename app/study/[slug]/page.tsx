@@ -2,23 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import {
-  ArrowRight,
-  BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  FileText,
-  Gauge,
-  Layers3,
-  NotebookPen,
-  Plus,
-  Route,
-  Settings2,
-  Target,
-  Trash2,
-} from "lucide-react";
+import { ArrowRight, ChevronRight, Plus, Settings2, Trash2 } from "lucide-react";
 
 import {
   addStudyLogAction,
@@ -28,9 +12,10 @@ import {
   updateStudyNodeAction,
 } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
-import { getStudyNodeBySlug, getStudyTree } from "@/lib/dashboard";
+import { getStudyNodeBySlug } from "@/lib/dashboard";
 import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { StudyPageClient } from "@/components/ui/study-checklist";
+import { Chakra } from "@/components/ui/chakra";
 import { CountUp, NovaStage } from "@/components/ui/nova-fx";
 
 type ProgressRecord = {
@@ -120,35 +105,30 @@ function accentKeyFor(slug: string, parentSlug?: string | null) {
   return "default";
 }
 
-/* ── Framed form field ────────────────────────────────────────────── */
-function SxField({
+/* ── Labelled form field ──────────────────────────────────────────── */
+function SwField({
   label,
   hint,
-  icon,
   className = "",
   children,
 }: {
   label: string;
   hint?: string;
-  icon: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <label className={`sx-field ${className}`}>
-      <span className="sx-field-label">
-        <span className="sx-field-icon">{icon}</span>
-        <span>
-          {label}
-          {hint ? <em>{hint}</em> : null}
-        </span>
+    <label className={`sw-field ${className}`}>
+      <span className="lg-label">
+        {label}
+        {hint ? <em>{hint}</em> : null}
       </span>
       {children}
     </label>
   );
 }
 
-/* ── Recent-sessions ledger (read-only on papers/modules) ─────────── */
+/* ── Session ledger (read-only on papers/modules) ─────────────────── */
 function SessionLedger({
   logs,
   fallbackTitle,
@@ -162,60 +142,47 @@ function SessionLedger({
     hours: number;
     topicCount: number | null;
     completion: number | null;
+    focusScore?: number | null;
     studyNode?: { title: string | null } | null;
   }>;
   fallbackTitle: string;
   pathname: string;
   readOnly?: boolean;
 }) {
+  if (!logs.length) {
+    return <div className="sw-ledger-empty">No study sessions logged here yet. Your first one will appear here.</div>;
+  }
+
   return (
-    <div className="sx-ledger-shell">
-      <table className="sx-ledger">
-        <thead>
-          <tr>
-            <th>Session</th>
-            <th>Date</th>
-            <th>Hours</th>
-            <th>Topics</th>
-            <th>Done</th>
-            {readOnly ? null : <th aria-hidden="true" style={{ width: 48 }} />}
-          </tr>
-        </thead>
-        <tbody>
-          {logs.length ? (
-            logs.map((log) => (
-              <tr key={log.id}>
-                <td>
-                  <span className="sx-ledger-title">{log.title}</span>
-                  <small className="sx-ledger-sub">in {log.studyNode?.title ?? fallbackTitle}</small>
-                </td>
-                <td>{format(log.logDate, "dd MMM yyyy")}</td>
-                <td><span className="sx-tag gold">{log.hours.toFixed(1)}h</span></td>
-                <td><span className="sx-tag blue">{log.topicCount ?? "-"}</span></td>
-                <td><span className="sx-tag green">{log.completion ?? "-"}%</span></td>
-                {readOnly ? null : (
-                  <td>
-                    <form action={deleteStudyLogAction}>
-                      <input type="hidden" name="id" value={log.id} />
-                      <input type="hidden" name="pathname" value={pathname} />
-                      <button type="submit" className="sx-ledger-del" title="Delete log">
-                        <Trash2 size={13} />
-                      </button>
-                    </form>
-                  </td>
-                )}
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={readOnly ? 5 : 6} className="sx-ledger-empty">
-                No study sessions logged here yet.
-              </td>
-            </tr>
+    <ol className="sw-ledger">
+      {logs.map((log, i) => (
+        <li key={log.id} className="sw-entry" style={{ "--i": Math.min(i, 12) } as CSSProperties}>
+          <span className="sw-entry-date" aria-label={format(log.logDate, "dd MMM yyyy")}>
+            <b>{format(log.logDate, "dd")}</b>
+            <small>{format(log.logDate, "MMM yy")}</small>
+          </span>
+          <span className="sw-entry-body">
+            <strong>{log.title}</strong>
+            <small>in {log.studyNode?.title ?? fallbackTitle}</small>
+          </span>
+          <span className="sw-entry-stats">
+            <span className="is-hours">{log.hours.toFixed(1)}h</span>
+            <span>{log.topicCount ?? 0} topics</span>
+            <span className="is-done">{log.completion ?? 0}%</span>
+            {log.focusScore ? <span className="is-focus">focus {log.focusScore}</span> : null}
+          </span>
+          {readOnly ? null : (
+            <form action={deleteStudyLogAction} className="sw-entry-del">
+              <input type="hidden" name="id" value={log.id} />
+              <input type="hidden" name="pathname" value={pathname} />
+              <button type="submit" title="Delete log" aria-label={`Delete ${log.title}`}>
+                <Trash2 size={13} />
+              </button>
+            </form>
           )}
-        </tbody>
-      </table>
-    </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -226,10 +193,7 @@ export default async function StudyNodePage({
 }) {
   await requireSession();
   const { slug } = await params;
-  const [node, papers] = await Promise.all([
-    getStudyNodeBySlug(slug),
-    getStudyTree(),
-  ]);
+  const node = await getStudyNodeBySlug(slug);
 
   if (!node) {
     notFound();
@@ -276,114 +240,105 @@ export default async function StudyNodePage({
       : "Sub-topic name";
 
   const stats = [
-    { label: isPaper ? "Subjects" : "Chapters", value: children.length, icon: Layers3 },
-    { label: "Topics", value: progressSummary.total, icon: BookOpen },
-    { label: "Revisions", value: progressSummary.revisions, icon: Clock3 },
-    { label: "Logged", value: `${formatCompactNumber(loggedHours)}h`, icon: Gauge },
-    { label: "Sessions", value: studyLogs.length, icon: NotebookPen },
-    { label: "Avg focus", value: avgFocus !== null ? `${avgFocus}/10` : "-", icon: Target },
+    { label: isPaper ? "Subjects" : "Chapters", value: children.length },
+    { label: "Topics", value: progressSummary.total },
+    { label: "Done", value: progressSummary.done, tone: "good" },
+    { label: "Revisions", value: progressSummary.revisions },
+    { label: "Logged", value: `${formatCompactNumber(loggedHours)}h` },
+    { label: "Sessions", value: studyLogs.length },
+    { label: "Avg focus", value: avgFocus !== null ? `${avgFocus}/10` : "–" },
   ];
+
+  let section = 0;
+  const nextSection = () => `§ 0${++section}`;
+  const today = format(new Date(), "yyyy-MM-dd");
 
   return (
     <NovaStage
-      className="page-shell editorial-page editorial-study sx-page nv-root nv-app nv-study"
+      className="page-shell editorial-page sx-page nv-root nv-app nv-study"
       data-accent={accentKeyFor(node.slug, node.parent?.slug)}
       data-node-kind={node.type.toLowerCase()}
     >
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <header className="nv-study-hero nv-glass nv-rise" style={{ "--d": 0 } as CSSProperties}>
-        <div className="nv-hero-aurora" aria-hidden="true"><span /><span /><span /></div>
+      {/* ── Masthead ─────────────────────────────────────────────── */}
+      <header className="sm nv-rise" style={{ "--d": 0 } as CSSProperties}>
+        <Chakra className="sm-chakra" size={520} />
 
-        <div className="nv-study-main">
-          <nav className="nv-crumbs" aria-label="Breadcrumb">
-            <Link href="/dashboard">Study</Link>
-            <ChevronRight size={13} aria-hidden="true" />
-            {node.parent ? (
-              <>
-                <Link href={`/study/${node.parent.slug ?? ""}`}>{node.parent.title}</Link>
-                <ChevronRight size={13} aria-hidden="true" />
-              </>
-            ) : null}
-            <span aria-current="page">{node.title}</span>
-          </nav>
+        <nav className="sm-crumbs nv-mono" aria-label="Breadcrumb">
+          <Link href="/dashboard">Study</Link>
+          <span aria-hidden="true">/</span>
+          {node.parent ? (
+            <>
+              <Link href={`/study/${node.parent.slug ?? ""}`}>{node.parent.title}</Link>
+              <span aria-hidden="true">/</span>
+            </>
+          ) : null}
+          <span aria-current="page">{node.title}</span>
+        </nav>
 
-          <div className="nv-study-kind">
-            <span className="nv-icon-tile nv-icon-accent">
-              <StudySubjectIcon slug={node.slug} title={node.title} size={18} />
-            </span>
-            <span className="nv-kicker">{pageMode}</span>
+        <div className="sm-grid">
+          <div className="sm-copy">
+            <div className="sm-kind">
+              <span className="sm-sigil">
+                <StudySubjectIcon slug={node.slug} title={node.title} size={18} />
+              </span>
+              <span className="nv-mono">{pageMode}</span>
+              <span className="nv-deva sm-deva" lang="hi">अध्ययन</span>
+            </div>
+            <h1 className="nv-display sm-title">{node.title}</h1>
+            <p className="nv-lead">{node.overview ?? laneCopy}</p>
+            <div className="sm-chips">
+              {isPaper && hasSyllabusChildren ? <span>{children.length} subjects</span> : null}
+              {!isPaper ? <span>{progressSummary.total} topics tracked</span> : null}
+              {latestLog ? <span>Last log · {format(latestLog.logDate, "dd MMM")}</span> : <span>No sessions yet</span>}
+            </div>
           </div>
 
-          <h1 className="nv-display nv-study-title">{node.title}</h1>
-          <p className="nv-lead">{node.overview ?? laneCopy}</p>
-
-          <div className="nv-chip-row">
-            <span className="nv-chip tone-accent">{node.type}</span>
-            {isPaper && hasSyllabusChildren ? <span className="nv-chip">{children.length} subjects</span> : null}
-            {!isPaper ? <span className="nv-chip">{progressSummary.total} topics tracked</span> : null}
-            {latestLog ? (
-              <span className="nv-chip">
-                <CalendarDays size={13} />
-                Last log {format(latestLog.logDate, "dd MMM")}
+          <div className="sm-meter" style={{ "--p": progressSummary.pct } as CSSProperties} aria-label={`${progressSummary.pct}% syllabus completion`}>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle className="sm-meter-track" cx="60" cy="60" r="50" />
+              <circle className="sm-meter-fill" cx="60" cy="60" r="50" pathLength={100} />
+              {Array.from({ length: 24 }, (_, i) => (
+                <line
+                  key={i}
+                  className={i / 24 < progressSummary.pct / 100 ? "is-lit" : ""}
+                  x1="60"
+                  y1="3"
+                  x2="60"
+                  y2="7"
+                  transform={`rotate(${i * 15 + 90} 60 60)`}
+                />
+              ))}
+            </svg>
+            <div className="sm-meter-core">
+              <strong>
+                <CountUp value={progressSummary.pct} />
+                <em>%</em>
+              </strong>
+              <span>
+                {progressSummary.done}/{progressSummary.total} topics
               </span>
-            ) : null}
+            </div>
           </div>
         </div>
 
-        <aside className="nv-study-side">
-          <div
-            className="nv-ring nv-ring-xl tone-accent"
-            style={{ "--p": progressSummary.pct } as CSSProperties}
-            aria-label={`${progressSummary.pct}% syllabus completion`}
-          >
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle className="nv-ring-track" cx="60" cy="60" r="52" />
-              <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
-            </svg>
-            <div className="nv-ring-core">
-              <CountUp value={progressSummary.pct} suffix="%" className="nv-ring-num" />
-              <span>complete</span>
+        <dl className="gm-line sm-line">
+          {stats.map((item) => (
+            <div key={item.label} className={item.tone ? `is-${item.tone}` : undefined}>
+              <dt>{item.label}</dt>
+              <dd className="nv-mono">{item.value}</dd>
             </div>
-          </div>
-          <div className="nv-study-mini">
-            <div>
-              <span>Topics</span>
-              <strong>{progressSummary.done}/{progressSummary.total}</strong>
-            </div>
-            <div>
-              <span>Logged</span>
-              <strong>{formatCompactNumber(loggedHours)}h</strong>
-            </div>
-          </div>
-        </aside>
+          ))}
+        </dl>
       </header>
-
-      {/* ── Stat ribbon ──────────────────────────────────────────── */}
-      <section className="nv-ribbon" aria-label="Workspace metrics">
-        {stats.map((item, i) => (
-          <div key={item.label} className="nv-ribbon-cell" data-nv="" style={{ "--nv-i": i } as CSSProperties}>
-            <span className="nv-icon-tile nv-icon-sm nv-icon-accent">
-              <item.icon size={14} />
-            </span>
-            <span>
-              <small>{item.label}</small>
-              <strong>{item.value}</strong>
-            </span>
-          </div>
-        ))}
-      </section>
 
       {/* ── Paper: subject lanes ─────────────────────────────────── */}
       {isPaper && hasSyllabusChildren ? (
-        <section className="nv-block">
-          <div className="nv-sec-head" data-nv="">
-            <div>
-              <span className="nv-kicker">Subjects in this paper</span>
-              <h2 className="nv-h2">Choose a study lane</h2>
-            </div>
-            <span className="nv-chip">{children.length} lanes</span>
+        <>
+          <div className="nv-sect" data-nv="">
+            <span className="nv-sect-num">{nextSection()}</span>
+            <h2>Choose a study lane</h2>
+            <p>Each subject keeps its own checklist, revisions and session log.</p>
           </div>
-
           <div className="nv-lane-grid">
             {children.map((subject, i) => {
               const pct = computePct(subject);
@@ -399,21 +354,19 @@ export default async function StudyNodePage({
                       <span className="nv-icon-tile nv-icon-accent">
                         <StudySubjectIcon slug={subject.slug} title={subject.title} size={20} />
                       </span>
-                      <div className="nv-ring nv-ring-sm tone-accent">
-                        <svg viewBox="0 0 120 120" aria-hidden="true">
-                          <circle className="nv-ring-track" cx="60" cy="60" r="52" />
-                          <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
-                        </svg>
-                        <div className="nv-ring-core"><strong>{pct}%</strong></div>
-                      </div>
+                      <span className="sw-lane-pct nv-mono">{pct}%</span>
                     </div>
                     <strong className="nv-lane-title">{subject.title}</strong>
                     {subject.overview ? <p className="nv-lane-copy">{subject.overview}</p> : null}
                     <div className="nv-lane-foot">
                       <span>{subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}</span>
-                      <span className="nv-lane-cta">Enter <ArrowRight size={14} /></span>
+                      <span className="nv-lane-cta">
+                        Enter <ArrowRight size={14} />
+                      </span>
                     </div>
-                    <div className="nv-paper-bar" aria-hidden="true"><span /></div>
+                    <div className="nv-paper-bar" aria-hidden="true">
+                      <span />
+                    </div>
                   </Link>
                   <form action={deleteStudyNodeAction} className="nv-lane-del">
                     <input type="hidden" name="id" value={subject.id} suppressHydrationWarning />
@@ -426,176 +379,173 @@ export default async function StudyNodePage({
               );
             })}
           </div>
-        </section>
+        </>
       ) : null}
 
       {/* ── Checklist for subject / module ───────────────────────── */}
       {isChecklist && hasSyllabusChildren ? (
-        <section className="sx-section nv-block" data-nv="">
-          <div className="sx-section-head">
-            <div>
-              <div className="sx-eyebrow">Syllabus checklist</div>
-              <h2 className="sx-section-title">Track chapters &amp; revisions</h2>
-            </div>
-            {children.length > 1 ? (
-              <div className="sx-jump" aria-label="Open child pages">
-                {children.slice(0, 4).map((child) => (
-                  <Link key={child.id} href={`/study/${child.slug}`} className="sx-jump-chip">
-                    {child.title}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+        <>
+          <div className="nv-sect" data-nv="">
+            <span className="nv-sect-num">{nextSection()}</span>
+            <h2>Syllabus checklist</h2>
+            <p>Chapters open into topics. Press / to search.</p>
           </div>
-
-          <StudyPageClient
-            nodeId={node.id}
-            nodeType={node.type}
-            chapters={
-              children.map((chapter) => ({
+          {children.length > 1 ? (
+            <nav className="sw-jump" aria-label="Open child pages" data-nv="">
+              {children.slice(0, 6).map((child) => (
+                <Link key={child.id} href={`/study/${child.slug}`}>
+                  {child.title}
+                  <ArrowRight size={12} />
+                </Link>
+              ))}
+            </nav>
+          ) : null}
+          <div data-nv="">
+            <StudyPageClient
+              nodeId={node.id}
+              nodeType={node.type}
+              chapters={children.map((chapter) => ({
                 ...mapChecklistNode(chapter),
                 children: chapter.children.map(mapChecklistNode),
-              }))
-            }
-            pathname={pathname}
-          />
-        </section>
+              }))}
+              pathname={pathname}
+            />
+          </div>
+        </>
       ) : null}
 
-      {/* ── Log form (subject / leaf paper only) ─────────────────── */}
+      {/* ── Sessions ─────────────────────────────────────────────── */}
       {showLogForm ? (
-        <section className="sx-section sx-log-grid nv-block" data-nv="">
-          <article className="glass panel sx-card nv-glass">
-            <div className="sx-card-head">
-              <div className="sx-eyebrow">Study log</div>
-              <h2 className="sx-section-title">Record a session</h2>
-            </div>
-            <form action={addStudyLogAction} className="sx-form">
-              <input type="hidden" name="studyNodeId" value={node.id} suppressHydrationWarning />
-              <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-              <SxField label="Session title" hint="What did you attack?" icon={<NotebookPen size={14} />} className="span-2">
-                <input className="field" name="title" placeholder="e.g. Mughal administration revision" required suppressHydrationWarning />
-              </SxField>
-              <SxField label="Date" hint="Calendar day" icon={<CalendarDays size={14} />}>
-                <input
-                  className="field"
-                  type="date"
-                  name="logDate"
-                  defaultValue={format(new Date(), "yyyy-MM-dd")}
-                  required
-                  suppressHydrationWarning
-                />
-              </SxField>
-              <SxField label="Hours studied" hint="0.25 steps" icon={<Clock3 size={14} />}>
-                <input className="field" type="number" step="0.25" name="hours" placeholder="Hours" required suppressHydrationWarning />
-              </SxField>
-              <SxField label="Topics covered" hint="Optional" icon={<Layers3 size={14} />}>
-                <input className="field" type="number" name="topicCount" placeholder="Count" suppressHydrationWarning />
-              </SxField>
-              <SxField label="Completion" hint="0-100%" icon={<CheckCircle2 size={14} />}>
-                <input className="field" type="number" min="0" max="100" name="completion" placeholder="%" suppressHydrationWarning />
-              </SxField>
-              <SxField label="Focus score" hint="0-10" icon={<Target size={14} />}>
-                <input className="field" type="number" min="0" max="10" name="focusScore" placeholder="/10" suppressHydrationWarning />
-              </SxField>
-              <SxField label="Session notes" hint="Reflection, mistakes, next hook" icon={<FileText size={14} />} className="span-2">
-                <textarea className="textarea" name="notes" placeholder="What happened in this session?" suppressHydrationWarning />
-              </SxField>
-              <button className="button sx-submit" type="submit" suppressHydrationWarning>
-                Save study log
-              </button>
-            </form>
-          </article>
+        <>
+          <div className="nv-sect" data-nv="">
+            <span className="nv-sect-num">{nextSection()}</span>
+            <h2>Sessions</h2>
+            <p>Record what you studied here. Hours roll up into the paper and your dashboard.</p>
+          </div>
+          <section className="sw-sessions" data-nv="">
+            <article className="sw-card">
+              <div className="sw-card-head">
+                <span className="lg-label">Record a session</span>
+                <span className="nv-mono sw-today">{format(new Date(), "EEE, dd MMM")}</span>
+              </div>
+              <form action={addStudyLogAction} className="sw-form">
+                <input type="hidden" name="studyNodeId" value={node.id} suppressHydrationWarning />
+                <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
+                <SwField label="What did you attack?" className="span-2">
+                  <input className="lg-input sw-input-hero" name="title" placeholder="Mughal administration — revision" required suppressHydrationWarning />
+                </SwField>
+                <SwField label="Date">
+                  <input className="lg-input" type="date" name="logDate" defaultValue={today} required suppressHydrationWarning />
+                </SwField>
+                <SwField label="Hours" hint="0.25 steps">
+                  <span className="sw-suffix">
+                    <input className="lg-input" type="number" step="0.25" min="0" max="24" name="hours" placeholder="2.5" required suppressHydrationWarning />
+                    <i>h</i>
+                  </span>
+                </SwField>
+                <SwField label="Topics covered">
+                  <input className="lg-input" type="number" min="0" name="topicCount" placeholder="0" suppressHydrationWarning />
+                </SwField>
+                <SwField label="Completion">
+                  <span className="sw-suffix">
+                    <input className="lg-input" type="number" min="0" max="100" name="completion" placeholder="0" suppressHydrationWarning />
+                    <i>%</i>
+                  </span>
+                </SwField>
+                <fieldset className="sw-field span-2 sw-focus">
+                  <legend className="lg-label">Focus</legend>
+                  <div className="sw-focus-scale">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <label key={n} style={{ "--n": n } as CSSProperties}>
+                        <input type="radio" name="focusScore" value={n} suppressHydrationWarning />
+                        <span>{n}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <small>1 = scattered · 10 = deep, undistracted</small>
+                </fieldset>
+                <label className="lg-note tone-next span-2">
+                  <span className="lg-label">Notes · mistakes · next hook</span>
+                  <textarea name="notes" placeholder="What happened in this session?" rows={3} suppressHydrationWarning />
+                </label>
+                <div className="sw-form-actions span-2">
+                  <button className="lg-btn save" type="submit" suppressHydrationWarning>
+                    <Plus size={15} /> Save session
+                  </button>
+                </div>
+              </form>
+            </article>
 
-          <article className="glass panel sx-card nv-glass">
-            <div className="sx-card-head sx-card-head-row">
-              <div>
-                <div className="sx-eyebrow">Recent sessions</div>
-                <h2 className="sx-section-title">Latest work</h2>
+            <article className="sw-card">
+              <div className="sw-card-head">
+                <span className="lg-label">Recent sessions</span>
+                <span className="nv-mono sw-today">{studyLogs.length} logged</span>
               </div>
-              <span className="sx-count-pill">{studyLogs.length} logs</span>
-            </div>
-            <SessionLedger logs={studyLogs} fallbackTitle={node.title} pathname={pathname} />
-          </article>
-        </section>
+              <SessionLedger logs={studyLogs} fallbackTitle={node.title} pathname={pathname} />
+            </article>
+          </section>
+        </>
       ) : studyLogs.length ? (
-        <section className="sx-section nv-block" data-nv="">
-          <article className="glass panel sx-card nv-glass">
-            <div className="sx-card-head sx-card-head-row">
-              <div>
-                <div className="sx-eyebrow">Recent sessions</div>
-                <h2 className="sx-section-title">
-                  {isPaper ? "Logged across this paper" : "Logged on this module"}
-                </h2>
-              </div>
-              <span className="sx-count-pill">{studyLogs.length} logs</span>
-            </div>
-            <p className="sx-readonly-note">
-              {isPaper
-                ? "Sessions are logged on the subject pages — this is a read-only roll-up."
-                : "Sessions are logged on the subject page — this is a read-only roll-up."}
-            </p>
+        <>
+          <div className="nv-sect" data-nv="">
+            <span className="nv-sect-num">{nextSection()}</span>
+            <h2>{isPaper ? "Logged across this paper" : "Logged on this module"}</h2>
+            <p>Sessions are logged on subject pages — this is a read-only roll-up.</p>
+          </div>
+          <article className="sw-card" data-nv="">
             <SessionLedger logs={studyLogs} fallbackTitle={node.title} pathname={pathname} readOnly />
           </article>
-        </section>
+        </>
       ) : null}
 
       {/* ── Manage drawer (collapsed by default) ─────────────────── */}
-      <details className="sx-manage nv-block" data-nv="">
-        <summary className="sx-manage-summary">
-          <span className="sx-manage-summary-main">
+      <details className="sw-manage" data-nv="">
+        <summary>
+          <span className="sw-manage-title">
             <Settings2 size={15} />
             Manage this page
           </span>
-          <ChevronRight size={16} className="sx-manage-chevron" aria-hidden="true" />
+          <small>Rename, describe or extend the syllabus</small>
+          <ChevronRight size={16} className="sw-manage-chev" aria-hidden="true" />
         </summary>
 
-        <div className="sx-manage-body">
-          <article className="glass panel sx-card nv-glass">
-            <div className="sx-card-head">
-              <div className="sx-eyebrow">Page controls</div>
-              <h2 className="sx-section-title">Edit metadata</h2>
-            </div>
-            <form action={updateStudyNodeAction} className="sx-form">
-              <input type="hidden" name="id" value={node.id} suppressHydrationWarning />
-              <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-              <SxField label="Page title" hint="Visible across study navigation" icon={<FileText size={14} />} className="span-2">
-                <input className="field" name="title" defaultValue={node.title} placeholder="Page title" required suppressHydrationWarning />
-              </SxField>
-              <SxField label="Overview" hint="Short page summary" icon={<Route size={14} />} className="span-2">
-                <textarea className="textarea" name="overview" defaultValue={node.overview ?? ""} placeholder="Short description or overview" suppressHydrationWarning />
-              </SxField>
-              <SxField label="Detailed syllabus notes" hint="Optional deeper context" icon={<BookOpen size={14} />} className="span-2">
-                <textarea className="textarea" name="details" defaultValue={node.details ?? ""} placeholder="Detailed syllabus notes" suppressHydrationWarning />
-              </SxField>
-              <button className="button sx-submit" type="submit" suppressHydrationWarning>
+        <div className="sw-manage-body">
+          <form action={updateStudyNodeAction} className="sw-form sw-card">
+            <span className="lg-label span-2">Edit metadata</span>
+            <input type="hidden" name="id" value={node.id} suppressHydrationWarning />
+            <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
+            <SwField label="Page title" className="span-2">
+              <input className="lg-input" name="title" defaultValue={node.title} placeholder="Page title" required suppressHydrationWarning />
+            </SwField>
+            <SwField label="Overview" className="span-2">
+              <textarea className="lg-input sw-textarea" name="overview" defaultValue={node.overview ?? ""} placeholder="Short description or overview" suppressHydrationWarning />
+            </SwField>
+            <SwField label="Detailed syllabus notes" hint="optional" className="span-2">
+              <textarea className="lg-input sw-textarea" name="details" defaultValue={node.details ?? ""} placeholder="Detailed syllabus notes" suppressHydrationWarning />
+            </SwField>
+            <div className="sw-form-actions span-2">
+              <button className="lg-btn next" type="submit" suppressHydrationWarning>
                 Save changes
               </button>
-            </form>
-          </article>
-
-          <article className="glass panel sx-card nv-glass">
-            <div className="sx-card-head">
-              <div className="sx-eyebrow">
-                <Plus size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} />
-                {addChildLabel}
-              </div>
-              <h2 className="sx-section-title">Expand syllabus</h2>
             </div>
-            <form action={createStudyNodeAction} className="sx-form">
-              <input type="hidden" name="parentId" value={node.id} suppressHydrationWarning />
-              <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-              <SxField label={addChildLabel} hint="Adds below this page" icon={<Plus size={14} />} className="span-2">
-                <input className="field" name="title" placeholder={addChildPlaceholder} required suppressHydrationWarning />
-              </SxField>
-              <SxField label="Overview" hint="Optional description" icon={<FileText size={14} />} className="span-2">
-                <textarea className="textarea" name="overview" placeholder="Brief description (optional)" suppressHydrationWarning />
-              </SxField>
-              <button className="button sx-submit" type="submit" suppressHydrationWarning>
+          </form>
+
+          <form action={createStudyNodeAction} className="sw-form sw-card">
+            <span className="lg-label span-2">{addChildLabel}</span>
+            <input type="hidden" name="parentId" value={node.id} suppressHydrationWarning />
+            <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
+            <SwField label="Title" hint="added below this page" className="span-2">
+              <input className="lg-input" name="title" placeholder={addChildPlaceholder} required suppressHydrationWarning />
+            </SwField>
+            <SwField label="Overview" hint="optional" className="span-2">
+              <textarea className="lg-input sw-textarea" name="overview" placeholder="Brief description" suppressHydrationWarning />
+            </SwField>
+            <div className="sw-form-actions span-2">
+              <button className="lg-btn next" type="submit" suppressHydrationWarning>
                 <Plus size={14} /> Add to syllabus
               </button>
-            </form>
-          </article>
+            </div>
+          </form>
         </div>
       </details>
     </NovaStage>

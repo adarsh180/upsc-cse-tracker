@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
 import {
   BookOpen,
   Check,
@@ -15,7 +15,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { CircularProgress } from "@/components/ui/sections";
 
 type TopicNode = {
   id: string;
@@ -50,12 +49,12 @@ type DragState =
   | null;
 
 function revisionColor(n: number): string {
-  if (n === 0) return "hsl(40 7% 52%)";
-  if (n <= 2) return "hsl(218 84% 62%)";
-  if (n <= 5) return "hsl(142 60% 48%)";
-  if (n <= 10) return "hsl(38 88% 54%)";
-  if (n <= 15) return "hsl(270 68% 62%)";
-  return "hsl(352 60% 58%)";
+  if (n === 0) return "hsl(220 8% 55%)";
+  if (n <= 2) return "hsl(212 80% 60%)";
+  if (n <= 5) return "hsl(150 55% 46%)";
+  if (n <= 10) return "hsl(38 86% 52%)";
+  if (n <= 15) return "hsl(272 62% 62%)";
+  return "hsl(350 66% 58%)";
 }
 
 function revisionLabel(n: number): string {
@@ -156,6 +155,28 @@ function nodeKindLabel(node: Pick<TopicNode, "nodeKind">, fallback: string) {
   return node.nodeKind ? labels[node.nodeKind] ?? fallback : fallback;
 }
 
+function MiniRing({ pct, size = 40 }: { pct: number; size?: number }) {
+  return (
+    <span className="ck-ring" style={{ "--p": pct, "--s": `${size}px` } as CSSProperties} aria-hidden="true">
+      <svg viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="15" className="ck-ring-track" />
+        <circle cx="18" cy="18" r="15" className="ck-ring-fill" pathLength={100} />
+      </svg>
+      <span>{pct === 100 ? "✓" : `${pct}`}</span>
+    </span>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <span className="ck-check" aria-hidden="true">
+      <svg viewBox="0 0 16 16">
+        <path d="M3.4 8.6l3 3 6.2-7" />
+      </svg>
+    </span>
+  );
+}
+
 function RevisionBadge({
   count,
   onIncrement,
@@ -168,23 +189,15 @@ function RevisionBadge({
   const color = revisionColor(count);
 
   return (
-    <div className="study-revision-badge">
-      <button type="button" onClick={onDecrement} disabled={count <= 0} className="study-stepper-btn" title="Remove one revision">
+    <div className="ck-rev" style={{ "--rc": color } as CSSProperties}>
+      <button type="button" onClick={onDecrement} disabled={count <= 0} className="ck-rev-btn" title="Remove one revision">
         -
       </button>
-      <div
-        className="study-revision-value"
-        style={{
-          background: `${color}22`,
-          borderColor: `${color}55`,
-          color,
-        }}
-        title={revisionLabel(count)}
-      >
+      <div className="ck-rev-val" title={revisionLabel(count)}>
         <RefreshCw size={10} />
         {count}
       </div>
-      <button type="button" onClick={onIncrement} disabled={count >= 20} className="study-stepper-btn" title="Add one revision">
+      <button type="button" onClick={onIncrement} disabled={count >= 20} className="ck-rev-btn" title="Add one revision">
         +
       </button>
     </div>
@@ -203,7 +216,7 @@ function InlineEdit({
   const [val, setVal] = useState(label);
 
   return (
-    <div className="study-inline-edit">
+    <div className="ck-edit">
       <input
         autoFocus
         value={val}
@@ -212,12 +225,12 @@ function InlineEdit({
           if (event.key === "Enter") onSave(normalizeTitle(val));
           if (event.key === "Escape") onCancel();
         }}
-        className="study-inline-input"
+        className="ck-input"
       />
-      <button type="button" onClick={() => onSave(normalizeTitle(val))} className="study-icon-btn success">
+      <button type="button" onClick={() => onSave(normalizeTitle(val))} className="ck-icon is-ok">
         <Check size={14} />
       </button>
-      <button type="button" onClick={onCancel} className="study-icon-btn">
+      <button type="button" onClick={onCancel} className="ck-icon">
         <X size={14} />
       </button>
     </div>
@@ -302,9 +315,9 @@ function TopicRow({
   };
 
   return (
-    <div className={level > 0 ? "study-subtopic-block" : undefined}>
+    <div className={level > 0 ? "ck-sub-block" : undefined}>
       <div
-        className={`study-topic-row${level > 0 ? " subtopic" : ""}${subtopicsOpen ? " is-open" : ""}${isChecked ? " checked" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+        className={`ck-topic${level > 0 ? " is-sub" : ""}${subtopicsOpen ? " is-open" : ""}${isChecked ? " is-checked" : ""}${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop" : ""}`}
         data-level={level}
         draggable={manageMode && level === 0 && !editing}
         onDragStart={() => {
@@ -322,13 +335,13 @@ function TopicRow({
         }}
         onDragEnd={onDragEnd}
       >
-        <div className="study-row-leading">
+        <div className="ck-topic-lead">
           {manageMode && level === 0 ? (
-            <span className="study-drag-chip" aria-hidden="true" title="Drag to reorder">
+            <span className="ck-drag" aria-hidden="true" title="Drag to reorder">
               <GripVertical size={12} />
             </span>
           ) : level > 0 ? (
-            <span className="study-subtopic-dot" aria-hidden="true" />
+            <span className="ck-sub-dot" aria-hidden="true" />
           ) : null}
           <button
             type="button"
@@ -344,17 +357,17 @@ function TopicRow({
                 headers: { "Content-Type": "application/json" },
               });
             }}
-            className="study-topic-main"
+            className="ck-topic-main"
           >
-            <span className="topic-checkbox" aria-hidden="true" />
+            <CheckGlyph />
             {!editing ? (
-              <div className="topic-label">
-                <small className="study-level-label">
+              <div className="ck-topic-label">
+                <small className="ck-kind">
                   {nodeKindLabel(topic, level > 0 ? "Sub-topic" : "Topic")}
                   {!topic.curriculumKey ? " · personal" : ""}
                 </small>
-                <span className={isChecked ? "done" : ""}>{topic.title}</span>
-                {topic.overview ? <div className="topic-sub">{topic.overview}</div> : null}
+                <span className="ck-topic-title">{topic.title}</span>
+                {topic.overview ? <div className="ck-topic-sub">{topic.overview}</div> : null}
               </div>
             ) : null}
           </button>
@@ -370,25 +383,25 @@ function TopicRow({
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <div className="study-row-actions">
+          <div className="ck-topic-actions">
             {isContainer ? (
-              <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{leafIds.length}</span>
+              <span className={`ck-count${pct === 100 ? " is-full" : ""}`}>{doneCount}/{leafIds.length}</span>
             ) : (
               <RevisionBadge count={revCount} onIncrement={() => onRevisionChange(topic.id, 1)} onDecrement={() => onRevisionChange(topic.id, -1)} />
             )}
             {isContainer && avgRevision > 0 ? (
-              <span className="study-soft-pill" style={{ color: revisionColor(avgRevision), borderColor: `${revisionColor(avgRevision)}44` }}>
+              <span className="ck-pill is-heat" style={{ "--rc": revisionColor(avgRevision) } as CSSProperties}>
                 avg {avgRevision}x
               </span>
             ) : null}
             {manageMode && level === 0 ? (
-              <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add sub-topic">
+              <button type="button" onClick={() => setAddOpen((current) => !current)} className="ck-icon is-accent" title="Add sub-topic">
                 <Plus size={12} />
               </button>
             ) : null}
             {manageMode ? (
               <>
-                <button type="button" onClick={() => setEditing(true)} className="study-icon-btn" title={level > 0 ? "Rename sub-topic" : "Rename topic"}>
+                <button type="button" onClick={() => setEditing(true)} className="ck-icon" title={level > 0 ? "Rename sub-topic" : "Rename topic"}>
                   <Pencil size={12} />
                 </button>
                 <button
@@ -401,7 +414,7 @@ function TopicRow({
                     onDelete(topic.id);
                     setConfirmDelete(false);
                   }}
-                  className="study-icon-btn danger"
+                  className="ck-icon is-danger"
                   title={confirmDelete ? "Confirm delete" : level > 0 ? "Delete sub-topic" : "Delete topic"}
                 >
                   {confirmDelete ? "Sure?" : <Trash2 size={12} />}
@@ -411,13 +424,13 @@ function TopicRow({
             {isContainer ? (
               <button
                 type="button"
-                className="study-chevron-btn"
+                className="ck-chev"
                 onClick={() => onExpandedChange(topic.id, !subtopicsOpen)}
                 title={subtopicsOpen ? "Collapse sub-topics" : "Expand sub-topics"}
                 aria-expanded={subtopicsOpen}
                 aria-controls={subtopicRegionId}
               >
-                <ChevronDown size={12} className={`chapter-accord-chevron${subtopicsOpen ? " open" : ""}`} />
+                <ChevronDown size={12} className={`ck-chev-ico${subtopicsOpen ? " is-open" : ""}`} />
               </button>
             ) : null}
           </div>
@@ -425,7 +438,7 @@ function TopicRow({
       </div>
 
       {manageMode && addOpen ? (
-        <div className="study-inline-creator study-subtopic-creator">
+        <div className="ck-creator is-sub">
           <input
             autoFocus
             value={newSubTopic}
@@ -435,16 +448,16 @@ function TopicRow({
               if (event.key === "Escape") setAddOpen(false);
             }}
             placeholder="Add a sub-topic"
-            className="study-inline-input"
+            className="ck-input"
           />
-          <button type="button" onClick={handleAddSubTopic} disabled={isPending || !normalizeTitle(newSubTopic)} className="button-secondary">
+          <button type="button" onClick={handleAddSubTopic} disabled={isPending || !normalizeTitle(newSubTopic)} className="ck-btn">
             {isPending ? "Adding..." : "Add"}
           </button>
         </div>
       ) : null}
 
       {subTopics.length && subtopicsOpen ? (
-        <div className="study-subtopic-stack" id={subtopicRegionId}>
+        <div className="ck-sub-stack" id={subtopicRegionId}>
           {subTopics.map((subTopic) => (
             <TopicRow
               key={subTopic.id}
@@ -552,7 +565,6 @@ function ChapterAccordion({
   const allIds = collectLeafIds(topics);
   const doneCount = allIds.filter((id) => optimisticMap[id] ?? false).length;
   const pct = allIds.length ? Math.round((doneCount / allIds.length) * 100) : 0;
-  const accentColor = pct === 100 ? "var(--gold)" : pct >= 50 ? "var(--botany)" : "var(--physics)";
   const avgRevision = allIds.length
     ? Math.round(allIds.reduce((sum, id) => sum + (revisionMap[id] ?? 0), 0) / allIds.length)
     : 0;
@@ -578,7 +590,8 @@ function ChapterAccordion({
 
   return (
     <div
-      className={`chapter-accordion study-chapter-card${open ? " is-open" : ""}${isDragging ? " dragging" : ""}${isDropTarget ? " drop-target" : ""}`}
+      className={`ck-chapter${open ? " is-open" : ""}${pct === 100 ? " is-complete" : ""}${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop" : ""}`}
+      style={{ "--cp": pct } as CSSProperties}
       draggable={manageMode && !editingChapter}
       onDragStart={() => onDragStart()}
       onDragOver={(event) => {
@@ -591,36 +604,34 @@ function ChapterAccordion({
       }}
       onDragEnd={onDragEnd}
     >
-      <div className="chapter-accord-head study-chapter-head">
+      <div className="ck-chapter-head">
         <button
           type="button"
           onClick={() => onExpandedChange(chapter.id, !open)}
-          className="study-chapter-main"
+          className="ck-chapter-main"
           aria-expanded={open}
           aria-controls={chapterRegionId}
         >
           {manageMode ? (
-            <span className="study-drag-chip study-chapter-drag-chip" aria-hidden="true" title="Drag to reorder">
+            <span className="ck-drag" aria-hidden="true" title="Drag to reorder">
               <GripVertical size={13} />
             </span>
           ) : null}
-          <span className="study-chapter-index" aria-hidden="true">{String(chapterIndex + 1).padStart(2, "0")}</span>
-          <div className="study-chapter-progress">
-            <CircularProgress pct={pct} size={42} stroke={4} color={accentColor} />
-          </div>
+          <span className="ck-index" aria-hidden="true">{String(chapterIndex + 1).padStart(2, "0")}</span>
+          <MiniRing pct={pct} />
           {!editingChapter ? (
-            <div className="chapter-accord-title study-chapter-copy">
-              <span>{chapter.title}</span>
-              <div className="study-chapter-meta-line">
-                <span className="study-soft-pill">{nodeKindLabel(chapter, "Chapter")}</span>
-                {!chapter.curriculumKey ? <span className="study-soft-pill personal">personal</span> : null}
-                <span className={`progress-badge${pct === 100 ? " full" : ""}`}>{doneCount}/{allIds.length}</span>
+            <div className="ck-chapter-copy">
+              <span className="ck-chapter-title">{chapter.title}</span>
+              <div className="ck-meta">
+                <span className="ck-pill">{nodeKindLabel(chapter, "Chapter")}</span>
+                {!chapter.curriculumKey ? <span className="ck-pill is-personal">personal</span> : null}
+                <span className={`ck-count${pct === 100 ? " is-full" : ""}`}>{doneCount}/{allIds.length}</span>
                 {avgRevision > 0 ? (
-                  <span className="study-soft-pill" style={{ color: revisionColor(avgRevision), borderColor: `${revisionColor(avgRevision)}44` }}>
+                  <span className="ck-pill is-heat" style={{ "--rc": revisionColor(avgRevision) } as CSSProperties}>
                     avg {avgRevision}x
                   </span>
                 ) : (
-                  <span className="study-soft-pill">fresh lane</span>
+                  <span className="ck-pill is-fresh">unrevised</span>
                 )}
               </div>
             </div>
@@ -639,18 +650,18 @@ function ChapterAccordion({
         </button>
 
         {!editingChapter ? (
-          <div className="chapter-accord-meta study-chapter-actions">
+          <div className="ck-chapter-actions">
             {!focused ? (
-              <button type="button" onClick={onFocus} className="study-icon-btn" title="Focus this chapter">
+              <button type="button" onClick={onFocus} className="ck-icon" title="Focus this chapter">
                 <Focus size={12} />
               </button>
             ) : null}
             {manageMode ? (
               <>
-                <button type="button" onClick={() => setAddOpen((current) => !current)} className="study-icon-btn accent" title="Add topic">
+                <button type="button" onClick={() => setAddOpen((current) => !current)} className="ck-icon is-accent" title="Add topic">
                   <Plus size={12} />
                 </button>
-                <button type="button" onClick={() => setEditingChapter(true)} className="study-icon-btn" title="Rename chapter">
+                <button type="button" onClick={() => setEditingChapter(true)} className="ck-icon" title="Rename chapter">
                   <Pencil size={12} />
                 </button>
                 <button
@@ -665,7 +676,7 @@ function ChapterAccordion({
                       setConfirmDelete(false);
                     });
                   }}
-                  className="study-icon-btn danger"
+                  className="ck-icon is-danger"
                   title={confirmDelete ? "Confirm delete" : "Delete chapter"}
                 >
                   {confirmDelete ? "Sure?" : <Trash2 size={12} />}
@@ -674,20 +685,20 @@ function ChapterAccordion({
             ) : null}
             <button
               type="button"
-              className="study-chevron-btn"
+              className="ck-chev"
               onClick={() => onExpandedChange(chapter.id, !open)}
               title={open ? "Collapse chapter" : "Expand chapter"}
               aria-expanded={open}
               aria-controls={chapterRegionId}
             >
-              <ChevronDown size={16} className={`chapter-accord-chevron${open ? " open" : ""}`} />
+              <ChevronDown size={16} className={`ck-chev-ico${open ? " is-open" : ""}`} />
             </button>
           </div>
         ) : null}
       </div>
 
       {manageMode && addOpen ? (
-        <div className="study-inline-creator">
+        <div className="ck-creator">
           <input
             autoFocus
             value={newTopic}
@@ -697,16 +708,16 @@ function ChapterAccordion({
               if (event.key === "Escape") setAddOpen(false);
             }}
             placeholder="Add a topic to this chapter"
-            className="study-inline-input"
+            className="ck-input"
           />
-          <button type="button" onClick={handleAddTopic} disabled={isPending || !normalizeTitle(newTopic)} className="button-secondary">
+          <button type="button" onClick={handleAddTopic} disabled={isPending || !normalizeTitle(newTopic)} className="ck-btn">
             {isPending ? "Adding..." : "Add"}
           </button>
         </div>
       ) : null}
 
       {open ? (
-        <div className="chapter-accord-body study-topic-stack" id={chapterRegionId}>
+        <div className="ck-topics" id={chapterRegionId}>
           {topics.map((topic) => (
             <TopicRow
               key={topic.id}
@@ -747,7 +758,7 @@ function ChapterAccordion({
             />
           ))}
 
-          {!topics.length ? <div className="muted">No topics yet.</div> : null}
+          {!topics.length ? <div className="ck-empty">No topics yet.</div> : null}
         </div>
       ) : null}
     </div>
@@ -762,6 +773,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const [dragState, setDragState] = useState<DragState>(null);
   const [dropState, setDropState] = useState<DragState>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const [optimisticMap, setOptimisticMap] = useState<Record<string, boolean>>(() => {
     const next: Record<string, boolean> = {};
     const revisions: Record<string, number> = {};
@@ -814,6 +826,20 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
       })
       .catch(() => {});
   }, [nodeId]);
+
+  // "/" jumps to the syllabus search, Escape clears it.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const clearDragState = () => {
     setDragState(null);
@@ -1099,64 +1125,95 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
   const unrevisedCount = allRevisions.filter((value) => value === 0).length;
   const wellRevisedCount = allRevisions.filter((value) => value >= 5).length;
 
+  const spine = chapters.map((chapter) => {
+    const ids = chapter.children.length ? collectLeafIds(chapter.children) : [chapter.id];
+    const done = ids.filter((id) => optimisticMap[id]).length;
+    return { id: chapter.id, title: chapter.title, total: ids.length, done };
+  });
+
   return (
-    <article className={`glass panel study-control-shell${manageMode ? " is-managing" : ""}`}>
-      <div className="study-control-header">
-        <div className="study-control-progress">
-          <CircularProgress pct={overallPct} size={68} stroke={6} color="var(--gold)" />
+    <article className={`ck${manageMode ? " is-managing" : ""}`}>
+      <div className="ck-head">
+        <div className="ck-head-progress">
+          <div className="ck-fraction">
+            <strong>{totalDone}</strong>
+            <span>/ {allTopicIds.length}</span>
+          </div>
           <div>
-            <div className="eyebrow">Study Flow</div>
-            <div className="display study-control-title">{totalDone} / {allTopicIds.length} leaf topics completed</div>
-            <div className="muted study-control-copy">Current completion and revision state.</div>
+            <div className="ck-eyebrow">Leaf topics done · {overallPct}%</div>
+            <div className="ck-copy">Tick a topic when it's studied; add a revision each time you go back to it.</div>
           </div>
         </div>
-        <div className="study-mode-switch" role="group" aria-label="Syllabus workspace mode">
-          <button type="button" className={!manageMode ? "active" : ""} onClick={() => setManageMode(false)}>
+        <div
+          className="nv-seg ck-mode"
+          role="group"
+          aria-label="Syllabus workspace mode"
+          style={{ "--n": 2, "--i": manageMode ? 1 : 0 } as CSSProperties}
+        >
+          <button type="button" className={!manageMode ? "is-on" : ""} onClick={() => setManageMode(false)}>
             <BookOpen size={14} /> Study
           </button>
-          <button type="button" className={manageMode ? "active" : ""} onClick={() => setManageMode(true)}>
+          <button type="button" className={manageMode ? "is-on" : ""} onClick={() => setManageMode(true)}>
             <Settings2 size={14} /> Manage
           </button>
         </div>
       </div>
 
-      <div className="study-findbar">
-        <label className="study-search-field">
+      <div className="ck-spine" aria-label="Completion by chapter">
+        {spine.map((part, i) => (
+          <span
+            key={part.id}
+            className={part.done === part.total ? "is-full" : ""}
+            style={{ "--w": part.total, "--f": part.total ? part.done / part.total : 0, "--i": i } as CSSProperties}
+            title={`${part.title}: ${part.done}/${part.total}`}
+          >
+            <i />
+          </span>
+        ))}
+      </div>
+
+      <div className="ck-find">
+        <label className="ck-search">
           <Search size={15} aria-hidden="true" />
           <input
+            ref={searchRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setQuery("");
+                event.currentTarget.blur();
+              }
+            }}
             placeholder="Find a chapter or topic"
             aria-label="Find a chapter or topic"
           />
-          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button> : null}
+          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button> : <kbd aria-hidden="true">/</kbd>}
         </label>
         {focusedChapterId ? (
-          <button type="button" className="study-focus-exit" onClick={() => setFocusedChapterId(null)}>
+          <button type="button" className="ck-focus-exit" onClick={() => setFocusedChapterId(null)}>
             <Focus size={14} /> Show all chapters
           </button>
         ) : (
-          <span className="study-find-count">{visibleChapters.length} chapters</span>
+          <span className="ck-find-count">{visibleChapters.length} chapters</span>
         )}
       </div>
 
-      <div className="study-summary-grid">
+      <dl className="ck-sum">
         {[
           { label: "Total revisions", value: totalRevisions, color: revisionColor(Math.round(totalRevisions / Math.max(allTopicIds.length, 1))) },
           { label: "Avg per topic", value: `${avgRevision}x`, color: revisionColor(Number(avgRevision)) },
           { label: "Strongly revised", value: wellRevisedCount, color: revisionColor(5) },
-          { label: "Fresh topics", value: unrevisedCount, color: unrevisedCount > 0 ? "var(--danger)" : "var(--botany)" },
+          { label: "Unrevised topics", value: unrevisedCount, color: unrevisedCount > 0 ? "var(--nv-rose)" : "var(--nv-green)" },
         ].map((stat) => (
-          <div key={stat.label} className="study-summary-card">
-            <div className="study-summary-label">{stat.label}</div>
-            <div className="study-summary-value" style={{ color: stat.color }}>
-              {stat.value}
-            </div>
+          <div key={stat.label} style={{ "--rc": stat.color } as CSSProperties}>
+            <dt>{stat.label}</dt>
+            <dd>{stat.value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="chapter-grid study-chapter-grid">
+      <div className="ck-chapters">
         {visibleChapters.map((chapter) => {
           const chapterIndex = chapters.findIndex((item) => item.id === chapter.id);
           return (
@@ -1211,7 +1268,7 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
           );
         })}
         {!visibleChapters.length ? (
-          <div className="study-empty-search">
+          <div className="ck-empty-search">
             <Search size={18} />
             <span>No matching chapter or topic.</span>
             <button type="button" onClick={() => setQuery("")}>Clear search</button>
@@ -1219,8 +1276,8 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
         ) : null}
       </div>
 
-      <div className="study-legend">
-        <span className="study-summary-label">Revision heat</span>
+      <div className="ck-legend">
+        <span className="ck-legend-label">Revision heat</span>
         {[
           { label: "0", color: revisionColor(0) },
           { label: "1-2", color: revisionColor(1) },
@@ -1228,8 +1285,8 @@ export function StudyPageClient({ nodeId, chapters: initialChapters, pathname }:
           { label: "6-10", color: revisionColor(8) },
           { label: "11+", color: revisionColor(12) },
         ].map((item) => (
-          <span key={item.label} className="study-legend-item">
-            <span className="study-legend-dot" style={{ background: item.color }} />
+          <span key={item.label} className="ck-legend-item">
+            <span className="ck-legend-dot" style={{ background: item.color }} />
             {item.label}
           </span>
         ))}

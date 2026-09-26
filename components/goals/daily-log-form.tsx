@@ -9,27 +9,10 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpenCheck,
-  CalendarDays,
-  Check,
-  CheckCircle2,
-  Gauge,
-  Layers,
-  ListChecks,
-  Minus,
-  PenLine,
-  Plus,
-  Save,
-  ShieldCheck,
-  Target,
-  Trophy,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Minus, Plus, Save } from "lucide-react";
 
 import { saveDailyGoalAction } from "@/app/actions";
-import { MOMENTUM_TIERS, tierForHours } from "@/components/goals/momentum-heatmap";
+import { MOMENTUM_TIERS, tierForHours } from "@/components/goals/momentum-tiers";
 import { SubjectTagPicker, type SubjectGroup } from "@/components/goals/subject-tag-picker";
 
 export type DailyLogDefaults = {
@@ -47,12 +30,15 @@ export type DailyLogDefaults = {
 
 type StepKey = "mission" | "coverage" | "numbers" | "reflect";
 
-const STEPS: { key: StepKey; label: string; hint: string; icon: ReactNode }[] = [
-  { key: "mission", label: "Brief", hint: "Date and mission", icon: <Target size={15} /> },
-  { key: "coverage", label: "Coverage", hint: "Syllabus touched", icon: <Layers size={15} /> },
-  { key: "numbers", label: "Metrics", hint: "Hours and output", icon: <Gauge size={15} /> },
-  { key: "reflect", label: "Close", hint: "Wins and repair", icon: <PenLine size={15} /> },
+const STEPS: { key: StepKey; label: string; hint: string }[] = [
+  { key: "mission", label: "Brief", hint: "Date & mission" },
+  { key: "coverage", label: "Coverage", hint: "Syllabus touched" },
+  { key: "numbers", label: "Numbers", hint: "Hours & output" },
+  { key: "reflect", label: "Reflect", hint: "Wins & repair" },
 ];
+
+const HOUR_MAX = 16;
+const MISSION_LIMIT = 120;
 
 function clampNum(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
@@ -60,7 +46,8 @@ function clampNum(value: number, min: number, max: number) {
 }
 
 function formatHours(value: number) {
-  return value ? value.toFixed(2) : "0";
+  if (!value) return "0";
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, "");
 }
 
 export function DailyLogForm({
@@ -79,6 +66,7 @@ export function DailyLogForm({
   hasTodayLog?: boolean;
 }) {
   const [step, setStep] = useState(0);
+  const [dir, setDir] = useState<"fwd" | "back">("fwd");
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,11 +89,11 @@ export function DailyLogForm({
   const hoursToGood = Math.max(0, 8 - totalHours);
 
   const verdict = useMemo(() => {
-    if (totalHours <= 0) return "Open ledger. Start with the honest number.";
+    if (totalHours <= 0) return "Open ledger — start with the honest number.";
     if (isPeak) return "Peak attempt mode. This is the day that builds rank.";
-    if (isGood) return "Good UPSC day cleared. Push toward the 12h ceiling.";
-    if (totalHours >= 6) return `Close range. ${hoursToGood.toFixed(2)}h more crosses the good-day bar.`;
-    return `Below the 8h bar by ${hoursToGood.toFixed(2)}h. Tomorrow needs correction.`;
+    if (isGood) return "Good day cleared. The 12h ceiling is the next line.";
+    if (totalHours >= 6) return `Close — ${formatHours(hoursToGood)}h more crosses the good-day bar.`;
+    return `Below the 8h bar by ${formatHours(hoursToGood)}h. Tomorrow needs correction.`;
   }, [totalHours, isGood, isPeak, hoursToGood]);
 
   const validateStep = (index: number): string | null => {
@@ -116,6 +104,11 @@ export function DailyLogForm({
     return null;
   };
 
+  const goTo = (next: number) => {
+    setDir(next >= step ? "fwd" : "back");
+    setStep(next);
+  };
+
   const goNext = () => {
     const err = validateStep(step);
     if (err) {
@@ -123,12 +116,12 @@ export function DailyLogForm({
       return;
     }
     setError(null);
-    setStep((s) => Math.min(STEPS.length - 1, s + 1));
+    goTo(Math.min(STEPS.length - 1, step + 1));
   };
 
   const goBack = () => {
     setError(null);
-    setStep((s) => Math.max(0, s - 1));
+    goTo(Math.max(0, step - 1));
   };
 
   const blockEnterSubmit = (event: KeyboardEvent<HTMLFormElement>) => {
@@ -143,7 +136,7 @@ export function DailyLogForm({
     for (let i = 0; i < STEPS.length; i += 1) {
       const err = validateStep(i);
       if (err) {
-        setStep(i);
+        goTo(i);
         setError(err);
         return;
       }
@@ -157,7 +150,6 @@ export function DailyLogForm({
     });
   };
 
-  const progress = ((step + 1) / STEPS.length) * 100;
   const score = Math.round(
     Math.min(
       100,
@@ -165,88 +157,77 @@ export function DailyLogForm({
     ),
   );
 
+  const hourPct = clampNum((totalHours / HOUR_MAX) * 100, 0, 100);
+
   return (
     <article
-      className="glass panel dlf-panel goals-ledger-card"
-      style={{ "--dlf-tier": tierMeta.accent, "--dlf-glow": tierMeta.glow, "--dlf-score": `${score}%` } as CSSProperties}
+      className="lg-form"
+      style={{ "--tier": tier === 0 ? "var(--nv-faint)" : tierMeta.accent, "--step": step, "--steps": STEPS.length } as CSSProperties}
     >
-      <div className="dlf-head">
-        <div className="dlf-head-copy">
-          <div className="eyebrow">Daily logging</div>
-          <div className="display dlf-title">Closeout console</div>
-          <p className="dlf-subtitle">Capture the mission, coverage, output, and drift without visual noise.</p>
+      <header className="lg-form-head">
+        <div>
+          <span className="lg-eyebrow">Closeout · {todayLabel}</span>
+          <h3>Close today&apos;s ledger</h3>
         </div>
-        <div className="dlf-head-side">
-          <div className="goals-date-chip">
-            <CalendarDays size={14} />
-            {todayLabel}
+        {hasTodayLog ? (
+          <span className="lg-pill is-live">
+            <Check size={12} /> Editing today
+          </span>
+        ) : (
+          <span className="lg-pill">New entry</span>
+        )}
+      </header>
+
+      {/* Live readout — reacts to every number typed below */}
+      <div className={`lg-readout${isPeak ? " is-peak" : isGood ? " is-good" : ""}`} aria-live="polite">
+        <div className="lg-readout-figure">
+          <span className="lg-readout-emoji" key={tier} aria-hidden="true">
+            {tier === 0 ? "—" : tierMeta.emoji}
+          </span>
+          <strong>{formatHours(totalHours)}</strong>
+          <em>h</em>
+        </div>
+        <div className="lg-readout-body">
+          <div className="lg-readout-line">
+            <b>{tierMeta.label}</b>
+            <span>{verdict}</span>
           </div>
-          {hasTodayLog && (
-            <span className="dlf-existing-chip">
-              <Check size={12} />
-              Editing today
-            </span>
-          )}
+          <div className="lg-scale" aria-hidden="true">
+            <div className="lg-scale-track">
+              <i style={{ width: `${hourPct}%` }} />
+            </div>
+            <span className="lg-scale-mark good" style={{ left: `${(8 / HOUR_MAX) * 100}%` }}>8h</span>
+            <span className="lg-scale-mark peak" style={{ left: `${(12 / HOUR_MAX) * 100}%` }}>12h</span>
+          </div>
         </div>
+        <dl className="lg-readout-stats">
+          <div>
+            <dt>Score</dt>
+            <dd>{score}</dd>
+          </div>
+          <div>
+            <dt>Done</dt>
+            <dd>{completion}%</dd>
+          </div>
+          <div>
+            <dt>Disc.</dt>
+            <dd>{disciplineScore}</dd>
+          </div>
+          <div>
+            <dt>Qs</dt>
+            <dd>{questionsSolved}</dd>
+          </div>
+        </dl>
       </div>
 
-      <div className={`dlf-grade${isPeak ? " is-peak" : isGood ? " is-good" : ""}`}>
-        <div className="dlf-score-orb" aria-hidden="true">
-          <strong>{score}</strong>
-          <span>score</span>
-        </div>
-        <div className="dlf-grade-body">
-          <div className="dlf-grade-top">
-            <span>Day status</span>
-            <strong>{tierMeta.label}</strong>
-            <span className="dlf-grade-hours">
-              {formatHours(totalHours)}
-              <em>h</em>
-            </span>
-          </div>
-          <p className="dlf-grade-verdict">{verdict}</p>
-          <div className="dlf-grade-meter" aria-label="Deep-work hour progress toward 8 hour and 12 hour benchmarks">
-            <div className="dlf-grade-bar" aria-hidden>
-              <i style={{ width: `${clampNum((totalHours / 12) * 100, 0, 100)}%` }} />
-              <b className="dlf-grade-mark good" style={{ left: `${(8 / 12) * 100}%` }} />
-              <b className="dlf-grade-mark peak" style={{ left: "100%" }} />
-            </div>
-            <div className="dlf-grade-thresholds" aria-hidden>
-              <span className="good" style={{ left: `${(8 / 12) * 100}%` }}>
-                <em>Good</em>
-                <strong>8h</strong>
-              </span>
-              <span className="peak" style={{ left: "100%" }}>
-                <em>Peak</em>
-                <strong>12h</strong>
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="dlf-grade-mini">
-          <div>
-            <span>Done</span>
-            <strong>{completion}%</strong>
-          </div>
-          <div>
-            <span>Discipline</span>
-            <strong>{disciplineScore}/100</strong>
-          </div>
-          <div>
-            <span>Qs</span>
-            <strong>{questionsSolved}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="dlf-rail" role="tablist" aria-label="Logging steps">
+      <div className="lg-steps" role="tablist" aria-label="Logging steps">
         {STEPS.map((s, i) => (
           <button
             type="button"
             key={s.key}
             role="tab"
             aria-selected={i === step}
-            className={`dlf-rail-step${i === step ? " active" : ""}${i < step ? " done" : ""}`}
+            className={`lg-step${i === step ? " is-on" : ""}${i < step ? " is-done" : ""}`}
             onClick={() => {
               const err = validateStep(Math.min(step, i));
               if (i > step && err) {
@@ -254,20 +235,22 @@ export function DailyLogForm({
                 return;
               }
               setError(null);
-              setStep(i);
+              goTo(i);
             }}
           >
-            <i className="dlf-rail-icon">{i < step ? <Check size={14} /> : s.icon}</i>
-            <span className="dlf-rail-label">{s.label}</span>
-            <span className="dlf-rail-hint">{s.hint}</span>
+            <span className="lg-step-num">{i < step ? <Check size={11} strokeWidth={3} /> : `0${i + 1}`}</span>
+            <span className="lg-step-text">
+              <b>{s.label}</b>
+              <small>{s.hint}</small>
+            </span>
           </button>
         ))}
-        <div className="dlf-rail-track">
-          <i style={{ width: `${progress}%` }} />
-        </div>
+        <span className="lg-steps-rail" aria-hidden="true">
+          <i />
+        </span>
       </div>
 
-      <form onSubmit={submit} onKeyDown={blockEnterSubmit} className="dlf-form">
+      <form onSubmit={submit} onKeyDown={blockEnterSubmit} className="lg-body">
         <input type="hidden" name="logDate" value={logDate} />
         <input type="hidden" name="totalHours" value={totalHours} />
         <input type="hidden" name="completion" value={completion} />
@@ -275,200 +258,186 @@ export function DailyLogForm({
         <input type="hidden" name="questionsSolved" value={questionsSolved} />
         <input type="hidden" name="topicsStudied" value={topicsStudied} />
 
-        <section className={`dlf-step${step === 0 ? " active" : ""}`} aria-hidden={step !== 0}>
-          <div className="dlf-step-grid">
-            <label className="dlf-field">
-              <span className="dlf-field-label">
-                <CalendarDays size={13} />
-                Log date
-              </span>
-              <input className="field" type="date" value={logDate} max={todayKey} onChange={(e) => setLogDate(e.target.value)} />
-            </label>
-            <label className="dlf-field dlf-field-wide">
-              <span className="dlf-field-label">
-                <Target size={13} />
-                Mission objective
-              </span>
-              <input
-                className="field"
-                name="primaryFocus"
-                value={primaryFocus}
-                onChange={(e) => setPrimaryFocus(e.target.value)}
-                placeholder="e.g. Polity: DPSP revision + 40 PYQs"
-              />
-              <em className="dlf-field-help">One sharp line. What was today supposed to accomplish?</em>
-            </label>
-          </div>
-        </section>
+        <div className="lg-stage" data-dir={dir}>
+          {/* 01 — Brief */}
+          <section className={`lg-panel${step === 0 ? " is-on" : ""}`} aria-hidden={step !== 0}>
+            <div className="lg-brief">
+              <label className="lg-field lg-field-date">
+                <span className="lg-label">Log date</span>
+                <input
+                  className="lg-input"
+                  type="date"
+                  value={logDate}
+                  max={todayKey}
+                  onChange={(e) => setLogDate(e.target.value)}
+                />
+              </label>
+              <label className="lg-field lg-field-mission">
+                <span className="lg-label">
+                  Mission objective
+                  <em>{primaryFocus.length}/{MISSION_LIMIT}</em>
+                </span>
+                <input
+                  className="lg-input lg-input-hero"
+                  name="primaryFocus"
+                  value={primaryFocus}
+                  maxLength={MISSION_LIMIT}
+                  onChange={(e) => setPrimaryFocus(e.target.value)}
+                  placeholder="Polity: DPSP revision + 40 PYQs"
+                />
+                <small className="lg-help">One sharp line. What was today supposed to accomplish?</small>
+              </label>
+            </div>
+          </section>
 
-        <section className={`dlf-step${step === 1 ? " active" : ""}`} aria-hidden={step !== 1}>
-          {subjectGroups.length > 0 ? (
-            <SubjectTagPicker groups={subjectGroups} defaultSelected={defaultSubjects} />
-          ) : (
-            <div className="dlf-empty">No syllabus subjects found yet. You can still log everything else.</div>
-          )}
-        </section>
+          {/* 02 — Coverage */}
+          <section className={`lg-panel${step === 1 ? " is-on" : ""}`} aria-hidden={step !== 1}>
+            {subjectGroups.length > 0 ? (
+              <SubjectTagPicker groups={subjectGroups} defaultSelected={defaultSubjects} />
+            ) : (
+              <div className="lg-empty">No syllabus subjects found yet. You can still log everything else.</div>
+            )}
+          </section>
 
-        <section className={`dlf-step${step === 2 ? " active" : ""}`} aria-hidden={step !== 2}>
-          <div className="dlf-numbers">
-            <div className="dlf-hours-card" style={{ "--m-tone": "var(--goals-blue)" } as CSSProperties}>
-              <div className="dlf-hours-head">
-                <i>
-                  <Trophy size={16} />
-                </i>
-                <div>
-                  <span>Deep-work hours</span>
-                  <em>8h good / 12h peak</em>
+          {/* 03 — Numbers */}
+          <section className={`lg-panel${step === 2 ? " is-on" : ""}`} aria-hidden={step !== 2}>
+            <div className="lg-numbers">
+              <div className="lg-hours">
+                <div className="lg-hours-head">
+                  <span className="lg-label">Deep-work hours</span>
+                  <span className="lg-hours-rule">8h good · 12h peak</span>
+                </div>
+                <div className="lg-hours-control">
+                  <button
+                    type="button"
+                    className="lg-round"
+                    onClick={() => setTotalHours((h) => clampNum(Number((h - 0.25).toFixed(2)), 0, 24))}
+                    aria-label="Decrease hours"
+                  >
+                    <Minus size={17} />
+                  </button>
+                  <label className="lg-hours-value">
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      max="24"
+                      inputMode="decimal"
+                      value={totalHours || ""}
+                      onChange={(e) => setTotalHours(clampNum(Number(e.target.value), 0, 24))}
+                      placeholder="0"
+                      aria-label="Deep-work hours"
+                    />
+                    <span>hours</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="lg-round"
+                    onClick={() => setTotalHours((h) => clampNum(Number((h + 0.25).toFixed(2)), 0, 24))}
+                    aria-label="Increase hours"
+                  >
+                    <Plus size={17} />
+                  </button>
+                </div>
+                <div className="lg-ruler">
+                  <input
+                    type="range"
+                    min={0}
+                    max={HOUR_MAX}
+                    step={0.25}
+                    value={Math.min(totalHours, HOUR_MAX)}
+                    onChange={(e) => setTotalHours(Number(e.target.value))}
+                    style={{ "--fill": `${hourPct}%` } as CSSProperties}
+                    aria-label="Hours slider"
+                  />
+                  <div className="lg-ruler-ticks" aria-hidden="true">
+                    {Array.from({ length: HOUR_MAX + 1 }, (_, h) => (
+                      <i key={h} className={h === 8 ? "good" : h === 12 ? "peak" : h % 4 === 0 ? "major" : ""}>
+                        {h % 4 === 0 ? <span>{h}</span> : null}
+                      </i>
+                    ))}
+                  </div>
+                </div>
+                <div className="lg-quick">
+                  {[6, 8, 10, 12].map((q) => (
+                    <button
+                      type="button"
+                      key={q}
+                      className={totalHours === q ? "is-on" : ""}
+                      onClick={() => setTotalHours(q)}
+                    >
+                      {q}h
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="dlf-hours-control">
-                <button
-                  type="button"
-                  className="dlf-round"
-                  onClick={() => setTotalHours((h) => clampNum(Number((h - 0.25).toFixed(2)), 0, 24))}
-                  aria-label="Decrease hours"
-                >
-                  <Minus size={16} />
-                </button>
-                <input
-                  className="dlf-hours-input"
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  max="24"
-                  inputMode="decimal"
-                  value={totalHours || ""}
-                  onChange={(e) => setTotalHours(clampNum(Number(e.target.value), 0, 24))}
-                  placeholder="0"
-                />
-                <button
-                  type="button"
-                  className="dlf-round"
-                  onClick={() => setTotalHours((h) => clampNum(Number((h + 0.25).toFixed(2)), 0, 24))}
-                  aria-label="Increase hours"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <div className="dlf-quick">
-                {[6, 8, 10, 12].map((q) => (
-                  <button type="button" key={q} className={`dlf-quick-chip${totalHours === q ? " active" : ""}`} onClick={() => setTotalHours(q)}>
-                    {q}h
-                  </button>
-                ))}
+
+              <div className="lg-dials">
+                <SliderField label="Plan completion" tone="var(--nv-green)" value={completion} onChange={setCompletion} suffix="%" />
+                <SliderField label="Discipline" tone="var(--nv-a1)" value={disciplineScore} onChange={setDisciplineScore} suffix="/100" />
+                <StepperField label="Questions solved" value={questionsSolved} step={5} onChange={setQuestionsSolved} />
+                <StepperField label="Topics studied" value={topicsStudied} step={1} onChange={setTopicsStudied} />
               </div>
             </div>
+          </section>
 
-            <div className="dlf-sliders">
-              <SliderField
-                label="Plan completion"
-                icon={<CheckCircle2 size={15} />}
-                tone="var(--goals-success)"
-                value={completion}
-                onChange={setCompletion}
-                suffix="%"
-              />
-              <SliderField
-                label="Discipline score"
-                icon={<ShieldCheck size={15} />}
-                tone="var(--goals-gold)"
-                value={disciplineScore}
-                onChange={setDisciplineScore}
-                suffix="/100"
-              />
-            </div>
-
-            <div className="dlf-counters">
-              <StepperField
-                label="Questions solved"
-                icon={<BookOpenCheck size={15} />}
-                tone="var(--goals-blue)"
-                value={questionsSolved}
-                step={5}
-                onChange={setQuestionsSolved}
-              />
-              <StepperField
-                label="Topics studied"
-                icon={<ListChecks size={15} />}
-                tone="var(--goals-red)"
-                value={topicsStudied}
-                step={1}
-                onChange={setTopicsStudied}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className={`dlf-step${step === 3 ? " active" : ""}`} aria-hidden={step !== 3}>
-          <div className="dlf-reflect">
-            <label className="dlf-field dlf-reflect-field win">
-              <span className="dlf-field-label">
-                <CheckCircle2 size={13} />
-                Wins
-              </span>
-              <textarea
-                className="textarea"
+          {/* 04 — Reflect */}
+          <section className={`lg-panel${step === 3 ? " is-on" : ""}`} aria-hidden={step !== 3}>
+            <div className="lg-reflect">
+              <ReflectField
+                tone="win"
+                label="Wins"
                 name="wins"
                 value={wins}
-                onChange={(e) => setWins(e.target.value)}
+                onChange={setWins}
                 placeholder="What actually moved forward today?"
               />
-            </label>
-            <label className="dlf-field dlf-reflect-field block">
-              <span className="dlf-field-label">
-                <ShieldCheck size={13} />
-                Blockers / drift
-              </span>
-              <textarea
-                className="textarea"
+              <ReflectField
+                tone="drift"
+                label="Blockers & drift"
                 name="blockers"
                 value={blockers}
-                onChange={(e) => setBlockers(e.target.value)}
+                onChange={setBlockers}
                 placeholder="Where did time leak? What stalled?"
               />
-            </label>
-            <label className="dlf-field dlf-reflect-field next">
-              <span className="dlf-field-label">
-                <Target size={13} />
-                Tomorrow's first action
-              </span>
-              <textarea
-                className="textarea"
+              <ReflectField
+                tone="next"
+                label="Tomorrow's first move"
                 name="tomorrowPlan"
                 value={tomorrowPlan}
-                onChange={(e) => setTomorrowPlan(e.target.value)}
-                placeholder="The one clear move to open tomorrow."
+                onChange={setTomorrowPlan}
+                placeholder="The one clear action that opens tomorrow."
               />
-            </label>
-          </div>
-        </section>
+            </div>
+          </section>
+        </div>
 
-        {error && (
-          <div className="dlf-error" role="alert">
+        {error ? (
+          <div className="lg-error" role="alert">
             {error}
           </div>
-        )}
+        ) : null}
 
-        <div className="dlf-actions">
-          <button type="button" className="dlf-btn ghost" onClick={goBack} disabled={step === 0}>
+        <footer className="lg-actions">
+          <button type="button" className="lg-btn ghost" onClick={goBack} disabled={step === 0}>
             <ArrowLeft size={16} />
             Back
           </button>
-
-          <div className="dlf-actions-right">
-            {step < STEPS.length - 1 ? (
-              <button type="button" className="dlf-btn next" onClick={goNext}>
-                Next
-                <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button type="submit" className={`dlf-btn save${saved ? " saved" : ""}`} disabled={pending}>
-                {saved ? <Check size={17} /> : <Save size={16} />}
-                {pending ? "Saving..." : saved ? "Logged" : hasTodayLog ? "Update log" : "Save execution log"}
-              </button>
-            )}
-          </div>
-        </div>
+          <span className="lg-actions-count">
+            {step + 1} <i>/</i> {STEPS.length}
+          </span>
+          {step < STEPS.length - 1 ? (
+            <button type="button" className="lg-btn next" onClick={goNext}>
+              Next
+              <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button type="submit" className={`lg-btn save${saved ? " is-saved" : ""}`} disabled={pending}>
+              {saved ? <Check size={17} /> : <Save size={16} />}
+              {pending ? "Saving…" : saved ? "Logged" : hasTodayLog ? "Update log" : "Save the day"}
+            </button>
+          )}
+        </footer>
       </form>
     </article>
   );
@@ -476,33 +445,28 @@ export function DailyLogForm({
 
 function SliderField({
   label,
-  icon,
   tone,
   value,
   onChange,
   suffix,
 }: {
   label: string;
-  icon: ReactNode;
   tone: string;
   value: number;
   onChange: (v: number) => void;
   suffix: string;
 }) {
   return (
-    <div className="dlf-slider" style={{ "--m-tone": tone } as CSSProperties}>
-      <div className="dlf-slider-head">
-        <span>
-          <i>{icon}</i>
-          {label}
-        </span>
+    <div className="lg-dial" style={{ "--m": tone } as CSSProperties}>
+      <div className="lg-dial-head">
+        <span className="lg-label">{label}</span>
         <strong>
           {value}
           <em>{suffix}</em>
         </strong>
       </div>
       <input
-        className="dlf-range"
+        className="lg-range"
         type="range"
         min={0}
         max={100}
@@ -510,6 +474,7 @@ function SliderField({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ "--fill": `${value}%` } as CSSProperties}
+        aria-label={label}
       />
     </div>
   );
@@ -517,42 +482,58 @@ function SliderField({
 
 function StepperField({
   label,
-  icon,
-  tone,
   value,
   step,
   onChange,
 }: {
   label: string;
-  icon: ReactNode;
-  tone: string;
   value: number;
   step: number;
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="dlf-counter" style={{ "--m-tone": tone } as CSSProperties}>
-      <div className="dlf-counter-head">
-        <i>{icon}</i>
-        <span>{label}</span>
-      </div>
-      <div className="dlf-counter-control">
-        <button type="button" className="dlf-round" onClick={() => onChange(clampNum(value - step, 0, 9999))} aria-label={`Decrease ${label}`}>
-          <Minus size={15} />
+    <div className="lg-dial lg-counter">
+      <span className="lg-label">{label}</span>
+      <div className="lg-counter-control">
+        <button type="button" className="lg-round sm" onClick={() => onChange(clampNum(value - step, 0, 9999))} aria-label={`Decrease ${label}`}>
+          <Minus size={14} />
         </button>
         <input
-          className="dlf-counter-input"
           type="number"
           min="0"
           inputMode="numeric"
           value={value || ""}
           onChange={(e) => onChange(clampNum(Math.round(Number(e.target.value)), 0, 9999))}
           placeholder="0"
+          aria-label={label}
         />
-        <button type="button" className="dlf-round" onClick={() => onChange(clampNum(value + step, 0, 9999))} aria-label={`Increase ${label}`}>
-          <Plus size={15} />
+        <button type="button" className="lg-round sm" onClick={() => onChange(clampNum(value + step, 0, 9999))} aria-label={`Increase ${label}`}>
+          <Plus size={14} />
         </button>
       </div>
     </div>
+  );
+}
+
+function ReflectField({
+  tone,
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+}: {
+  tone: "win" | "drift" | "next";
+  label: string;
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}): ReactNode {
+  return (
+    <label className={`lg-note tone-${tone}`}>
+      <span className="lg-label">{label}</span>
+      <textarea name={name} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={4} />
+    </label>
   );
 }

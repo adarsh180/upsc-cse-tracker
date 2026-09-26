@@ -35,17 +35,17 @@ export type GoalPoint = {
 type ViewKey = "hours" | "output" | "quality" | "balance";
 
 const VIEWS: Array<{ key: ViewKey; label: string; hint: string; accent: string }> = [
-  { key: "hours", label: "Study hours", hint: "Daily depth against the 8h and 12h bars", accent: "var(--goals-blue)" },
-  { key: "output", label: "Output", hint: "Questions solved and topics covered", accent: "var(--goals-success)" },
-  { key: "quality", label: "Quality", hint: "Discipline and completion movement", accent: "var(--goals-gold)" },
-  { key: "balance", label: "Latest vs rhythm", hint: "Latest day compared with your 7-day average", accent: "var(--goals-red)" },
+  { key: "hours", label: "Hours", hint: "Daily depth against the 8h good and 12h peak bars", accent: "var(--g-a1)" },
+  { key: "output", label: "Output", hint: "Questions solved (bars) and topics covered (line)", accent: "var(--g-good)" },
+  { key: "quality", label: "Quality", hint: "Discipline (area) and plan completion (line)", accent: "var(--g-a1)" },
+  { key: "balance", label: "Balance", hint: "Latest day compared with your 7-day rhythm", accent: "var(--g-a2)" },
 ];
 
 const GOOD_LINE = 8;
 const PEAK_LINE = 12;
-const chartGrid = "var(--goals-chart-grid)";
-const chartAxis = "var(--goals-chart-axis)";
-const chartCursor = "var(--goals-chart-cursor)";
+const chartGrid = "var(--g-grid)";
+const chartAxis = "var(--g-axis)";
+const chartCursor = "var(--g-cursor)";
 
 function GenericTooltip({
   active,
@@ -59,7 +59,7 @@ function GenericTooltip({
   const point = payload[0]?.payload as Record<string, number> | undefined;
   if (!point) return null;
   return (
-    <div className="goals-chart-tooltip">
+    <div className="ga-tip">
       <strong>{label}</strong>
       <div>
         {items.map((it) => (
@@ -75,12 +75,12 @@ function GenericTooltip({
 }
 
 function hoursTone(h: number) {
-  if (h >= 12) return "var(--goals-gold)";
-  if (h >= 10) return "var(--goals-success-strong)";
-  if (h >= 8) return "var(--goals-success)";
-  if (h >= 6) return "var(--goals-warning)";
-  if (h >= 4) return "var(--goals-blue)";
-  return "var(--goals-muted)";
+  if (h >= 12) return "var(--g-peak)";
+  if (h >= 10) return "var(--g-strong)";
+  if (h >= 8) return "var(--g-good)";
+  if (h >= 6) return "var(--g-warn)";
+  if (h >= 4) return "var(--g-sky)";
+  return "var(--g-low)";
 }
 
 function axisProps() {
@@ -88,7 +88,7 @@ function axisProps() {
     tickLine: false,
     axisLine: false,
     stroke: chartAxis,
-    tick: { fontSize: 11, fontWeight: 700, fill: chartAxis },
+    tick: { fontSize: 10.5, fontWeight: 600, fill: chartAxis, fontFamily: "var(--font-mono), monospace" },
   };
 }
 
@@ -124,50 +124,57 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
   const activeView = VIEWS.find((v) => v.key === view)!;
 
   return (
-    <div className="goals-analytics">
-      <div className="goals-analytics-tabs" role="tablist">
-        {VIEWS.map((v) => (
-          <button
-            key={v.key}
-            type="button"
-            role="tab"
-            aria-selected={v.key === view}
-            className={`goals-analytics-tab${v.key === view ? " active" : ""}`}
-            style={{ "--tab-accent": v.accent } as CSSProperties}
-            onClick={() => setView(v.key)}
-          >
-            {v.label}
-          </button>
-        ))}
+    <div className="ga">
+      <div className="ga-bar">
+        <div
+          className="nv-seg"
+          role="tablist"
+          style={{ "--n": VIEWS.length, "--i": VIEWS.findIndex((v) => v.key === view) } as CSSProperties}
+        >
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              role="tab"
+              aria-selected={v.key === view}
+              className={v.key === view ? "is-on" : ""}
+              onClick={() => setView(v.key)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <p className="ga-hint" style={{ "--t": activeView.accent } as CSSProperties}>
+          {activeView.hint}
+        </p>
       </div>
-      <div className="goals-analytics-hint">{activeView.hint}</div>
 
-      <div className="goals-analytics-plot">
+      <div className="ga-plot" key={view}>
         {view === "hours" && (
           <ResponsiveContainer>
-            <BarChart data={points} margin={{ top: 16, right: 16, bottom: 4, left: -8 }}>
+            <BarChart data={points} margin={{ top: 16, right: 30, bottom: 4, left: -8 }}>
               <CartesianGrid stroke={chartGrid} vertical={false} />
               <XAxis dataKey="label" minTickGap={16} {...axisProps()} />
               <YAxis domain={[0, Math.ceil(maxHours)]} width={30} {...axisProps()} />
               <Tooltip
-                content={<GenericTooltip items={[{ key: "hours", label: "Hours", suffix: "h", color: "var(--goals-blue)" }]} />}
+                content={<GenericTooltip items={[{ key: "hours", label: "Hours", suffix: "h", color: "var(--g-a2)" }]} />}
                 cursor={{ fill: chartCursor }}
               />
               <ReferenceLine
                 y={GOOD_LINE}
-                stroke="var(--goals-success)"
+                stroke="var(--g-good)"
                 strokeDasharray="5 5"
                 strokeWidth={1.5}
-                label={{ value: "Good 8h", position: "right", fill: "var(--goals-success)", fontSize: 10, fontWeight: 800 }}
+                label={{ value: "8h", position: "right", fill: "var(--g-good)", fontSize: 10, fontWeight: 700 }}
               />
               <ReferenceLine
                 y={PEAK_LINE}
-                stroke="var(--goals-gold)"
+                stroke="var(--g-peak)"
                 strokeDasharray="5 5"
                 strokeWidth={1.5}
-                label={{ value: "Peak 12h", position: "right", fill: "var(--goals-gold)", fontSize: 10, fontWeight: 800 }}
+                label={{ value: "12h", position: "right", fill: "var(--g-peak)", fontSize: 10, fontWeight: 700 }}
               />
-              <Bar dataKey="hours" barSize={20} radius={[6, 6, 2, 2]} animationDuration={680}>
+              <Bar dataKey="hours" maxBarSize={22} radius={[5, 5, 2, 2]} animationDuration={680}>
                 {points.map((p) => (
                   <Cell key={p.label} fill={hoursTone(p.hours)} fillOpacity={0.92} />
                 ))}
@@ -186,15 +193,15 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
                 content={
                   <GenericTooltip
                     items={[
-                      { key: "questions", label: "Questions", color: "var(--goals-success)" },
-                      { key: "topics", label: "Topics", color: "var(--goals-gold)" },
+                      { key: "questions", label: "Questions", color: "var(--g-good)" },
+                      { key: "topics", label: "Topics", color: "var(--g-a1)" },
                     ]}
                   />
                 }
                 cursor={{ fill: chartCursor }}
               />
-              <Bar dataKey="questions" barSize={18} radius={[6, 6, 2, 2]} fill="var(--goals-success)" fillOpacity={0.58} animationDuration={680} />
-              <Line type="monotone" dataKey="topics" stroke="var(--goals-gold)" strokeWidth={2.7} dot={false} strokeLinecap="round" animationDuration={860} />
+              <Bar dataKey="questions" maxBarSize={20} radius={[5, 5, 2, 2]} fill="var(--g-good)" fillOpacity={0.58} animationDuration={680} />
+              <Line type="monotone" dataKey="topics" stroke="var(--g-a1)" strokeWidth={2.7} dot={false} strokeLinecap="round" animationDuration={860} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
@@ -204,8 +211,8 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
             <AreaChart data={points} margin={{ top: 16, right: 16, bottom: 4, left: -8 }}>
               <defs>
                 <linearGradient id="goals-quality-fill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--goals-gold)" stopOpacity={0.34} />
-                  <stop offset="78%" stopColor="var(--goals-gold)" stopOpacity={0.04} />
+                  <stop offset="0%" stopColor="var(--g-a1)" stopOpacity={0.34} />
+                  <stop offset="78%" stopColor="var(--g-a1)" stopOpacity={0.04} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={chartGrid} vertical={false} />
@@ -215,8 +222,8 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
                 content={
                   <GenericTooltip
                     items={[
-                      { key: "discipline", label: "Discipline", suffix: "/100", color: "var(--goals-gold)" },
-                      { key: "completion", label: "Completion", suffix: "%", color: "var(--goals-red)" },
+                      { key: "discipline", label: "Discipline", suffix: "/100", color: "var(--g-a1)" },
+                      { key: "completion", label: "Completion", suffix: "%", color: "var(--g-rose)" },
                     ]}
                   />
                 }
@@ -225,21 +232,21 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
               <Area
                 type="monotone"
                 dataKey="discipline"
-                stroke="var(--goals-gold)"
+                stroke="var(--g-a1)"
                 strokeWidth={2.8}
                 fill="url(#goals-quality-fill)"
                 dot={false}
                 strokeLinecap="round"
                 animationDuration={760}
               />
-              <Line type="monotone" dataKey="completion" stroke="var(--goals-red)" strokeWidth={2.4} dot={false} strokeLinecap="round" animationDuration={900} />
+              <Line type="monotone" dataKey="completion" stroke="var(--g-rose)" strokeWidth={2.4} dot={false} strokeLinecap="round" animationDuration={900} />
             </AreaChart>
           </ResponsiveContainer>
         )}
 
         {view === "balance" && (
-          <div className="goals-radar-layout">
-            <div className="goals-radar-explain">
+          <div className="ga-radar">
+            <div className="ga-radar-note">
               <strong>What this calculates</strong>
               <p>
                 Latest is your most recent daily log. Rhythm is your 7-day average. Hours are scored against the 12h peak;
@@ -255,8 +262,8 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
                   content={
                     <GenericTooltip
                       items={[
-                        { key: "latest", label: "Latest score", suffix: "%", color: "var(--goals-blue)" },
-                        { key: "rhythm", label: "7d rhythm", suffix: "%", color: "var(--goals-red)" },
+                        { key: "latest", label: "Latest score", suffix: "%", color: "var(--g-a2)" },
+                        { key: "rhythm", label: "7d rhythm", suffix: "%", color: "var(--g-rose)" },
                       ]}
                     />
                   }
@@ -264,8 +271,8 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
                 <Radar
                   name="7-day rhythm"
                   dataKey="rhythm"
-                  stroke="var(--goals-red)"
-                  fill="var(--goals-red)"
+                  stroke="var(--g-rose)"
+                  fill="var(--g-rose)"
                   fillOpacity={0.14}
                   strokeWidth={2}
                   animationDuration={780}
@@ -273,8 +280,8 @@ export function GoalsAnalytics({ data }: { data: GoalPoint[] }) {
                 <Radar
                   name="Latest"
                   dataKey="latest"
-                  stroke="var(--goals-blue)"
-                  fill="var(--goals-blue)"
+                  stroke="var(--g-a2)"
+                  fill="var(--g-a2)"
                   fillOpacity={0.24}
                   strokeWidth={2.4}
                   animationDuration={900}

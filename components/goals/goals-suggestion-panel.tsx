@@ -6,17 +6,17 @@ import { AlertTriangle, BookMarked, Compass, Flame, RefreshCw, ShieldCheck, Smar
 import { generateGoalsInsightAction, type GoalsInsight } from "@/app/goals/actions";
 
 const VERDICT_TONE: Record<string, { color: string; label: string }> = {
-  PEAK: { color: "var(--goals-gold)", label: "Peak momentum" },
-  STRONG: { color: "var(--goals-success-strong)", label: "Strong momentum" },
-  BUILDING: { color: "var(--goals-blue)", label: "Building" },
-  DRIFTING: { color: "var(--goals-warning)", label: "Drifting" },
-  STALLED: { color: "var(--goals-danger)", label: "Stalled" },
+  PEAK: { color: "var(--g-peak)", label: "Peak momentum" },
+  STRONG: { color: "var(--g-strong)", label: "Strong momentum" },
+  BUILDING: { color: "var(--nv-a2)", label: "Building" },
+  DRIFTING: { color: "var(--g-warn)", label: "Drifting" },
+  STALLED: { color: "var(--nv-rose)", label: "Stalled" },
 };
 
 const PRIORITY_TONE: Record<string, string> = {
-  HIGH: "var(--goals-danger)",
-  MEDIUM: "var(--goals-warning)",
-  LOW: "var(--goals-blue)",
+  HIGH: "var(--nv-rose)",
+  MEDIUM: "var(--g-warn)",
+  LOW: "var(--nv-a2)",
 };
 
 export function GoalsSuggestionPanel() {
@@ -45,194 +45,184 @@ export function GoalsSuggestionPanel() {
   const m = insight?.metrics;
   const verdict = m ? VERDICT_TONE[m.momentumVerdict] : null;
 
+
   return (
-    <article className="glass panel goals-suggest-panel goals-ledger-card">
-      <div className="goals-panel-head">
-        <div>
-          <div className="eyebrow">Misti brief</div>
-          <div className="display goals-panel-title">Revision intelligence</div>
-        </div>
-        <button type="button" className="goals-suggest-trigger" onClick={run} disabled={pending}>
-          {pending ? <RefreshCw size={15} className="spin" /> : <Compass size={15} />}
-          {pending ? "Analysing..." : insight ? "Refresh brief" : "Generate brief"}
+    <article className="gs" data-state={pending ? "loading" : insight ? "ready" : "idle"}>
+      <header className="gs-head">
+        <p>
+          An on-demand read across hours, stale subjects, weak revision zones and distraction debt. Nothing runs until you
+          ask.
+        </p>
+        <button type="button" className="lg-btn save gs-run" onClick={run} disabled={pending}>
+          {pending ? <RefreshCw size={15} className="gs-spin" /> : <Compass size={15} />}
+          {pending ? "Reading your data…" : insight ? "Refresh brief" : "Generate brief"}
         </button>
-      </div>
+      </header>
 
-      {!insight && !pending && (
-        <div className="goals-suggest-empty">
-          <Compass size={26} />
-          <p>
-            Generate a focused read across hours, stale subjects, weak revision zones, and distraction debt. Nothing runs
-            automatically; the brief appears only when you ask.
-          </p>
-        </div>
-      )}
+      {!insight && !pending ? (
+        <ol className="gs-checks">
+          {[
+            ["Momentum", "Average hours, 8h+ and 12h+ days, hours debt"],
+            ["Staleness", "Subjects you haven't tagged in 10+ days"],
+            ["Revision", "Least-revised and weakest areas"],
+            ["Attention", "Distraction on low vs good study days"],
+          ].map(([title, desc], i) => (
+            <li key={title}>
+              <span className="nv-mono">0{i + 1}</span>
+              <b>{title}</b>
+              <small>{desc}</small>
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
-      {pending && (
-        <div className="goals-suggest-loading">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="goals-suggest-skeleton" style={{ animationDelay: `${i * 90}ms` }} />
+      {pending ? (
+        <div className="gs-loading" aria-label="Analysing">
+          {[92, 74, 86, 58, 80].map((w, i) => (
+            <span key={i} style={{ width: `${w}%`, animationDelay: `${i * 110}ms` }} />
           ))}
         </div>
-      )}
+      ) : null}
 
-      {insight && !pending && (
-        <div className="goals-suggest-body">
-          {m && (
-            <div className="goals-momentum-band">
-              <div className="goals-momentum-score" style={{ "--mo-color": verdict?.color } as CSSProperties}>
-                <svg viewBox="0 0 100 100" width={92} height={92} aria-hidden="true">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--goals-ring-track)" strokeWidth="9" />
+      {insight && !pending ? (
+        <div className="gs-body">
+          {m ? (
+            <div className="gs-momentum" style={{ "--mo": verdict?.color } as CSSProperties}>
+              <div className="gs-dial">
+                <svg viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="42" className="gs-dial-track" />
                   <circle
                     cx="50"
                     cy="50"
                     r="42"
-                    fill="none"
-                    stroke={verdict?.color}
-                    strokeWidth="9"
-                    strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 42}
-                    strokeDashoffset={2 * Math.PI * 42 * (1 - m.momentumScore / 100)}
-                    transform="rotate(-90 50 50)"
-                    style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.32,0.72,0,1)" }}
+                    className="gs-dial-fill"
+                    pathLength={100}
+                    style={{ strokeDashoffset: 100 - m.momentumScore } as CSSProperties}
                   />
                 </svg>
-                <div className="goals-momentum-score-label">
+                <div>
                   <strong>{m.momentumScore}</strong>
                   <span>{verdict?.label}</span>
                 </div>
               </div>
-              <div className="goals-momentum-stats">
+              <dl className="gs-stats">
                 <div>
-                  <strong>{m.avgHours}h</strong>
-                  <span>avg / day</span>
+                  <dt>Avg / day</dt>
+                  <dd>{m.avgHours}h</dd>
                 </div>
-                <div>
-                  <strong style={{ color: "var(--goals-success)" }}>{m.goodDays}</strong>
-                  <span>8h+ days</span>
+                <div className="is-good">
+                  <dt>8h+ days</dt>
+                  <dd>{m.goodDays}</dd>
                 </div>
-                <div>
-                  <strong style={{ color: "var(--goals-gold)" }}>{m.peakDays}</strong>
-                  <span>12h+ days</span>
+                <div className="is-peak">
+                  <dt>12h+ days</dt>
+                  <dd>{m.peakDays}</dd>
                 </div>
-                <div>
-                  <strong style={{ color: m.belowParDays > m.goodDays ? "var(--goals-danger)" : "var(--goals-ink)" }}>{m.belowParDays}</strong>
-                  <span>sub-8h days</span>
-                </div>
-                <div>
-                  <strong>{m.consistencyPct}%</strong>
-                  <span>good-day rate</span>
+                <div className={m.belowParDays > m.goodDays ? "is-bad" : ""}>
+                  <dt>Sub-8h days</dt>
+                  <dd>{m.belowParDays}</dd>
                 </div>
                 <div>
-                  <strong style={{ color: "var(--goals-danger)" }}>{m.hoursDebt}h</strong>
-                  <span>hours debt</span>
+                  <dt>Good-day rate</dt>
+                  <dd>{m.consistencyPct}%</dd>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {insight.distraction && (
-            <div className={`goals-distraction-band tone-${insight.distraction.verdict.toLowerCase()}`}>
-              <div className="goals-distraction-icon">
-                <Smartphone size={18} />
-              </div>
-              <div className="goals-distraction-body">
-                <div className="goals-distraction-head">
-                  <strong>Distraction: {insight.distraction.verdict.replace(/_/g, " ")}</strong>
-                  <span>{insight.distraction.avgPerDay}h / day avg</span>
+                <div className="is-bad">
+                  <dt>Hours debt</dt>
+                  <dd>{m.hoursDebt}h</dd>
                 </div>
-                <div className="goals-distraction-stats">
-                  {insight.distraction.topApp && (
-                    <span>
-                      Top sink: <b>{insight.distraction.topApp}</b> ({insight.distraction.topAppHours}h)
-                    </span>
-                  )}
-                  <span>{insight.distraction.highDays} heavy days (3h+)</span>
-                  <span>
-                    Study YT: <b style={{ color: "var(--goals-success)" }}>{insight.distraction.studyYouTube}h</b>
-                  </span>
-                  {insight.distraction.onLowStudyDays > 0 && (
-                    <span>
-                      On sub-8h days you scroll <b style={{ color: "var(--goals-danger)" }}>{insight.distraction.onLowStudyDays}h</b> vs{" "}
-                      {insight.distraction.onGoodStudyDays}h on good days
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {insight.ai?.distractionVerdict ? (
-            <div className="goals-suggest-scold">
-              <Smartphone size={15} />
-              <p>{insight.ai.distractionVerdict}</p>
+              </dl>
             </div>
           ) : null}
 
-          {insight.error && !insight.ai && (
-            <div className="goals-suggest-error">
-              <AlertTriangle size={16} />
-              {insight.error} The momentum read and stale-area list above are computed locally and stay accurate.
+          {insight.distraction ? (
+            <div className={`gs-attention v-${insight.distraction.verdict.toLowerCase()}`}>
+              <Smartphone size={17} />
+              <div>
+                <strong>
+                  Attention: {insight.distraction.verdict.replace(/_/g, " ").toLowerCase()}
+                  <span>{insight.distraction.avgPerDay}h / day</span>
+                </strong>
+                <p>
+                  {insight.distraction.topApp ? (
+                    <>
+                      Top sink <b>{insight.distraction.topApp}</b> ({insight.distraction.topAppHours}h) ·{" "}
+                    </>
+                  ) : null}
+                  {insight.distraction.highDays} heavy days (3h+) · study YouTube{" "}
+                  <b className="is-good">{insight.distraction.studyYouTube}h</b>
+                  {insight.distraction.onLowStudyDays > 0 ? (
+                    <>
+                      {" "}
+                      · on sub-8h days you scroll <b className="is-bad">{insight.distraction.onLowStudyDays}h</b> vs{" "}
+                      {insight.distraction.onGoodStudyDays}h on good days
+                    </>
+                  ) : null}
+                </p>
+              </div>
             </div>
-          )}
+          ) : null}
 
-          {insight.ai && (
+          {insight.ai?.distractionVerdict ? <p className="gs-scold">{insight.ai.distractionVerdict}</p> : null}
+
+          {insight.error && !insight.ai ? (
+            <div className="gs-error">
+              <AlertTriangle size={16} />
+              {insight.error} The momentum read and stale-area list are computed locally and stay accurate.
+            </div>
+          ) : null}
+
+          {insight.ai ? (
             <>
-              <div className="goals-suggest-headline">
+              <blockquote className="gs-headline">
                 <Flame size={16} />
                 <p>{insight.ai.headline}</p>
-              </div>
-              <p className="goals-suggest-momentum-read">{insight.ai.momentumRead}</p>
+              </blockquote>
+              <p className="gs-read">{insight.ai.momentumRead}</p>
 
-              <div className="goals-suggest-cols">
-                <section className="goals-suggest-col">
+              <div className="gs-cols">
+                <section>
                   <h4>
-                    <BookMarked size={14} />
-                    Revise now
+                    <BookMarked size={14} /> Revise now
                   </h4>
-                  <ul>
+                  <ol>
                     {insight.ai.reviseNow?.map((r, i) => (
-                      <li key={`${r.area}-${i}`} style={{ "--p-tone": PRIORITY_TONE[r.priority] ?? "var(--goals-muted)" } as CSSProperties}>
-                        <div className="goals-suggest-li-head">
-                          <span className="goals-suggest-dot" />
+                      <li key={`${r.area}-${i}`} style={{ "--p": PRIORITY_TONE[r.priority] ?? "var(--nv-faint)" } as CSSProperties}>
+                        <div>
                           <strong>{r.area}</strong>
                           <em>{r.priority}</em>
                         </div>
                         <p>{r.reason}</p>
                       </li>
                     ))}
-                  </ul>
+                  </ol>
                 </section>
-
-                <section className="goals-suggest-col">
+                <section>
                   <h4>
-                    <Compass size={14} />
-                    Study next
+                    <Compass size={14} /> Study next
                   </h4>
-                  <ul>
+                  <ol>
                     {insight.ai.studyNext?.map((s, i) => (
-                      <li key={`${s.area}-${i}`} style={{ "--p-tone": "var(--goals-blue)" } as CSSProperties}>
-                        <div className="goals-suggest-li-head">
-                          <span className="goals-suggest-dot" />
+                      <li key={`${s.area}-${i}`} style={{ "--p": "var(--nv-a2)" } as CSSProperties}>
+                        <div>
                           <strong>{s.area}</strong>
                         </div>
                         <p>{s.reason}</p>
                       </li>
                     ))}
-                  </ul>
+                  </ol>
                 </section>
               </div>
 
-              {insight.ai.habitFix && (
-                <div className="goals-suggest-habit">
-                  <div className="goals-suggest-habit-card good">
+              {insight.ai.habitFix ? (
+                <div className="gs-habit">
+                  <div className="is-keep">
                     <ShieldCheck size={15} />
                     <div>
                       <span>Protect</span>
                       <p>{insight.ai.habitFix.strength}</p>
                     </div>
                   </div>
-                  <div className="goals-suggest-habit-card fix">
+                  <div className="is-fix">
                     <Target size={15} />
                     <div>
                       <span>Fix</span>
@@ -240,46 +230,48 @@ export function GoalsSuggestionPanel() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {insight.ai.weeklyTargets?.length > 0 && (
-                <div className="goals-suggest-targets">
+              {insight.ai.weeklyTargets?.length > 0 ? (
+                <dl className="gs-targets">
                   {insight.ai.weeklyTargets.map((t, i) => (
-                    <div key={`${t.label}-${i}`} className="goals-suggest-target">
-                      <span>{t.label}</span>
-                      <strong>{t.target}</strong>
+                    <div key={`${t.label}-${i}`}>
+                      <dt>{t.label}</dt>
+                      <dd>{t.target}</dd>
                     </div>
                   ))}
-                </div>
-              )}
+                </dl>
+              ) : null}
 
-              {insight.ai.closingNote && <p className="goals-suggest-close">{insight.ai.closingNote}</p>}
+              {insight.ai.closingNote ? <p className="gs-close">{insight.ai.closingNote}</p> : null}
             </>
-          )}
+          ) : null}
 
-          {insight.computedStale.length > 0 && (
-            <details className="goals-suggest-stale" open={!insight.ai}>
-              <summary>Detected stale and neglected zones ({insight.computedStale.length})</summary>
-              <div className="goals-suggest-stale-list">
+          {insight.computedStale.length > 0 ? (
+            <details className="gs-stale" open={!insight.ai}>
+              <summary>
+                Stale and neglected zones <span className="nv-mono">{insight.computedStale.length}</span>
+              </summary>
+              <div className="gs-stale-list">
                 {insight.computedStale.map((s, i) => (
-                  <div key={`${s.area}-${i}`} className="goals-suggest-stale-item" style={{ "--p-tone": PRIORITY_TONE[s.priority] } as CSSProperties}>
-                    <div className="goals-suggest-stale-top">
-                      <strong>{s.area}</strong>
-                      <em>{s.priority}</em>
-                    </div>
-                    <span>{s.signal} / {s.lastTouched}</span>
+                  <div key={`${s.area}-${i}`} style={{ "--p": PRIORITY_TONE[s.priority] } as CSSProperties}>
+                    <strong>{s.area}</strong>
+                    <em>{s.priority}</em>
+                    <span>
+                      {s.signal} · {s.lastTouched}
+                    </span>
                   </div>
                 ))}
               </div>
             </details>
-          )}
+          ) : null}
 
-          <div className="goals-suggest-meta">
-            Generated {new Date(insight.generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-            {insight.model !== "none" ? ` / ${insight.model}` : ""}
-          </div>
+          <p className="gs-meta nv-mono">
+            {new Date(insight.generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+            {insight.model !== "none" ? ` · ${insight.model}` : ""}
+          </p>
         </div>
-      )}
+      ) : null}
     </article>
   );
 }

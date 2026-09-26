@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
@@ -35,34 +35,9 @@ const IST_TIME_ZONE = "Asia/Kolkata";
 const RANGE_START = "2026-04-01";
 const BLOCK_SIZE = 500;
 
-export type MomentumTier = {
-  tier: number;
-  emoji: string;
-  label: string;
-  min: number;
-  accent: string;
-  glow: string;
-};
+import { MOMENTUM_TIERS, tierForHours, type MomentumTier } from "@/components/goals/momentum-tiers";
 
-export const MOMENTUM_TIERS: MomentumTier[] = [
-  { tier: 0, emoji: "·", label: "Rest", min: 0, accent: "rgba(255,255,255,0.18)", glow: "transparent" },
-  { tier: 1, emoji: "🌱", label: "Drift", min: 0.01, accent: "hsl(210, 22%, 58%)", glow: "hsla(210,40%,60%,0.30)" },
-  { tier: 2, emoji: "📖", label: "Warming", min: 4, accent: "hsl(199, 78%, 60%)", glow: "hsla(199,80%,58%,0.34)" },
-  { tier: 3, emoji: "🔥", label: "Close", min: 6, accent: "hsl(28, 92%, 60%)", glow: "hsla(28,92%,58%,0.40)" },
-  { tier: 4, emoji: "💪", label: "Good", min: 8, accent: "hsl(148, 62%, 52%)", glow: "hsla(148,70%,52%,0.46)" },
-  { tier: 5, emoji: "🏆", label: "Strong", min: 10, accent: "hsl(168, 70%, 54%)", glow: "hsla(168,76%,52%,0.50)" },
-  { tier: 6, emoji: "🚀", label: "Peak", min: 12, accent: "hsl(38, 96%, 60%)", glow: "hsla(38,96%,58%,0.62)" },
-];
-
-export function tierForHours(hours: number): number {
-  if (hours <= 0) return 0;
-  if (hours < 4) return 1;
-  if (hours < 6) return 2;
-  if (hours < 8) return 3;
-  if (hours < 10) return 4;
-  if (hours < 12) return 5;
-  return 6;
-}
+export { MOMENTUM_TIERS, tierForHours, type MomentumTier };
 
 function keyToUtcDate(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -106,6 +81,9 @@ function weekdayMonFirst(dateKey: string) {
   return (js + 6) % 7;
 }
 
+
+type ViewMode = "fill" | "emoji";
+
 export function MomentumHeatmap({
   data,
   startDate = RANGE_START,
@@ -121,7 +99,10 @@ export function MomentumHeatmap({
   const blockCount = currentBlock + 1;
 
   const [activeBlock, setActiveBlock] = useState(currentBlock);
-  const [active, setActive] = useState<MomentumDay | null>(null);
+  const [hovered, setHovered] = useState<MomentumDay | null>(null);
+  const [pinned, setPinned] = useState<MomentumDay | null>(null);
+  const [mode, setMode] = useState<ViewMode>("fill");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Global stats — drawn from every logged day, independent of the visible block.
   const stats = useMemo(() => {
@@ -157,6 +138,7 @@ export function MomentumHeatmap({
       streak,
       totalHours: Number(totalHours.toFixed(1)),
       bestHours: Number(bestHours.toFixed(1)),
+      avg: activeDays ? Number((totalHours / activeDays).toFixed(1)) : 0,
     };
   }, [data, globalStart, todayKey]);
 
@@ -185,7 +167,6 @@ export function MomentumHeatmap({
         data: log,
       });
     }
-    // Pad the tail to a full final week.
     while (days.length % 7 !== 0) {
       const dateKey = addDaysToKey(bStart, days.length - leadPad);
       days.push({
@@ -219,115 +200,148 @@ export function MomentumHeatmap({
     };
   }, [data, globalStart, activeBlock, currentBlock, daysSinceStart, todayKey]);
 
+  // Keep "today" in view: the block is ~72 weeks wide, today is usually at the far edge.
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const today = box.querySelector<HTMLElement>(".mh-cell.is-today");
+    const target = today ? today.offsetLeft - box.clientWidth * 0.7 : 0;
+    box.scrollTo({ left: Math.max(0, target), behavior: "auto" });
+  }, [activeBlock]);
+
+  const shown = pinned ?? hovered;
+  const shownTier = shown ? MOMENTUM_TIERS[shown.tier] : null;
+
   return (
-    <article className="glass panel momentum-panel">
-      <div className="momentum-head">
-        <div>
-          <div className="eyebrow">Momentum field</div>
-          <div className="display momentum-title">The grind ladder</div>
-          <div className="momentum-sub">8h+ is a good day · 12h+ is peak · 500-day blocks</div>
+    <article className="mh" data-mode={mode}>
+      <header className="mh-head">
+        <dl className="mh-stats">
+          <div className="is-streak">
+            <dt>Streak</dt>
+            <dd>
+              {stats.streak}
+              <small>d</small>
+            </dd>
+          </div>
+          <div className="is-good">
+            <dt>8h+ days</dt>
+            <dd>{stats.goodDays}</dd>
+          </div>
+          <div className="is-peak">
+            <dt>12h+ days</dt>
+            <dd>{stats.peakDays}</dd>
+          </div>
+          <div>
+            <dt>Best day</dt>
+            <dd>
+              {stats.bestHours}
+              <small>h</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Avg active</dt>
+            <dd>
+              {stats.avg}
+              <small>h</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Logged</dt>
+            <dd>
+              {stats.totalHours}
+              <small>h</small>
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mh-tools">
+          <div className="nv-seg" style={{ "--n": 2, "--i": mode === "fill" ? 0 : 1 } as CSSProperties} role="tablist" aria-label="Heatmap view">
+            <button type="button" role="tab" aria-selected={mode === "fill"} className={mode === "fill" ? "is-on" : ""} onClick={() => setMode("fill")}>
+              Fill
+            </button>
+            <button type="button" role="tab" aria-selected={mode === "emoji"} className={mode === "emoji" ? "is-on" : ""} onClick={() => setMode("emoji")}>
+              Emoji
+            </button>
+          </div>
+          <div className="mh-block">
+            <button
+              type="button"
+              className="mh-block-btn"
+              onClick={() => setActiveBlock((b) => Math.max(0, b - 1))}
+              disabled={activeBlock === 0}
+              aria-label="Previous 500-day block"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <div className="mh-block-meta">
+              <strong>
+                Block {activeBlock + 1}
+                <span> / {blockCount}</span>
+              </strong>
+              <small>
+                {formatKey(blockStart, "range")} – {formatKey(blockEnd, "range")}
+              </small>
+            </div>
+            <button
+              type="button"
+              className="mh-block-btn"
+              onClick={() => setActiveBlock((b) => Math.min(blockCount - 1, b + 1))}
+              disabled={activeBlock >= blockCount - 1}
+              aria-label="Next 500-day block"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
         </div>
-        <div className="momentum-stat-cluster">
-          <div className="momentum-stat" data-tone="streak">
-            <strong>{stats.streak}</strong>
-            <span>day streak</span>
-          </div>
-          <div className="momentum-stat" data-tone="good">
-            <strong>{stats.goodDays}</strong>
-            <span>good days</span>
-          </div>
-          <div className="momentum-stat" data-tone="peak">
-            <strong>{stats.peakDays}</strong>
-            <span>peak days</span>
-          </div>
-          <div className="momentum-stat">
-            <strong>{stats.bestHours}h</strong>
-            <span>best day</span>
-          </div>
-        </div>
+      </header>
+
+      <div className="mh-progress" aria-label={`Day ${blockElapsed} of ${BLOCK_SIZE}`}>
+        <span className="mh-progress-track">
+          <i style={{ width: `${blockProgress}%` }} />
+        </span>
+        <small>
+          Day {blockElapsed} <em>/ {BLOCK_SIZE}</em>
+        </small>
       </div>
 
-      <div className="momentum-block-bar">
-        <div className="momentum-block-nav">
-          <button
-            type="button"
-            className="momentum-block-btn"
-            onClick={() => setActiveBlock((b) => Math.max(0, b - 1))}
-            disabled={activeBlock === 0}
-            aria-label="Previous block"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <div className="momentum-block-meta">
-            <strong>Block {activeBlock + 1}<span className="momentum-block-total"> / {blockCount}</span></strong>
-            <span>{formatKey(blockStart, "range")} – {formatKey(blockEnd, "range")}</span>
-          </div>
-          <button
-            type="button"
-            className="momentum-block-btn"
-            onClick={() => setActiveBlock((b) => Math.min(blockCount - 1, b + 1))}
-            disabled={activeBlock >= blockCount - 1}
-            aria-label="Next block"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-        <div className="momentum-block-progress">
-          <div className="momentum-block-progress-track">
-            <span style={{ width: `${blockProgress}%` }} />
-          </div>
-          <span className="momentum-block-progress-label">Day {blockElapsed} / {BLOCK_SIZE}</span>
-        </div>
-      </div>
-
-      <div className="momentum-grid-wrap">
-        <div className="momentum-weekday-rail" aria-hidden="true">
-          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+      <div className="mh-field">
+        <div className="mh-weekdays" aria-hidden="true">
+          {["M", "", "W", "", "F", "", "S"].map((d, i) => (
             <span key={i}>{d}</span>
           ))}
         </div>
-        <div className="momentum-scroll hide-scrollbar">
-          <style>{`.hide-scrollbar::-webkit-scrollbar{display:none;}`}</style>
-          <div className="momentum-months">
+        <div className="mh-scroll" ref={scrollRef}>
+          <div className="mh-months" aria-hidden="true">
             {weeks.map((week, wIdx) => {
               const firstOfMonth = week.find((d) => d.dateKey.endsWith("-01") && !d.isPad);
-              return (
-                <span key={week[0]?.dateKey ?? wIdx} className="momentum-month-tag">
-                  {firstOfMonth ? firstOfMonth.monthLabel : ""}
-                </span>
-              );
+              return <span key={week[0]?.dateKey ?? wIdx}>{firstOfMonth ? firstOfMonth.monthLabel : ""}</span>;
             })}
           </div>
-          <div className="momentum-grid">
+          <div className="mh-grid">
             {weeks.map((week, wIdx) => (
-              <div key={week[0]?.dateKey ?? wIdx} className="momentum-week">
+              <div key={week[0]?.dateKey ?? wIdx} className="mh-week" style={{ "--w": Math.min(wIdx, 80) } as CSSProperties}>
                 {week.map((day) => {
                   const t = MOMENTUM_TIERS[day.tier];
                   if (day.isFuture) {
-                    return <div key={day.dateKey} className="momentum-cell future" aria-hidden="true" />;
+                    return <span key={day.dateKey} className={`mh-cell is-future${day.isPad ? " is-pad" : ""}`} aria-hidden="true" />;
                   }
+                  const level = day.data ? Math.min(1, day.data.hours / 14) : 0;
+                  const isPinned = pinned?.dateKey === day.dateKey;
                   return (
                     <button
                       key={day.dateKey}
                       type="button"
-                      className={`momentum-cell tier-${day.tier}${day.isToday ? " is-today" : ""}${
-                        day.tier >= 4 ? " is-good" : ""
-                      }`}
-                      style={
-                        {
-                          "--cell-accent": t.accent,
-                          "--cell-glow": t.glow,
-                        } as CSSProperties
-                      }
-                      onMouseEnter={() => setActive(day)}
-                      onFocus={() => setActive(day)}
-                      onMouseLeave={() => setActive((cur) => (cur?.dateKey === day.dateKey ? null : cur))}
-                      title={`${day.displayDate}: ${
-                        day.data ? `${day.data.hours.toFixed(1)}h · ${day.data.completion}% done — ${t.label}` : "no log"
-                      }`}
+                      className={`mh-cell t${day.tier}${day.isToday ? " is-today" : ""}${isPinned ? " is-pinned" : ""}`}
+                      style={{ "--c": t.accent, "--lvl": level } as CSSProperties}
+                      onMouseEnter={() => setHovered(day)}
+                      onFocus={() => setHovered(day)}
+                      onMouseLeave={() => setHovered((cur) => (cur?.dateKey === day.dateKey ? null : cur))}
+                      onClick={() => setPinned((cur) => (cur?.dateKey === day.dateKey ? null : day))}
+                      aria-pressed={isPinned}
                       aria-label={`${day.displayDate}: ${day.data ? `${day.data.hours.toFixed(1)} hours, ${t.label}` : "no log"}`}
                     >
-                      <span className="momentum-emoji">{t.emoji}</span>
+                      <i className="mh-fill" />
+                      <span className="mh-emoji">{day.tier ? t.emoji : ""}</span>
                     </button>
                   );
                 })}
@@ -337,32 +351,55 @@ export function MomentumHeatmap({
         </div>
       </div>
 
-      <div className="momentum-footer">
-        <div className="momentum-readout">
-          {active && active.data ? (
+      <footer className="mh-foot">
+        <div className="mh-readout" data-empty={!shown || undefined}>
+          {shown && shownTier ? (
             <>
-              <span className="momentum-readout-emoji">{MOMENTUM_TIERS[active.tier].emoji}</span>
+              <span className="mh-readout-badge" style={{ "--c": shownTier.accent } as CSSProperties}>
+                {shownTier.emoji === "·" ? "–" : shownTier.emoji}
+              </span>
               <div>
-                <strong>{active.displayDate}</strong>
+                <strong>
+                  {shown.displayDate}
+                  {shown.isToday ? <em> · today</em> : null}
+                </strong>
                 <span>
-                  {active.data.hours.toFixed(1)}h · {active.data.completion}% done ·{" "}
-                  <b style={{ color: MOMENTUM_TIERS[active.tier].accent }}>{MOMENTUM_TIERS[active.tier].label}</b>
+                  {shown.data ? (
+                    <>
+                      {shown.data.hours.toFixed(1)}h · {shown.data.completion}% done ·{" "}
+                      <b style={{ color: shownTier.accent }}>{shownTier.label}</b>
+                    </>
+                  ) : (
+                    "No log for this day"
+                  )}
                 </span>
               </div>
+              {pinned ? (
+                <button type="button" className="mh-unpin" onClick={() => setPinned(null)}>
+                  unpin
+                </button>
+              ) : null}
             </>
           ) : (
-            <span className="momentum-readout-hint">Hover a day to read it · {stats.totalHours}h logged across {stats.activeDays} days</span>
+            <span className="mh-hint">
+              Hover or tap a day to read it · {stats.activeDays} days logged
+            </span>
           )}
         </div>
-        <div className="momentum-legend">
+        <div className="mh-legend" aria-label="Tiers">
+          <span className="mh-legend-cap">less</span>
           {MOMENTUM_TIERS.slice(1).map((t) => (
-            <span key={t.tier} className="momentum-legend-item" title={`${t.label} — ${t.min}h+`}>
-              <i style={{ "--cell-accent": t.accent } as CSSProperties}>{t.emoji}</i>
-              {t.label}
+            <span key={t.tier} className="mh-legend-item" title={`${t.label} — ${t.min >= 1 ? `${t.min}h+` : "under 4h"}`}>
+              <i className={`mh-cell t${t.tier}`} style={{ "--c": t.accent, "--lvl": Math.min(1, Math.max(t.min, 2) / 14) } as CSSProperties}>
+                <i className="mh-fill" />
+                <span className="mh-emoji">{t.emoji}</span>
+              </i>
+              <span>{t.label}</span>
             </span>
           ))}
+          <span className="mh-legend-cap">more</span>
         </div>
-      </div>
+      </footer>
     </article>
   );
 }

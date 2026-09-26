@@ -1,15 +1,16 @@
-import { CalendarDays, Flame, Gauge, ShieldCheck, Smartphone, Target } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { DailyLogForm, type DailyLogDefaults } from "@/components/goals/daily-log-form";
 import { GoalsAnalytics } from "@/components/goals/goals-analytics";
 import { GoalsHistoryTable, type GoalsHistoryRow } from "@/components/goals/goals-history-table";
+import { HoursDial } from "@/components/goals/hours-dial";
 import { GoalsSuggestionPanel } from "@/components/goals/goals-suggestion-panel";
 import { MomentumHeatmap } from "@/components/goals/momentum-heatmap";
 import { ScreenTimeAnalytics } from "@/components/goals/screen-time-analytics";
 import { ScreenTimePanel } from "@/components/goals/screen-time-panel";
 import { type SubjectGroup } from "@/components/goals/subject-tag-picker";
-import { CountUp, NovaStage } from "@/components/ui/nova-fx";
+import { Chakra } from "@/components/ui/chakra";
+import { NovaStage } from "@/components/ui/nova-fx";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -220,191 +221,202 @@ export default async function GoalsPage() {
   const todayTone =
     todayStatus === "Peak" ? "gold" : todayStatus === "Good" ? "green" : todayStatus === "Below bar" ? "saffron" : "blue";
 
+  // Last seven calendar days (IST), oldest → today, for the masthead week strip.
+  const hoursByKey = new Map(logs.map((log) => [formatIstDateKey(log.logDate), log.totalHours]));
+  const weekStrip = Array.from({ length: 7 }, (_, i) => {
+    const [y, mo, d] = todayKey.split("-").map(Number);
+    const date = new Date(Date.UTC(y, mo - 1, d - (6 - i)));
+    const key = date.toISOString().slice(0, 10);
+    return {
+      key,
+      day: new Intl.DateTimeFormat("en-IN", { weekday: "short", timeZone: "UTC" }).format(date).slice(0, 2),
+      date: date.getUTCDate(),
+      hours: hoursByKey.get(key) ?? 0,
+      isToday: key === todayKey,
+    };
+  });
+  const [sy, sm, sd] = HEATMAP_START_KEY.split("-").map(Number);
+  const [ty, tm, td] = todayKey.split("-").map(Number);
+  const dayNumber = Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(sy, sm - 1, sd)) / 86400000) + 1;
+  const weekdayLong = new Intl.DateTimeFormat("en-IN", { timeZone: IST_TIME_ZONE, weekday: "long" }).format(new Date());
+
   return (
-    <NovaStage className="page-shell editorial-page editorial-goals goals-page goals-command-page nv-root nv-app nv-goals">
-      <section className="nv-goals-hero nv-glass nv-rise" style={{ "--d": 0 } as CSSProperties} aria-label="Daily goals summary">
-        <div className="nv-hero-aurora" aria-hidden="true"><span /><span /><span /></div>
-        <div className="nv-goals-copy">
-          <span className="nv-pill">
-            <CalendarDays size={14} />
-            {todayLabel} · Daily goals
-          </span>
-          <h1 className="nv-display nv-goals-title">
-            Daily command <span className="nv-gradient-text">ledger.</span>
-          </h1>
-          <p className="nv-lead">
-            Close the day with clean numbers, distraction truth, and one precise revision brief.
-          </p>
-          <div className="nv-chip-row">
-            <span className={`nv-chip tone-${todayTone}`}><Flame size={13} /> {todayStatus}</span>
-            <span className="nv-chip">8h good · 12h peak</span>
-            <span className="nv-chip">{goodDays7} good days this week</span>
-          </div>
+    <NovaStage className="page-shell editorial-page editorial-goals nv-root nv-app nv-goals">
+      {/* ── Masthead ─────────────────────────────────────────── */}
+      <header className="gm nv-rise" style={{ "--d": 0 } as CSSProperties}>
+        <Chakra className="gm-chakra" size={560} />
+        <div className="gm-dateline nv-mono">
+          <span>{weekdayLong}</span>
+          <span>{formatIstFullDate(new Date())}</span>
+          <span>Day {dayNumber} of the ledger</span>
         </div>
 
-        <div
-          className={`nv-ring nv-ring-xl tone-${todayTone}`}
-          style={{ "--p": dailyReadiness } as CSSProperties}
-          aria-label={`Today score ${dailyReadiness} of 100`}
-        >
-          <svg viewBox="0 0 120 120" aria-hidden="true">
-            <circle className="nv-ring-track" cx="60" cy="60" r="52" />
-            <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
-          </svg>
-          <div className="nv-ring-core">
-            <CountUp value={dailyReadiness} className="nv-ring-num" />
-            <span>today score</span>
-          </div>
-        </div>
-
-        <div className="nv-goals-stats">
-          {[
-            { icon: <Flame size={16} />, label: "Today", value: todayStatus, tone: todayTone },
-            { icon: <Gauge size={16} />, label: "7d hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "blue" },
-            { icon: <ShieldCheck size={16} />, label: "Discipline", value: `${avgDiscipline}/100`, tone: "gold" },
-            { icon: <Smartphone size={16} />, label: "7d distraction", value: `${screenDebt7.toFixed(1)}h`, tone: "rose" },
-          ].map((item) => (
-            <div key={item.label} className={`nv-goals-stat tone-${item.tone}`}>
-              <span className="nv-icon-tile nv-icon-sm">{item.icon}</span>
+        <div className="gm-grid">
+          <div className="gm-copy">
+            <span className="gm-deva nv-deva" lang="hi">दैनिक लेखा</span>
+            <h1 className="nv-display gm-title">
+              Daily <span className="nv-gradient-text">ledger.</span>
+            </h1>
+            <p className="nv-lead">
+              Close the day with clean numbers, the truth about distraction, and one precise revision brief.
+            </p>
+            <div className="gm-status">
+              <span className={`gm-status-dot tone-${todayTone}`} />
+              <b>{todayStatus}</b>
               <span>
-                <small>{item.label}</small>
-                <strong>{item.value}</strong>
+                {todayLog
+                  ? `Today is logged — ${dailyLogDefaults.totalHours}h on “${dailyLogDefaults.primaryFocus}”.`
+                  : "Today is still open. Log it before you sleep."}
+              </span>
+            </div>
+          </div>
+          <HoursDial hours={dailyLogDefaults.totalHours} score={dailyReadiness} />
+        </div>
+
+        <div className="gm-week" aria-label="Last seven days">
+          <span className="gm-week-line good" aria-hidden="true"><i>8h</i></span>
+          <span className="gm-week-line peak" aria-hidden="true"><i>12h</i></span>
+          {weekStrip.map((day, i) => (
+            <div
+              key={day.key}
+              className={`gm-day${day.isToday ? " is-today" : ""}${day.hours >= 12 ? " is-peak" : day.hours >= 8 ? " is-good" : day.hours > 0 ? " is-low" : ""}`}
+              style={{ "--h": Math.min(1, day.hours / 14), "--i": i } as CSSProperties}
+            >
+              <span className="gm-day-val nv-mono">{day.hours ? `${day.hours}h` : "–"}</span>
+              <span className="gm-day-bar"><i /></span>
+              <span className="gm-day-label">
+                {day.day}
+                <small className="nv-mono">{day.date}</small>
               </span>
             </div>
           ))}
         </div>
+
+        <dl className="gm-line">
+          {[
+            { label: "7d hours", value: `${sevenDayHours.toFixed(1)}h` },
+            { label: "8h+ days", value: `${goodDays7}/${recentLogs.length || 0}`, tone: "good" },
+            { label: "12h+ days", value: `${peakDays7}/${recentLogs.length || 0}`, tone: "peak" },
+            { label: "Questions", value: sevenDayQuestions },
+            { label: "Discipline", value: `${avgDiscipline}` },
+            { label: "Distraction", value: `${screenDebt7.toFixed(1)}h`, tone: screenDebt7 > 14 ? "bad" : "" },
+            { label: "Study YT", value: `${studyYoutube7.toFixed(1)}h`, tone: "good" },
+          ].map((item) => (
+            <div key={item.label} className={item.tone ? `is-${item.tone}` : undefined}>
+              <dt>{item.label}</dt>
+              <dd className="nv-mono">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </header>
+
+      {/* ── 01 Close the day ─────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 01</span>
+        <h2>Close the day</h2>
+        <p>Four short steps: mission, coverage, numbers, reflection. Everything saves to one daily record.</p>
+      </div>
+      <section className="gx-close" data-nv="">
+        <DailyLogForm
+          todayKey={todayKey}
+          todayLabel={todayLabel}
+          subjectGroups={subjectGroups}
+          defaultSubjects={todaySelectedSubjects}
+          defaults={dailyLogDefaults}
+          hasTodayLog={Boolean(todayLog)}
+        />
+
+        <aside className="gx-note" aria-label="Latest reflection">
+          <div className="gx-note-head">
+            <span className="lg-label">Latest reflection</span>
+            <span className="nv-mono">{latestLog ? formatIstFullDate(latestLog.logDate) : "—"}</span>
+          </div>
+          {latestLog ? (
+            <div className="gx-note-body">
+              <p className="gx-note-focus">{latestLog.primaryFocus}</p>
+              {latestSubjects.length > 0 ? (
+                <div className="gx-note-tags">
+                  {latestSubjects.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="gx-note-entry tone-win">
+                <span>Wins</span>
+                <p>{latestLog.wins || "No wins written."}</p>
+              </div>
+              <div className="gx-note-entry tone-drift">
+                <span>Drift</span>
+                <p>{latestLog.blockers || "Nothing recorded."}</p>
+              </div>
+              <div className="gx-note-entry tone-next">
+                <span>Tomorrow</span>
+                <p>{latestLog.tomorrowPlan || "No plan written."}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="gx-note-empty">Save your first daily log to start a reflection trail.</p>
+          )}
+        </aside>
       </section>
 
-      <section className="section-stack goals-v2-stack nv-goals-stack">
-        <section className="goals-v2-top" data-nv="">
-          <DailyLogForm
-            todayKey={todayKey}
-            todayLabel={todayLabel}
-            subjectGroups={subjectGroups}
-            defaultSubjects={todaySelectedSubjects}
-            defaults={dailyLogDefaults}
-            hasTodayLog={Boolean(todayLog)}
-          />
+      {/* ── 02 Momentum ──────────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 02</span>
+        <h2>Momentum field</h2>
+        <p>Every day since 1 April, graded by hours. Under 8h is never a good day; 12h is the peak.</p>
+      </div>
+      <div data-nv="">
+        <MomentumHeatmap data={heatmapData} startDate={HEATMAP_START_KEY} />
+      </div>
 
-          <div className="goals-snapshot-column">
-            <article className="glass panel nv-glass goals-snapshot-panel goals-ledger-card">
-              <div className="goals-panel-head">
-                <div>
-                  <div className="eyebrow">7-day signal</div>
-                  <div className="display goals-panel-title">Current rhythm</div>
-                </div>
-                <div className="pill">
-                  <Flame size={14} />
-                  Live
-                </div>
-              </div>
-
-              <div className="goals-snapshot-grid">
-                {[
-                  { label: "Hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "var(--physics)" },
-                  { label: "8h+ days", value: `${goodDays7}/${recentLogs.length || 0}`, tone: "hsl(148,62%,56%)" },
-                  { label: "12h+ days", value: `${peakDays7}/${recentLogs.length || 0}`, tone: "var(--gold)" },
-                  { label: "Questions", value: sevenDayQuestions, tone: "var(--botany)" },
-                  { label: "Discipline", value: `${avgDiscipline}/100`, tone: "var(--gold)" },
-                  { label: "Study YT", value: `${studyYoutube7.toFixed(1)}h`, tone: "var(--goals-success)" },
-                ].map((item) => (
-                  <div key={item.label} className="goals-snapshot-card">
-                    <span>{item.label}</span>
-                    <strong style={{ color: item.tone }}>{item.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="glass panel nv-glass goals-reflection-panel goals-ledger-card">
-              <div className="goals-panel-head">
-                <div>
-                  <div className="eyebrow">Latest reflection</div>
-                  <div className="display goals-panel-title-sm">{latestLog ? formatIstFullDate(latestLog.logDate) : "No log yet"}</div>
-                </div>
-                <div className="pill">
-                  <Target size={14} />
-                  Review
-                </div>
-              </div>
-
-              {latestLog ? (
-                <div className="goals-reflection-stack">
-                  <div>
-                    <span>Focus</span>
-                    <strong>{latestLog.primaryFocus}</strong>
-                  </div>
-                  {latestSubjects.length > 0 && (
-                    <div>
-                      <span>Subjects covered</span>
-                      <div className="goals-reflection-tags">
-                        {latestSubjects.map((tag) => (
-                          <span key={tag} className="goals-reflection-tag">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <span>Wins</span>
-                    <p>{latestLog.wins || "No wins written."}</p>
-                  </div>
-                  <div>
-                    <span>Tomorrow</span>
-                    <p>{latestLog.tomorrowPlan || "No plan written."}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="muted">Save your first daily log to create a reflection trail.</div>
-              )}
-            </article>
+      {/* ── 03 Attention ─────────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 03</span>
+        <h2>Attention audit</h2>
+        <p>Where the hours leak. YouTube used for study is tracked separately and never counts against you.</p>
+      </div>
+      <section className="gx-attention" data-nv="">
+        <ScreenTimePanel todayKey={todayKey} defaults={screenTimeDefaults} />
+        <article className="gx-card">
+          <div className="gx-card-head">
+            <span className="lg-label">Consumption trend</span>
           </div>
-        </section>
-
-        <div className="nv-reveal-wrap" data-nv="">
-          <MomentumHeatmap data={heatmapData} startDate={HEATMAP_START_KEY} />
-        </div>
-
-        <section className="screen-time-section" data-nv="">
-          <ScreenTimePanel todayKey={todayKey} defaults={screenTimeDefaults} />
-          <article className="glass panel nv-glass screen-time-graph-panel">
-            <div className="goals-panel-head">
-              <div>
-                <div className="eyebrow">Consumption trend</div>
-                <div className="display goals-panel-title">Where the hours leak</div>
-              </div>
-              <div className="pill">Daily / 7d / Monthly / Yearly</div>
-            </div>
-            <ScreenTimeAnalytics rows={screenTimeRows} todayKey={todayKey} />
-          </article>
-        </section>
-
-        <div className="nv-reveal-wrap" data-nv="">
-          <GoalsSuggestionPanel />
-        </div>
-
-        <article className="glass panel goals-chart-panel nv-glass" data-nv="">
-          <div className="goals-panel-head">
-            <div>
-              <div className="eyebrow">Graphical analysis</div>
-              <div className="display goals-panel-title">Each signal, on its own</div>
-            </div>
-            <div className="pill">IST synced</div>
-          </div>
-          <GoalsAnalytics data={trendData} />
-        </article>
-
-        <article className="glass panel goals-history-panel nv-glass" data-nv="">
-          <div className="goals-panel-head">
-            <div>
-              <div className="eyebrow">History</div>
-              <div className="display goals-panel-title">Execution ledger</div>
-            </div>
-            <div className="pill">{historyRows.length} entries</div>
-          </div>
-
-          <GoalsHistoryTable rows={historyRows} />
+          <ScreenTimeAnalytics rows={screenTimeRows} todayKey={todayKey} />
         </article>
       </section>
+
+      {/* ── 04 Brief ─────────────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 04</span>
+        <h2>Revision brief</h2>
+        <p>Misti reads your ledger and tells you what to revise, what to study next, and what to cut.</p>
+      </div>
+      <div data-nv="">
+        <GoalsSuggestionPanel />
+      </div>
+
+      {/* ── 05 Signals ───────────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 05</span>
+        <h2>Signals</h2>
+        <p>One signal at a time, last 30 logs, IST.</p>
+      </div>
+      <article className="gx-card" data-nv="">
+        <GoalsAnalytics data={trendData} />
+      </article>
+
+      {/* ── 06 Ledger ────────────────────────────────────────── */}
+      <div className="nv-sect" data-nv="">
+        <span className="nv-sect-num">§ 06</span>
+        <h2>
+          Execution ledger <small className="nv-mono gx-count">{historyRows.length}</small>
+        </h2>
+        <p>Every closed day, newest first.</p>
+      </div>
+      <article className="gx-card gx-ledger" data-nv="">
+        <GoalsHistoryTable rows={historyRows} />
+      </article>
     </NovaStage>
   );
 }

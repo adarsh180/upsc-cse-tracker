@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
-import { CalendarDays, Save, Smartphone } from "lucide-react";
+import { Check, Minus, Plus, Save, ShieldCheck } from "lucide-react";
 
 import { saveScreenTimeAction } from "@/app/actions";
 import { AppTile, SCREEN_APPS, type ScreenApp } from "@/components/goals/app-icons";
@@ -15,6 +15,9 @@ const QUICK_VALUES = [
   { label: "1h", value: 1 },
   { label: "2h", value: 2 },
 ];
+/** Daily distraction budget. Above it the day is "leaking"; double it is out of control. */
+const BUDGET = 2;
+const METER_MAX = 6;
 
 function appHours(values: Record<string, string>, key: string) {
   return Number(values[key]) || 0;
@@ -76,6 +79,13 @@ export function ScreenTimePanel({
     setValues((cur) => ({ ...cur, [key]: Number.isNaN(Number(v)) || v === "" ? "" : String(n) }));
   };
 
+  const nudge = (key: string, delta: number) => {
+    setValues((cur) => {
+      const next = clampHours(Number(((Number(cur[key]) || 0) + delta).toFixed(2)));
+      return { ...cur, [key]: next ? String(next) : "" };
+    });
+  };
+
   const setQuick = (key: string, value: number) => {
     setValues((cur) => ({ ...cur, [key]: value ? String(value) : "" }));
   };
@@ -90,111 +100,94 @@ export function ScreenTimePanel({
     });
   };
 
-  const tone =
-    totals.distraction >= 4 ? "var(--goals-danger)" : totals.distraction >= 2 ? "var(--goals-warning)" : "var(--goals-success)";
-  const verdict = totals.distraction >= 4 ? "Out of control" : totals.distraction >= 2 ? "Watch the leak" : "Clean enough";
+  const status =
+    totals.distraction >= BUDGET * 2 ? "bad" : totals.distraction > BUDGET ? "warn" : "ok";
+  const verdict = status === "bad" ? "Out of control" : status === "warn" ? "Leaking" : "Within budget";
+  const meterPct = Math.min(100, (totals.distraction / METER_MAX) * 100);
 
   return (
-    <article className="glass panel screen-time-panel goals-ledger-card">
-      <div className="goals-panel-head">
-        <div>
-          <div className="eyebrow">Screen time</div>
-          <div className="display goals-panel-title">Distraction audit</div>
-        </div>
-        <div className="goals-date-chip">
-          <Smartphone size={14} />
-          Manual
-        </div>
-      </div>
-
-      <form onSubmit={submit} className="screen-time-form">
-        <div className="screen-time-audit-head" style={{ "--audit-tone": tone } as CSSProperties}>
-          <label className="goals-field screen-time-date">
-            <span>
-              <CalendarDays size={13} />
-              Log date
+    <article className="st">
+      <form onSubmit={submit} className="st-form">
+        <div className={`st-budget is-${status}`}>
+          <div className="st-budget-top">
+            <label className="st-date">
+              <span className="lg-label">Log date</span>
+              <input className="lg-input" type="date" name="logDate" defaultValue={todayKey} required />
+            </label>
+            <div className="st-verdict">
+              <span className="lg-label">Distraction</span>
+              <strong>
+                {totals.distraction}
+                <em>h</em>
+              </strong>
+              <b>{verdict}</b>
+            </div>
+          </div>
+          <div className="st-meter" aria-hidden="true">
+            <span className="st-meter-track">
+              <i style={{ width: `${meterPct}%` }} />
             </span>
-            <input className="field" type="date" name="logDate" defaultValue={todayKey} required />
-          </label>
-
-          <div className="screen-time-verdict">
-            <span>Distraction status</span>
-            <strong>{verdict}</strong>
-            <em>{totals.distraction}h distraction entered</em>
+            <span className="st-meter-mark" style={{ left: `${(BUDGET / METER_MAX) * 100}%` }}>
+              {BUDGET}h budget
+            </span>
+            <span className="st-meter-mark bad" style={{ left: `${((BUDGET * 2) / METER_MAX) * 100}%` }}>
+              {BUDGET * 2}h
+            </span>
           </div>
+          <dl className="st-sums">
+            <div>
+              <dt>Total screen</dt>
+              <dd>{totals.total}h</dd>
+            </div>
+            <div className="is-study">
+              <dt>Study YouTube</dt>
+              <dd>{totals.study}h</dd>
+            </div>
+            <div>
+              <dt>Top sink</dt>
+              <dd className="st-top">
+                {totals.top ? (
+                  <>
+                    <AppTile app={totals.top.app} size={18} />
+                    {totals.top.app.label}
+                  </>
+                ) : (
+                  "None"
+                )}
+              </dd>
+            </div>
+          </dl>
         </div>
 
-        <div className="screen-time-summary">
-          <Summary label="Total screen" value={`${totals.total}h`} tone="var(--goals-blue)" />
-          <Summary label="Distraction" value={`${totals.distraction}h`} tone={tone} />
-          <Summary label="YouTube study" value={`${totals.study}h`} tone="var(--goals-success)" />
-          <div className="screen-time-summary-card top-sink">
-            <span>Top sink</span>
-            <strong>
-              {totals.top ? (
-                <>
-                  <AppTile app={totals.top.app} size={24} />
-                  {totals.top.app.label}
-                </>
-              ) : (
-                "None"
-              )}
-            </strong>
-          </div>
-        </div>
-
-        <div className="screen-time-group-stack">
-          {APP_GROUPS.map((group) => (
-            <section key={group} className="screen-time-app-group">
-              <div className="screen-time-app-group-title">
-                <span>{group}</span>
-                {group === "Video" ? <em>YouTube study is protected from distraction debt</em> : null}
-              </div>
-              <div className="screen-time-apps">
-                {SCREEN_APPS.filter((app) => app.group === group).map((app) => {
-                  const value = appHours(values, app.key);
-                  return (
-                    <div
-                      key={app.key}
-                      className={`screen-time-app${app.key === "youtubeStudy" ? " study-app" : ""}`}
-                      style={{ "--app-color": app.solid, "--app-color-dim": `${app.solid}24` } as CSSProperties}
-                    >
-                      <div className="screen-time-app-main">
-                        <AppTile app={app} size={30} />
-                        <div>
-                          <span className="screen-time-app-label">{app.label}</span>
-                          <em>{app.key === "youtubeStudy" ? "study" : app.group}</em>
-                        </div>
-                      </div>
-
-                      <div className="screen-time-app-entry">
-                        <label className="screen-time-mini-input">
-                          <input
-                            type="number"
-                            step="0.25"
-                            min="0"
-                            max="24"
-                            name={app.key}
-                            value={values[app.key]}
-                            onChange={(e) => set(app.key, e.target.value)}
-                            placeholder="0"
-                            inputMode="decimal"
-                          />
-                          <span>h</span>
-                        </label>
-                        <strong>{value ? `${value}h` : "0h"}</strong>
-                      </div>
-
-                      <div className="screen-time-app-meter" aria-hidden="true">
-                        <i style={{ width: `${Math.min(100, (value / 4) * 100)}%`, background: app.solid }} />
-                      </div>
-
-                      <div className="screen-time-quick-row">
+        {APP_GROUPS.map((group) => (
+          <section key={group} className="st-group">
+            <div className="st-group-head">
+              <span>{group}</span>
+              {group === "Video" ? (
+                <em>
+                  <ShieldCheck size={12} /> Study YouTube never counts as distraction
+                </em>
+              ) : null}
+            </div>
+            <div className="st-apps">
+              {SCREEN_APPS.filter((app) => app.group === group).map((app) => {
+                const value = appHours(values, app.key);
+                const isStudy = app.key === "youtubeStudy";
+                return (
+                  <div
+                    key={app.key}
+                    className={`st-app${isStudy ? " is-study" : ""}${value > 0 ? " has-value" : ""}`}
+                    style={{ "--app": app.solid } as CSSProperties}
+                  >
+                    <AppTile app={app} size={30} />
+                    <div className="st-app-name">
+                      <b>{app.label}</b>
+                      <div className="st-app-quick">
                         {QUICK_VALUES.map((quick) => (
                           <button
                             key={quick.label}
                             type="button"
-                            className={value === quick.value ? "active" : ""}
+                            className={value === quick.value && (quick.value > 0 || values[app.key] === "") ? "is-on" : ""}
                             onClick={() => setQuick(app.key, quick.value)}
                           >
                             {quick.label}
@@ -202,37 +195,53 @@ export function ScreenTimePanel({
                         ))}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+                    <div className="st-stepper">
+                      <button type="button" onClick={() => nudge(app.key, -0.25)} aria-label={`Less ${app.label}`}>
+                        <Minus size={13} />
+                      </button>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        max="24"
+                        name={app.key}
+                        value={values[app.key]}
+                        onChange={(e) => set(app.key, e.target.value)}
+                        placeholder="0"
+                        inputMode="decimal"
+                        aria-label={`${app.label} hours`}
+                      />
+                      <button type="button" onClick={() => nudge(app.key, 0.25)} aria-label={`More ${app.label}`}>
+                        <Plus size={13} />
+                      </button>
+                    </div>
+                    <span className="st-app-bar" aria-hidden="true">
+                      <i style={{ width: `${Math.min(100, (value / 4) * 100)}%` }} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
 
-        <label className="goals-field">
-          <span>Note <em>e.g. doom-scroll after dinner / lecture on Polity</em></span>
+        <label className="lg-note tone-drift st-note">
+          <span className="lg-label">Note</span>
           <textarea
-            className="textarea"
             name="note"
             defaultValue={defaults.note ?? ""}
             placeholder="What pulled you in? Was any of it for study?"
+            rows={2}
           />
         </label>
 
-        <button className="button goals-save-button" type="submit" disabled={pending}>
-          <Save size={16} />
-          {pending ? "Saving..." : saved ? "Saved" : "Save screen time"}
-        </button>
+        <div className="st-actions">
+          <button className={`lg-btn save${saved ? " is-saved" : ""}`} type="submit" disabled={pending}>
+            {saved ? <Check size={16} /> : <Save size={15} />}
+            {pending ? "Saving…" : saved ? "Saved" : "Save screen time"}
+          </button>
+        </div>
       </form>
     </article>
-  );
-}
-
-function Summary({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="screen-time-summary-card" style={{ "--summary-tone": tone } as CSSProperties}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   );
 }
