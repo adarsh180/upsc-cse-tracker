@@ -11,6 +11,7 @@ import "./premium.css";
 import "./theme.css";
 import "./study.css";
 import "./editorial.css";
+import "./nova.css";
 
 const bodyFont = Inter({
   subsets: ["latin"],

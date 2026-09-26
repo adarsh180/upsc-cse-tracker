@@ -29,9 +29,9 @@ import {
 } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { getStudyNodeBySlug, getStudyTree } from "@/lib/dashboard";
-import { CircularProgress } from "@/components/ui/sections";
 import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { StudyPageClient } from "@/components/ui/study-checklist";
+import { CountUp, NovaStage } from "@/components/ui/nova-fx";
 
 type ProgressRecord = {
   checked: boolean;
@@ -285,17 +285,17 @@ export default async function StudyNodePage({
   ];
 
   return (
-    <main
-      className="page-shell editorial-page editorial-study sx-page"
+    <NovaStage
+      className="page-shell editorial-page editorial-study sx-page nv-root nv-app nv-study"
       data-accent={accentKeyFor(node.slug, node.parent?.slug)}
       data-node-kind={node.type.toLowerCase()}
     >
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <header className="sx-hero">
-        <div className="sx-hero-bg" aria-hidden="true" />
+      <header className="nv-study-hero nv-glass nv-rise" style={{ "--d": 0 } as CSSProperties}>
+        <div className="nv-hero-aurora" aria-hidden="true"><span /><span /><span /></div>
 
-        <div className="sx-hero-main">
-          <nav className="sx-breadcrumb" aria-label="Breadcrumb">
+        <div className="nv-study-main">
+          <nav className="nv-crumbs" aria-label="Breadcrumb">
             <Link href="/dashboard">Study</Link>
             <ChevronRight size={13} aria-hidden="true" />
             {node.parent ? (
@@ -304,25 +304,25 @@ export default async function StudyNodePage({
                 <ChevronRight size={13} aria-hidden="true" />
               </>
             ) : null}
-            <span className="sx-breadcrumb-current">{node.title}</span>
+            <span aria-current="page">{node.title}</span>
           </nav>
 
-          <div className="sx-hero-kind">
-            <StudySubjectIcon slug={node.slug} title={node.title} size={17} className="sx-hero-sigil sx-hero-semantic" />
-            {pageMode}
+          <div className="nv-study-kind">
+            <span className="nv-icon-tile nv-icon-accent">
+              <StudySubjectIcon slug={node.slug} title={node.title} size={18} />
+            </span>
+            <span className="nv-kicker">{pageMode}</span>
           </div>
 
-          <h1 className="sx-title">{node.title}</h1>
-          <p className="sx-lead">{node.overview ?? laneCopy}</p>
+          <h1 className="nv-display nv-study-title">{node.title}</h1>
+          <p className="nv-lead">{node.overview ?? laneCopy}</p>
 
-          <div className="sx-meta">
-            <span className="sx-chip strong">{node.type}</span>
-            {isPaper && hasSyllabusChildren ? (
-              <span className="sx-chip">{children.length} subjects</span>
-            ) : null}
-            {!isPaper ? <span className="sx-chip">{progressSummary.total} topics tracked</span> : null}
+          <div className="nv-chip-row">
+            <span className="nv-chip tone-accent">{node.type}</span>
+            {isPaper && hasSyllabusChildren ? <span className="nv-chip">{children.length} subjects</span> : null}
+            {!isPaper ? <span className="nv-chip">{progressSummary.total} topics tracked</span> : null}
             {latestLog ? (
-              <span className="sx-chip">
+              <span className="nv-chip">
                 <CalendarDays size={13} />
                 Last log {format(latestLog.logDate, "dd MMM")}
               </span>
@@ -330,44 +330,42 @@ export default async function StudyNodePage({
           </div>
         </div>
 
-        <aside className="sx-hero-side">
+        <aside className="nv-study-side">
           <div
-            className="sx-orb"
-            style={{ "--sx-pct": `${progressSummary.pct}%` } as CSSProperties}
+            className="nv-ring nv-ring-xl tone-accent"
+            style={{ "--p": progressSummary.pct } as CSSProperties}
             aria-label={`${progressSummary.pct}% syllabus completion`}
           >
-            <span>{progressSummary.pct}%</span>
-            <small>complete</small>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle className="nv-ring-track" cx="60" cy="60" r="52" />
+              <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
+            </svg>
+            <div className="nv-ring-core">
+              <CountUp value={progressSummary.pct} suffix="%" className="nv-ring-num" />
+              <span>complete</span>
+            </div>
           </div>
-          <div className="sx-orb-stats">
-            <div>
-              <span>Logged</span>
-              <strong>{formatCompactNumber(loggedHours)}h</strong>
-            </div>
-            <div>
-              <span>Focus</span>
-              <strong>{avgFocus !== null ? `${avgFocus}/10` : "-"}</strong>
-            </div>
+          <div className="nv-study-mini">
             <div>
               <span>Topics</span>
               <strong>{progressSummary.done}/{progressSummary.total}</strong>
             </div>
             <div>
-              <span>Revisions</span>
-              <strong>{progressSummary.revisions}</strong>
+              <span>Logged</span>
+              <strong>{formatCompactNumber(loggedHours)}h</strong>
             </div>
           </div>
         </aside>
       </header>
 
-      {/* ── Stat strip ───────────────────────────────────────────── */}
-      <section className="sx-stat-strip" aria-label="Workspace metrics">
-        {stats.map((item) => (
-          <div key={item.label} className="sx-stat">
-            <span className="sx-stat-icon">
-              <item.icon size={15} />
+      {/* ── Stat ribbon ──────────────────────────────────────────── */}
+      <section className="nv-ribbon" aria-label="Workspace metrics">
+        {stats.map((item, i) => (
+          <div key={item.label} className="nv-ribbon-cell" data-nv="" style={{ "--nv-i": i } as CSSProperties}>
+            <span className="nv-icon-tile nv-icon-sm nv-icon-accent">
+              <item.icon size={14} />
             </span>
-            <span className="sx-stat-body">
+            <span>
               <small>{item.label}</small>
               <strong>{item.value}</strong>
             </span>
@@ -377,40 +375,50 @@ export default async function StudyNodePage({
 
       {/* ── Paper: subject lanes ─────────────────────────────────── */}
       {isPaper && hasSyllabusChildren ? (
-        <section className="sx-section">
-          <div className="sx-section-head">
+        <section className="nv-block">
+          <div className="nv-sec-head" data-nv="">
             <div>
-              <div className="sx-eyebrow">Subjects in this paper</div>
-              <h2 className="sx-section-title">Choose a study lane</h2>
+              <span className="nv-kicker">Subjects in this paper</span>
+              <h2 className="nv-h2">Choose a study lane</h2>
             </div>
-            <span className="sx-count-pill">{children.length} lanes</span>
+            <span className="nv-chip">{children.length} lanes</span>
           </div>
 
-          <div className="sx-lane-grid">
-            {children.map((subject) => {
+          <div className="nv-lane-grid">
+            {children.map((subject, i) => {
               const pct = computePct(subject);
               return (
-                <div key={subject.id} className="sx-lane">
-                  <Link href={`/study/${subject.slug}`} className="sx-lane-link">
-                    <div className="sx-lane-top">
-                      <div className="sx-lane-identity">
-                        <StudySubjectIcon slug={subject.slug} title={subject.title} size={22} className="sx-lane-semantic" />
-                        <CircularProgress pct={pct} size={50} stroke={5} color="var(--sx-accent)" />
-                      </div>
-                      <span className="sx-lane-badge">
-                        {subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}
+                <div
+                  key={subject.id}
+                  className="nv-lane nv-glass nv-spot"
+                  data-nv=""
+                  style={{ "--nv-i": Math.min(i, 10), "--p": pct } as CSSProperties}
+                >
+                  <Link href={`/study/${subject.slug}`} className="nv-lane-link">
+                    <div className="nv-lane-top">
+                      <span className="nv-icon-tile nv-icon-accent">
+                        <StudySubjectIcon slug={subject.slug} title={subject.title} size={20} />
                       </span>
+                      <div className="nv-ring nv-ring-sm tone-accent">
+                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                          <circle className="nv-ring-track" cx="60" cy="60" r="52" />
+                          <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
+                        </svg>
+                        <div className="nv-ring-core"><strong>{pct}%</strong></div>
+                      </div>
                     </div>
-                    <div className="sx-lane-title">{subject.title}</div>
-                    {subject.overview ? <p className="sx-lane-copy">{subject.overview}</p> : null}
-                    <div className="sx-lane-cta">
-                      Enter <ArrowRight size={15} />
+                    <strong className="nv-lane-title">{subject.title}</strong>
+                    {subject.overview ? <p className="nv-lane-copy">{subject.overview}</p> : null}
+                    <div className="nv-lane-foot">
+                      <span>{subject.type === "SUBJECT" ? `${subject.children.length} chapters` : subject.type}</span>
+                      <span className="nv-lane-cta">Enter <ArrowRight size={14} /></span>
                     </div>
+                    <div className="nv-paper-bar" aria-hidden="true"><span /></div>
                   </Link>
-                  <form action={deleteStudyNodeAction} className="sx-lane-del">
+                  <form action={deleteStudyNodeAction} className="nv-lane-del">
                     <input type="hidden" name="id" value={subject.id} suppressHydrationWarning />
                     <input type="hidden" name="pathname" value={pathname} suppressHydrationWarning />
-                    <button type="submit" title="Remove this subject" suppressHydrationWarning>
+                    <button type="submit" title="Remove this subject" aria-label={`Remove ${subject.title}`} suppressHydrationWarning>
                       <Trash2 size={12} />
                     </button>
                   </form>
@@ -423,7 +431,7 @@ export default async function StudyNodePage({
 
       {/* ── Checklist for subject / module ───────────────────────── */}
       {isChecklist && hasSyllabusChildren ? (
-        <section className="sx-section">
+        <section className="sx-section nv-block" data-nv="">
           <div className="sx-section-head">
             <div>
               <div className="sx-eyebrow">Syllabus checklist</div>
@@ -456,8 +464,8 @@ export default async function StudyNodePage({
 
       {/* ── Log form (subject / leaf paper only) ─────────────────── */}
       {showLogForm ? (
-        <section className="sx-section sx-log-grid">
-          <article className="glass panel sx-card">
+        <section className="sx-section sx-log-grid nv-block" data-nv="">
+          <article className="glass panel sx-card nv-glass">
             <div className="sx-card-head">
               <div className="sx-eyebrow">Study log</div>
               <h2 className="sx-section-title">Record a session</h2>
@@ -499,7 +507,7 @@ export default async function StudyNodePage({
             </form>
           </article>
 
-          <article className="glass panel sx-card">
+          <article className="glass panel sx-card nv-glass">
             <div className="sx-card-head sx-card-head-row">
               <div>
                 <div className="sx-eyebrow">Recent sessions</div>
@@ -511,8 +519,8 @@ export default async function StudyNodePage({
           </article>
         </section>
       ) : studyLogs.length ? (
-        <section className="sx-section">
-          <article className="glass panel sx-card">
+        <section className="sx-section nv-block" data-nv="">
+          <article className="glass panel sx-card nv-glass">
             <div className="sx-card-head sx-card-head-row">
               <div>
                 <div className="sx-eyebrow">Recent sessions</div>
@@ -533,7 +541,7 @@ export default async function StudyNodePage({
       ) : null}
 
       {/* ── Manage drawer (collapsed by default) ─────────────────── */}
-      <details className="sx-manage">
+      <details className="sx-manage nv-block" data-nv="">
         <summary className="sx-manage-summary">
           <span className="sx-manage-summary-main">
             <Settings2 size={15} />
@@ -543,7 +551,7 @@ export default async function StudyNodePage({
         </summary>
 
         <div className="sx-manage-body">
-          <article className="glass panel sx-card">
+          <article className="glass panel sx-card nv-glass">
             <div className="sx-card-head">
               <div className="sx-eyebrow">Page controls</div>
               <h2 className="sx-section-title">Edit metadata</h2>
@@ -566,7 +574,7 @@ export default async function StudyNodePage({
             </form>
           </article>
 
-          <article className="glass panel sx-card">
+          <article className="glass panel sx-card nv-glass">
             <div className="sx-card-head">
               <div className="sx-eyebrow">
                 <Plus size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} />
@@ -590,6 +598,6 @@ export default async function StudyNodePage({
           </article>
         </div>
       </details>
-    </main>
+    </NovaStage>
   );
 }

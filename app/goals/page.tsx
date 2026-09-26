@@ -9,7 +9,7 @@ import { MomentumHeatmap } from "@/components/goals/momentum-heatmap";
 import { ScreenTimeAnalytics } from "@/components/goals/screen-time-analytics";
 import { ScreenTimePanel } from "@/components/goals/screen-time-panel";
 import { type SubjectGroup } from "@/components/goals/subject-tag-picker";
-import { PageIntro } from "@/components/ui/sections";
+import { CountUp, NovaStage } from "@/components/ui/nova-fx";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -217,49 +217,66 @@ export default async function GoalsPage() {
     ),
   );
 
+  const todayTone =
+    todayStatus === "Peak" ? "gold" : todayStatus === "Good" ? "green" : todayStatus === "Below bar" ? "saffron" : "blue";
+
   return (
-    <main className="page-shell editorial-page editorial-goals goals-page goals-command-page">
-      <PageIntro
-        eyebrow="Daily Goals"
-        title="Daily command ledger."
-        description="Close the day with clean numbers, distraction truth, and one precise revision brief."
-        glyph="goals"
-      />
+    <NovaStage className="page-shell editorial-page editorial-goals goals-page goals-command-page nv-root nv-app nv-goals">
+      <section className="nv-goals-hero nv-glass nv-rise" style={{ "--d": 0 } as CSSProperties} aria-label="Daily goals summary">
+        <div className="nv-hero-aurora" aria-hidden="true"><span /><span /><span /></div>
+        <div className="nv-goals-copy">
+          <span className="nv-pill">
+            <CalendarDays size={14} />
+            {todayLabel} · Daily goals
+          </span>
+          <h1 className="nv-display nv-goals-title">
+            Daily command <span className="nv-gradient-text">ledger.</span>
+          </h1>
+          <p className="nv-lead">
+            Close the day with clean numbers, distraction truth, and one precise revision brief.
+          </p>
+          <div className="nv-chip-row">
+            <span className={`nv-chip tone-${todayTone}`}><Flame size={13} /> {todayStatus}</span>
+            <span className="nv-chip">8h good · 12h peak</span>
+            <span className="nv-chip">{goodDays7} good days this week</span>
+          </div>
+        </div>
 
-      <section className="section-stack goals-v2-stack">
-        <section className="goals-command-hero" aria-label="Daily goals summary">
-          <div className="goals-command-hero-copy">
-            <div className="goals-command-kicker">
-              <CalendarDays size={15} />
-              {todayLabel}
-            </div>
-            <h2>Execution room</h2>
-            <p>
-              A quiet daily closeout for hours, output, subject coverage, and the exact places attention leaked.
-            </p>
+        <div
+          className={`nv-ring nv-ring-xl tone-${todayTone}`}
+          style={{ "--p": dailyReadiness } as CSSProperties}
+          aria-label={`Today score ${dailyReadiness} of 100`}
+        >
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle className="nv-ring-track" cx="60" cy="60" r="52" />
+            <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
+          </svg>
+          <div className="nv-ring-core">
+            <CountUp value={dailyReadiness} className="nv-ring-num" />
+            <span>today score</span>
           </div>
-          <div className="goals-command-score" style={{ "--score": `${dailyReadiness}%` } as CSSProperties}>
-            <span>Today score</span>
-            <strong>{dailyReadiness}</strong>
-            <i aria-hidden="true" />
-          </div>
-          <div className="goals-command-stat-grid">
-            {[
-              { icon: <Flame size={16} />, label: "Today", value: todayStatus, tone: "var(--goals-success)" },
-              { icon: <Gauge size={16} />, label: "7d hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "var(--goals-blue)" },
-              { icon: <ShieldCheck size={16} />, label: "Discipline", value: `${avgDiscipline}/100`, tone: "var(--goals-gold)" },
-              { icon: <Smartphone size={16} />, label: "7d distraction", value: `${screenDebt7.toFixed(1)}h`, tone: "var(--goals-danger)" },
-            ].map((item) => (
-              <div key={item.label} className="goals-command-stat" style={{ "--stat-tone": item.tone } as CSSProperties}>
-                <i>{item.icon}</i>
-                <span>{item.label}</span>
+        </div>
+
+        <div className="nv-goals-stats">
+          {[
+            { icon: <Flame size={16} />, label: "Today", value: todayStatus, tone: todayTone },
+            { icon: <Gauge size={16} />, label: "7d hours", value: `${sevenDayHours.toFixed(1)}h`, tone: "blue" },
+            { icon: <ShieldCheck size={16} />, label: "Discipline", value: `${avgDiscipline}/100`, tone: "gold" },
+            { icon: <Smartphone size={16} />, label: "7d distraction", value: `${screenDebt7.toFixed(1)}h`, tone: "rose" },
+          ].map((item) => (
+            <div key={item.label} className={`nv-goals-stat tone-${item.tone}`}>
+              <span className="nv-icon-tile nv-icon-sm">{item.icon}</span>
+              <span>
+                <small>{item.label}</small>
                 <strong>{item.value}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <section className="goals-v2-top">
+      <section className="section-stack goals-v2-stack nv-goals-stack">
+        <section className="goals-v2-top" data-nv="">
           <DailyLogForm
             todayKey={todayKey}
             todayLabel={todayLabel}
@@ -270,7 +287,7 @@ export default async function GoalsPage() {
           />
 
           <div className="goals-snapshot-column">
-            <article className="glass panel goals-snapshot-panel goals-ledger-card">
+            <article className="glass panel nv-glass goals-snapshot-panel goals-ledger-card">
               <div className="goals-panel-head">
                 <div>
                   <div className="eyebrow">7-day signal</div>
@@ -299,7 +316,7 @@ export default async function GoalsPage() {
               </div>
             </article>
 
-            <article className="glass panel goals-reflection-panel goals-ledger-card">
+            <article className="glass panel nv-glass goals-reflection-panel goals-ledger-card">
               <div className="goals-panel-head">
                 <div>
                   <div className="eyebrow">Latest reflection</div>
@@ -343,11 +360,13 @@ export default async function GoalsPage() {
           </div>
         </section>
 
-        <MomentumHeatmap data={heatmapData} startDate={HEATMAP_START_KEY} />
+        <div className="nv-reveal-wrap" data-nv="">
+          <MomentumHeatmap data={heatmapData} startDate={HEATMAP_START_KEY} />
+        </div>
 
-        <section className="screen-time-section">
+        <section className="screen-time-section" data-nv="">
           <ScreenTimePanel todayKey={todayKey} defaults={screenTimeDefaults} />
-          <article className="glass panel screen-time-graph-panel">
+          <article className="glass panel nv-glass screen-time-graph-panel">
             <div className="goals-panel-head">
               <div>
                 <div className="eyebrow">Consumption trend</div>
@@ -359,9 +378,11 @@ export default async function GoalsPage() {
           </article>
         </section>
 
-        <GoalsSuggestionPanel />
+        <div className="nv-reveal-wrap" data-nv="">
+          <GoalsSuggestionPanel />
+        </div>
 
-        <article className="glass panel goals-chart-panel">
+        <article className="glass panel goals-chart-panel nv-glass" data-nv="">
           <div className="goals-panel-head">
             <div>
               <div className="eyebrow">Graphical analysis</div>
@@ -372,7 +393,7 @@ export default async function GoalsPage() {
           <GoalsAnalytics data={trendData} />
         </article>
 
-        <article className="glass panel goals-history-panel">
+        <article className="glass panel goals-history-panel nv-glass" data-nv="">
           <div className="goals-panel-head">
             <div>
               <div className="eyebrow">History</div>
@@ -384,6 +405,6 @@ export default async function GoalsPage() {
           <GoalsHistoryTable rows={historyRows} />
         </article>
       </section>
-    </main>
+    </NovaStage>
   );
 }

@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  ArrowUpRight,
   BrainCircuit,
   ClipboardList,
   Clock,
@@ -19,7 +20,8 @@ import { signOutAction } from "@/app/actions";
 import { DayPlanCard } from "@/components/ai/day-plan-card";
 import { SundayReviewCard } from "@/components/ai/sunday-review";
 import { ExamCountdownMatrix } from "@/components/ui/live-exam-timer";
-import { StudyCard } from "@/components/ui/sections";
+import { CountUp, NovaStage } from "@/components/ui/nova-fx";
+import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary, getPaperCompletionMap } from "@/lib/dashboard";
 import { getTodayPlan } from "@/lib/day-plan";
@@ -135,13 +137,6 @@ export default async function DashboardPage() {
     streakCursor = shiftDateKey(streakCursor, -1);
   }
   const streakProgressPct = clampPct((todayHours / 8) * 100);
-  const streakCircleRadius = 50;
-  const streakCircleCircumference = 2 * Math.PI * streakCircleRadius;
-  const streakCircleOffset = streakCircleCircumference * (1 - streakProgressPct / 100);
-  const streakCircleStyle = {
-    "--streak-offset": streakCircleOffset,
-    "--streak-circumference": streakCircleCircumference,
-  } as CSSProperties;
 
   const paperPctMap = await getPaperCompletionMap(summary.papers);
   const syllabusCompletion = average(Object.values(paperPctMap));
@@ -197,13 +192,31 @@ export default async function DashboardPage() {
   const neetConfidenceScore = clampPct(neetConfidence?.score ?? 0);
 
   const statIcons = [Clock, Trophy, Target, Zap];
-  const statColors = ["var(--botany)", "var(--physics)", "var(--gold-bright)", "var(--lotus-bright)"];
+  const statTones = ["green", "blue", "gold", "violet"];
+
+  const istHour = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }).format(new Date()),
+  );
+  const greeting = istHour < 5 ? "Burning the midnight oil" : istHour < 12 ? "Good morning" : istHour < 17 ? "Good afternoon" : "Good evening";
+  const todayLabel = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+
+  const parseMetric = (raw: string) => {
+    const match = raw.match(/^(-?[\d.]+)(.*)$/);
+    if (!match) return null;
+    const num = Number(match[1]);
+    return Number.isFinite(num) ? { num, suffix: match[2], decimals: match[1].includes(".") ? 1 : 0 } : null;
+  };
 
   const quickActions = [
     {
       href: "/goals",
       icon: Target,
-      color: "var(--gold-bright)",
+      tone: "gold",
       title: "Daily goals",
       desc: recentLog
         ? `Last: ${recentLog.primaryFocus} · ${recentLog.totalHours.toFixed(1)}h · ${recentLog.disciplineScore}/100 discipline`
@@ -212,7 +225,7 @@ export default async function DashboardPage() {
     {
       href: "/tests",
       icon: ClipboardList,
-      color: "var(--physics)",
+      tone: "blue",
       title: "Log a test",
       desc: recentTest
         ? `Last: ${recentTest.title} — ${recentTest.score}/${recentTest.totalMarks}`
@@ -221,7 +234,7 @@ export default async function DashboardPage() {
     {
       href: "/mood",
       icon: Flame,
-      color: "var(--saffron)",
+      tone: "saffron",
       title: "Track mood",
       desc: latestMood
         ? `Latest: ${latestMood.label} · focus ${latestMood.focus}/10`
@@ -230,52 +243,128 @@ export default async function DashboardPage() {
     {
       href: "/ai-insight/guru",
       icon: Sparkles,
-      color: "var(--gold-bright)",
+      tone: "violet",
       title: "Ask the Guru",
       desc: "Strict AI mentor reading your live preparation data.",
     },
     {
       href: "/performance",
       icon: TrendingUp,
-      color: "var(--lotus-bright)",
+      tone: "rose",
       title: "Performance",
       desc: "Score curves, subject drift and trend analytics.",
     },
     {
       href: "/mission-control",
       icon: BrainCircuit,
-      color: "var(--physics)",
+      tone: "green",
       title: "Mission Control",
       desc: "Launch a planning agent and turn it into todos.",
     },
   ];
 
+  const paperTones = ["gold", "blue", "green", "violet", "rose", "saffron", "teal"];
+
   return (
-    <main className="page-shell editorial-page editorial-dashboard apex-dashboard">
-      {/* Header */}
-      <div className="db-head db-command-deck anim-fade-up">
-        <div className="db-head-copy">
-          <div className="eyebrow">Preparation overview</div>
-          <h1 className="db-greeting">
-            {recentLog ? "Good evening, Adarsh." : "Your workspace is ready."}
+    <NovaStage className="page-shell editorial-page editorial-dashboard nv-root nv-app nv-dashboard">
+      {/* ── Command hero ─────────────────────────────────────── */}
+      <section className="nv-dash-hero">
+        <article className="nv-hero-card nv-glass nv-rise" style={{ "--d": 0 } as CSSProperties}>
+          <div className="nv-hero-aurora" aria-hidden="true"><span /><span /><span /></div>
+          <div className="nv-hero-top">
+            <span className="nv-pill"><span className="nv-live-dot" /> {todayLabel}</span>
+            <form action={signOutAction}>
+              <button className="nv-btn nv-btn-glass nv-btn-sm" type="submit" aria-label="Sign out">
+                <LogOut size={14} />
+                <span className="nv-hide-sm">Sign out</span>
+              </button>
+            </form>
+          </div>
+          <h1 className="nv-display nv-hero-title">
+            {greeting},<br />
+            <span className="nv-gradient-text">Adarsh.</span>
           </h1>
-          <p className="db-context">
+          <p className="nv-lead">
             {recentLog
               ? `Latest session: ${recentLog.primaryFocus} — ${recentLog.totalHours.toFixed(1)}h logged, ${recentLog.disciplineScore}/100 discipline.`
-              : "Everything on this page is computed from your real entries — no mock data."}
+              : "Everything here is computed from your real entries — no mock data."}
           </p>
-        </div>
-        <form action={signOutAction} className="db-signout">
-          <button className="button-secondary" type="submit">
-            <LogOut size={14} />
-            Sign out
-          </button>
-        </form>
-      </div>
+          <div className="nv-hero-actions">
+            <Link href="/goals" className="nv-btn nv-btn-primary">
+              <Target size={16} /> Log today
+            </Link>
+            <Link href="/ai-insight/guru" className="nv-btn nv-btn-glass">
+              <Sparkles size={16} /> Ask the Guru
+            </Link>
+          </div>
+        </article>
+
+        <article className="nv-streak-card nv-glass nv-rise" style={{ "--d": 1 } as CSSProperties}>
+          <div className="nv-card-head">
+            <span className="nv-kicker">8-hour streak loop</span>
+            <span className={`nv-chip ${todayHours >= 8 ? "tone-green" : "tone-saffron"}`}>
+              {todayHours >= 8 ? "Target cleared" : "Day open"}
+            </span>
+          </div>
+          <div
+            className="nv-ring nv-ring-lg tone-saffron"
+            style={{ "--p": streakProgressPct } as CSSProperties}
+            aria-label={`${currentStudyStreak} day study streak, ${streakProgressPct}% of today's target complete`}
+          >
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle className="nv-ring-track" cx="60" cy="60" r="52" />
+              <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
+            </svg>
+            <div className="nv-ring-core">
+              <Flame size={22} className="nv-flame" />
+              <CountUp value={currentStudyStreak} className="nv-ring-num" suffix="d" />
+              <span>streak</span>
+            </div>
+          </div>
+          <div className="nv-streak-foot">
+            <div>
+              <small>Today</small>
+              <strong>{todayHours.toFixed(1)}h <em>/ 8h</em></strong>
+            </div>
+            <div>
+              <small>Progress</small>
+              <strong>{streakProgressPct}%</strong>
+            </div>
+          </div>
+          <p className="nv-muted">
+            {todayHours >= 8 ? "Protect the chain tomorrow." : "Today is still open — it doesn't break the chain yet."}
+          </p>
+        </article>
+      </section>
+
+      {/* ── KPIs ─────────────────────────────────────────────── */}
+      <section className="nv-kpis" aria-label="Key metrics">
+        {summary.metrics.map((metric, i) => {
+          const Icon = statIcons[i % statIcons.length];
+          const parsed = parseMetric(metric.value);
+          return (
+            <article
+              key={metric.label}
+              className={`nv-kpi nv-glass nv-spot tone-${statTones[i % statTones.length]}`}
+              data-nv=""
+              style={{ "--nv-i": i } as CSSProperties}
+            >
+              <div className="nv-kpi-head">
+                <span className="nv-icon-tile nv-icon-sm"><Icon size={15} /></span>
+                <span>{metric.label}</span>
+              </div>
+              <div className="nv-kpi-value">
+                {parsed ? <CountUp value={parsed.num} decimals={parsed.decimals} suffix={parsed.suffix} /> : metric.value}
+              </div>
+              <div className="nv-kpi-hint">{metric.hint}</div>
+            </article>
+          );
+        })}
+      </section>
 
       {/* Morning day-plan proposal — todos are created only after approval */}
       {todayPlan && todayPlan.status === "PENDING" && pendingPlanTasks.length > 0 ? (
-        <section className="db-section anim-fade-up">
+        <section className="nv-block" data-nv="">
           <DayPlanCard
             planId={todayPlan.id}
             briefingTitle={todayPlan.briefingTitle}
@@ -287,65 +376,13 @@ export default async function DashboardPage() {
 
       {/* Sunday self-review (auto-generated weekly) */}
       {sundayReview ? (
-        <SundayReviewCard weekStart={sundayReview.weekStart} reportText={sundayReview.reportText} />
+        <section className="nv-block" data-nv="">
+          <SundayReviewCard weekStart={sundayReview.weekStart} reportText={sundayReview.reportText} />
+        </section>
       ) : null}
 
-      {/* Key stats */}
-      <section className="db-stats-row anim-fade-up">
-        {summary.metrics.map((metric, i) => {
-          const Icon = statIcons[i % statIcons.length];
-          return (
-            <article key={metric.label} className="glass db-stat">
-              <div className="db-stat-label">
-                <Icon size={14} style={{ color: statColors[i % statColors.length] }} />
-                {metric.label}
-              </div>
-              <div className="db-stat-value">{metric.value}</div>
-              <div className="db-stat-hint">{metric.hint}</div>
-            </article>
-          );
-        })}
-      </section>
-
-      <section className="db-section anim-fade-up">
-        <article className="glass db-streak-widget">
-          <div className="db-streak-copy">
-            <div className="eyebrow">8-hour streak loop</div>
-            <h2>{currentStudyStreak}d active streak</h2>
-            <p>
-              Today: {todayHours.toFixed(1)}h / 8h. {todayHours >= 8 ? "Target cleared; protect the chain tomorrow." : "Today is still open, so it does not break the chain yet."}
-            </p>
-          </div>
-          <div className="db-streak-ring-wrap" aria-label={`${currentStudyStreak} day study streak, ${streakProgressPct}% of today's target complete`}>
-            <svg className="db-streak-svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
-              <defs>
-                <linearGradient id="streakGradient" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="var(--gold-bright)" />
-                  <stop offset="52%" stopColor="var(--saffron)" />
-                  <stop offset="100%" stopColor="var(--rose-bright)" />
-                </linearGradient>
-              </defs>
-              <circle className="db-streak-bg" cx="64" cy="64" r={streakCircleRadius} />
-              <circle
-                className="streak-svg-circle"
-                cx="64"
-                cy="64"
-                r={streakCircleRadius}
-                strokeDasharray={streakCircleCircumference}
-                style={streakCircleStyle}
-              />
-            </svg>
-            <div className="db-streak-core">
-              <Flame size={28} />
-              <strong>{currentStudyStreak}d streak</strong>
-              <span>{streakProgressPct}% today</span>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      {/* Countdowns + readiness */}
-      <section className="db-section">
+      {/* ── Countdowns + readiness ───────────────────────────── */}
+      <section className="nv-block nv-horizon-block" data-nv="">
         <ExamCountdownMatrix
           prelimsDate={process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30"}
           mainsDate={process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30"}
@@ -354,73 +391,98 @@ export default async function DashboardPage() {
         />
       </section>
 
-      {/* Quick actions */}
-      <section className="db-section">
-        <div className="db-section-title">
-          <h2>Quick actions</h2>
+      {/* ── Quick actions ────────────────────────────────────── */}
+      <section className="nv-block">
+        <div className="nv-sec-head" data-nv="">
+          <div>
+            <span className="nv-kicker">Jump back in</span>
+            <h2 className="nv-h2">Quick actions</h2>
+          </div>
         </div>
-        <div className="db-actions-row">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href} className="glass card-link db-action">
-              <div className="db-stat-label">
-                <action.icon size={15} style={{ color: action.color }} />
-                <span style={{ fontSize: 14, fontWeight: 650, color: "var(--text)" }}>{action.title}</span>
-              </div>
-              <p className="db-action-desc">{action.desc}</p>
-              <span className="db-section-link">
-                Open <ArrowRight size={13} />
+        <div className="nv-action-grid">
+          {quickActions.map((action, i) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className={`nv-action nv-glass nv-spot tone-${action.tone}`}
+              data-nv=""
+              style={{ "--nv-i": i } as CSSProperties}
+            >
+              <span className="nv-icon-tile"><action.icon size={18} /></span>
+              <span className="nv-action-body">
+                <strong>{action.title}</strong>
+                <span>{action.desc}</span>
               </span>
+              <ArrowUpRight size={17} className="nv-action-arrow" aria-hidden="true" />
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Study spaces */}
-      <section className="db-section">
-        <div className="db-section-title">
-          <h2>Study spaces</h2>
-          <Link href="/todo" className="db-section-link">
-            <ListTodo size={13} /> Todo board <ArrowRight size={13} />
+      {/* ── Study spaces ─────────────────────────────────────── */}
+      <section className="nv-block">
+        <div className="nv-sec-head" data-nv="">
+          <div>
+            <span className="nv-kicker">Syllabus</span>
+            <h2 className="nv-h2">Study spaces</h2>
+          </div>
+          <Link href="/todo" className="nv-btn nv-btn-glass nv-btn-sm">
+            <ListTodo size={14} /> Todo board <ArrowRight size={13} />
           </Link>
         </div>
-        <div className="grid grid-4">
-          {summary.papers.map((paper) => (
-            <StudyCard
-              key={paper.id}
-              href={`/study/${paper.slug}`}
-              title={paper.title}
-              overview={paper.overview}
-              accent={paper.accent}
-              badge={`${paper.children.length} pages`}
-              completionPct={paperPctMap[paper.id] ?? 0}
-            />
-          ))}
+        <div className="nv-paper-grid">
+          {summary.papers.map((paper, i) => {
+            const pct = clampPct(paperPctMap[paper.id] ?? 0);
+            return (
+              <Link
+                key={paper.id}
+                href={`/study/${paper.slug}`}
+                className={`nv-paper nv-glass nv-spot tone-${paperTones[i % paperTones.length]}`}
+                data-nv=""
+                style={{ "--nv-i": i, "--p": pct } as CSSProperties}
+              >
+                <div className="nv-paper-top">
+                  <span className="nv-icon-tile">
+                    <StudySubjectIcon slug={paper.slug} title={paper.title} size={20} />
+                  </span>
+                  <div className="nv-ring nv-ring-sm">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                      <circle className="nv-ring-track" cx="60" cy="60" r="52" />
+                      <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
+                    </svg>
+                    <div className="nv-ring-core"><strong>{pct}%</strong></div>
+                  </div>
+                </div>
+                <strong className="nv-paper-title">{paper.title}</strong>
+                {paper.overview ? <p className="nv-paper-copy">{paper.overview}</p> : null}
+                <div className="nv-paper-foot">
+                  <span>{paper.children.length} {paper.children.length === 1 ? "page" : "pages"}</span>
+                  <span className="nv-paper-cta">Enter <ArrowRight size={14} /></span>
+                </div>
+                <div className="nv-paper-bar" aria-hidden="true"><span /></div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* Connected NEET instance */}
-      <section className="db-section">
-        <div className="db-section-title">
-          <h2>Connected · NEET Tracker</h2>
-        </div>
-        <article className="glass panel" style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ minWidth: 220, flex: "1 1 260px" }}>
-            <div className="eyebrow" style={{ color: "var(--botany)" }}>Prep confidence</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
-              <span style={{ fontSize: "2rem", fontWeight: 680, letterSpacing: "-0.03em", color: "var(--botany)" }}>
-                {neetConfidence ? neetConfidenceScore : "—"}
+      {/* ── Connected NEET instance ──────────────────────────── */}
+      <section className="nv-block">
+        <article className="nv-neet nv-glass nv-spot tone-green" data-nv="">
+          <div className="nv-neet-copy">
+            <span className="nv-kicker">Connected · NEET Tracker</span>
+            <div className="nv-neet-score">
+              <strong>{neetConfidence ? neetConfidenceScore : "—"}</strong>
+              <span>
+                {neetConfidence ? `/100 · ${neetConfidence.reliability}% reliability` : "syncing"}
               </span>
-              {neetConfidence ? <span style={{ fontSize: 13, color: "var(--text-muted)" }}>/100 · {neetConfidence.reliability}% reliability</span> : <span style={{ fontSize: 13, color: "var(--text-muted)" }}>syncing</span>}
             </div>
-            <div className="db-bar" style={{ marginTop: 10, maxWidth: 320 }}>
-              <span
-                style={{
-                  width: neetConfidence ? `${neetConfidenceScore}%` : "0%",
-                  background: "linear-gradient(90deg, var(--botany), var(--physics))",
-                }}
-              />
+            <div className="nv-meter tone-green">
+              <div className="nv-meter-track">
+                <span style={{ "--w": neetConfidence ? `${neetConfidenceScore}%` : "0%" } as CSSProperties} />
+              </div>
             </div>
-            <p className="db-stat-hint" style={{ marginTop: 8 }}>
+            <p className="nv-muted">
               {neetConfidence?.label ?? "Waiting for live NEET endpoint"}
               {neetConfidence?.signals?.[0] ? ` · ${neetConfidence.signals[0]}` : ""}
             </p>
@@ -429,12 +491,12 @@ export default async function DashboardPage() {
             href="https://neet-tracker-misti.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="button-secondary"
+            className="nv-btn nv-btn-glass"
           >
-            Open NEET Tracker <ArrowRight size={15} />
+            Open NEET Tracker <ArrowUpRight size={15} />
           </a>
         </article>
       </section>
-    </main>
+    </NovaStage>
   );
 }
