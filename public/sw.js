@@ -1,4 +1,6 @@
-const CACHE_NAME = "upsc-cse-tracker-pwa-v9";
+// Bumped whenever the caching rules change: activating a new version deletes
+// every older cache, including any bad entries an older worker stored.
+const CACHE_NAME = "upsc-cse-tracker-pwa-v10";
 const OFFLINE_URL = "/offline";
 const APP_SHELL_ASSETS = [
   OFFLINE_URL,
@@ -100,8 +102,12 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          // Only keep real files. Caching a 404 (e.g. a stylesheet requested
+          // while a deploy is still propagating) would break the page for good.
+          if (response.ok && response.type === "basic") {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         });
       }),
