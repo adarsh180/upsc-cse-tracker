@@ -46,10 +46,10 @@ export default async function CurrentAffairsPage() {
     : [];
 
   return (
-    <main className="page-shell editorial-page editorial-current-affairs">
+    <main className="page-shell editorial-page editorial-current-affairs su-page su-legacy pg-ca">
       <PageIntro
         eyebrow="Current Affairs"
-        title="Daily UPSC-filtered digest."
+        title="Today's digest"
         description="A calm daily briefing with precise facts, prelims pointers, mains angles, editorial arguments and a five-question self-check."
         icon={<StudySubjectIcon slug="current-affairs" title="Current Affairs" size={22} className="pi2-semantic-icon" />}
         actions={

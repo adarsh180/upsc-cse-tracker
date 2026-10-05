@@ -399,7 +399,7 @@ export async function getPerformanceSummary() {
         }),
         db.dailyLog.findMany({
           orderBy: { logDate: "asc" },
-          select: { id: true, logDate: true, disciplineScore: true, completion: true },
+          select: { id: true, logDate: true, disciplineScore: true, completion: true, totalHours: true },
         }),
         db.studyLog.findMany({
           orderBy: { logDate: "asc" },

@@ -1,13 +1,16 @@
 import { format } from "date-fns";
 import Link from "next/link";
-import { ArrowRight, Award, BrainCircuit, Clock3, Crosshair, FileCheck2, Gauge, Target } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
-import { TestMetricTrendChart } from "@/components/charts/analytics-charts";
+import { TestLab } from "@/components/dashboard/test-lab";
+import { MetricLine } from "@/components/su/metric-line";
 import { PageIntro } from "@/components/ui/sections";
-import { RevealGroup, Reveal } from "@/components/ui/reveal";
 import { TestsClient } from "@/components/ui/tests-client";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { toTestPoint } from "@/lib/insights";
+
+export const metadata = { title: "Tests · Sacred Attempt" };
 
 function percent(score: number, total: number) {
   return Number(((score / Math.max(total, 1)) * 100).toFixed(1));
@@ -132,225 +135,144 @@ export default async function TestsPage() {
     { title: "Test type", label: "Mock format", items: summarizeBy(tests, (test) => test.testType.replaceAll("_", " ")) },
     { title: "Subject lane", label: "Syllabus pressure", items: summarizeBy(tests, (test) => test.studyNode?.title ?? "General") },
   ];
-  const trendCards = [
-    {
-      label: "Score trajectory",
-      value: `${averageScore}%`,
-      meta: latestTest ? `Latest ${latestPct}%` : "No score yet",
-      dataKey: "scorePct" as const,
-      color: "var(--gold-bright)",
-      icon: Gauge,
-      suffix: "%",
-      stage: null,
+  const cutoffs = tests.filter((t) => t.cutoffTarget && t.totalMarks).map((t) => (t.cutoffTarget! / t.totalMarks) * 100);
+  const avgCutoff = cutoffs.length ? average(cutoffs) : null;
+  const series = chartData.map((p) => ({
+    x: p.label,
+    sub: p.title,
+    values: {
+      scorePct: p.scorePct,
+      accuracy: p.examStage === "PRELIMS" && p.attempted ? p.accuracy : null,
+      precision: p.examStage === "PRELIMS" && p.attempted ? p.precision : null,
+      percentile: p.percentile || null,
+      timeMinutes: p.timeMinutes || null,
     },
-    {
-      label: "Accuracy control",
-      value: `${averageAccuracy}%`,
-      meta: latestPrelims ? `Latest ${accuracy(latestPrelims.correctQuestions, latestPrelims.attemptedQuestions)}%` : "No Prelims attempts yet",
-      dataKey: "accuracy" as const,
-      color: "var(--botany)",
-      icon: Target,
-      suffix: "%",
-      stage: "PRELIMS" as const,
-    },
-    {
-      label: "Precision discipline",
-      value: `${averagePrecision}%`,
-      meta: latestPrelims ? `Latest ${precision(latestPrelims.correctQuestions, latestPrelims.incorrectQuestions, latestPrelims.attemptedQuestions)}%` : "No Prelims precision yet",
-      dataKey: "precision" as const,
-      color: "var(--physics)",
-      icon: Crosshair,
-      suffix: "%",
-      stage: "PRELIMS" as const,
-    },
-    {
-      label: "Percentile rank",
-      value: averagePercentile ? `${averagePercentile}` : "NA",
-      meta: latestTest ? `Latest ${latestTest.percentile ?? 0}` : "No rank yet",
-      dataKey: "percentile" as const,
-      color: "var(--lotus-bright)",
-      icon: Award,
-      suffix: "",
-      stage: "PRELIMS" as const,
-    },
-    {
-      label: "Time pressure",
-      value: `${Math.round(totalMinutes / 60)}h`,
-      meta: latestTest ? `Latest ${latestTest.timeMinutes ?? 0} min` : "No time logged",
-      dataKey: "timeMinutes" as const,
-      color: "var(--rose-bright)",
-      icon: Clock3,
-      suffix: "",
-      stage: null,
-    },
+  }));
+  const figures = [
+    { label: "Tests logged", value: String(tests.length), unit: "", note: `${prelimsTests.length} prelims · ${mainsTests.length} mains` },
+    { label: "Prelims average", value: prelimsTests.length ? String(Math.round(averagePrelimsScore)) : "—", unit: prelimsTests.length ? "%" : "", note: latestTest ? `latest ${Math.round(latestPct)}%` : "no tests yet" },
+    { label: "Accuracy", value: prelimsTests.length ? String(Math.round(averageAccuracy)) : "—", unit: prelimsTests.length ? "%" : "", note: "right of attempted" },
+    { label: "Precision", value: prelimsTests.length ? String(Math.round(averagePrecision)) : "—", unit: prelimsTests.length ? "%" : "", note: "right of answered" },
+    { label: "Percentile", value: averagePercentile ? String(Math.round(averagePercentile)) : "—", unit: "", note: "average rank" },
+    { label: "Best", value: bestTest ? String(Math.round(bestPct)) : "—", unit: bestTest ? "%" : "", note: bestTest?.title.slice(0, 26) ?? "—" },
   ];
 
   return (
-    <RevealGroup as="main" className="page-shell editorial-page editorial-tests tests-page">
-      <Reveal>
-        <PageIntro
-          eyebrow="Test Tracker"
-          title="Mock evidence, cleaned up."
-          description="Scores, accuracy, time and subject patterns in one sharp testing cockpit."
-          glyph="tests"
+    <main className="page-shell editorial-page editorial-tests tests-page su-page su-legacy pg-tests">
+      <PageIntro
+        eyebrow="Test Tracker"
+        title="Test tracker"
+        description="Every mock you log — score against cut-off, accuracy, time and subject patterns — feeds your selection odds."
+        actions={
+          <>
+            <a href="#log" className="su-btn su-btn-ink">Log a test</a>
+            <Link href="/tests/error-analysis" className="su-btn">Error lab <ArrowUpRight size={14} /></Link>
+          </>
+        }
+      />
+
+      <div className="su-figs ts-figs">
+        {figures.map((f) => (
+          <div className="su-fig" key={f.label}>
+            <span className="su-fig-label">{f.label}</span>
+            <span className="su-fig-value">{f.value}<small>{f.unit}</small></span>
+            <span className="su-fig-note">{f.note}</span>
+          </div>
+        ))}
+      </div>
+
+      <section className="su-sect" id="trends">
+        <div className="su-sect-head">
+          <span className="su-idx">01</span>
+          <h2>Trend</h2>
+          <p>One instrument for every signal. Switch the metric, scrub across to read any test.</p>
+        </div>
+        <MetricLine
+          series={series}
+          emptyText="Log your first test to start the curve."
+          metrics={[
+            { key: "scorePct", label: "Score", suffix: "%", max: 100, target: avgCutoff ? { value: avgCutoff, label: `avg cut-off ${Math.round(avgCutoff)}%` } : undefined },
+            { key: "accuracy", label: "Accuracy", suffix: "%", max: 100, tone: "good" },
+            { key: "precision", label: "Precision", suffix: "%", max: 100, tone: "good" },
+            { key: "percentile", label: "Percentile", max: 100, tone: "warn", decimals: 0 },
+            { key: "timeMinutes", label: "Time", suffix: "m", tone: "ink", decimals: 0 },
+          ]}
         />
-      </Reveal>
+      </section>
 
-      <section className="section-stack tests-redesign-stack">
+      <section className="su-sect" id="every-test">
+        <div className="su-sect-head">
+          <span className="su-idx">02</span>
+          <h2>Every test, against its cut-off</h2>
+          <p>The notch is the cut-off, the ring is you. Green stretch: cleared by. Red: short by. Hover for the breakdown.</p>
+        </div>
+        <TestLab tests={tests.map(toTestPoint)} />
+      </section>
 
-        {/* ── KPI metric strip ── */}
-        <section className="tests-metric-grid" data-reveal="">
-          {[
-            { label: "Tests logged", value: tests.length, hint: "records", icon: FileCheck2, tone: "var(--physics)" },
-            { label: "Prelims score", value: prelimsTests.length ? `${averagePrelimsScore}%` : "—", hint: `${prelimsTests.length} objective tests`, icon: Gauge, tone: "var(--physics)" },
-            { label: "Mains score", value: mainsTests.length ? `${averageMainsScore}%` : "—", hint: `${mainsTests.length} descriptive tests`, icon: Award, tone: "var(--gold)" },
-            { label: "Prelims accuracy", value: prelimsTests.length ? `${averageAccuracy}%` : "—", hint: "objective attempts only", icon: Crosshair, tone: "var(--botany)" },
-          ].map((metric) => (
-            <article key={metric.label} className="glass panel tests-metric-card" style={{ color: metric.tone }}>
-              <div className="tests-metric-icon">
-                <metric.icon size={18} />
+      <section className="su-sect" id="lanes">
+        <div className="su-sect-head">
+          <span className="su-idx">03</span>
+          <h2>Lanes</h2>
+          <p>Averages split by stage, format and subject — where you are strong, and where a lane is thin.</p>
+        </div>
+        <div className="ts-lanes">
+          {sectionGroups.map((group) => (
+            <div key={group.title} className="ts-lane">
+              <div className="ts-lane-head">
+                <span className="su-fig-label">{group.label}</span>
+                <strong>{group.title}</strong>
               </div>
-              <div>
-                <span>{metric.label}</span>
-                <strong style={{ color: metric.tone }}>{metric.value}</strong>
-              </div>
-              <em>{metric.hint}</em>
-            </article>
-          ))}
-        </section>
-
-        {/* ── Trend analysis cockpit ── */}
-        <section className="tests-analysis-grid" data-reveal="">
-          {trendCards.map((card) => (
-            <article key={card.label} className="glass panel tests-trend-panel" style={{ color: card.color }}>
-              <div className="tests-panel-head">
-                <div>
-                  <div className="eyebrow">{card.label}</div>
-                  <div className="display tests-panel-title">{card.value}</div>
-                </div>
-                <div className="tests-trend-icon">
-                  <card.icon size={18} />
-                </div>
-              </div>
-              <div className="tests-trend-meta">{card.meta}</div>
-              <TestMetricTrendChart
-                data={card.stage ? chartData.filter((point) => point.examStage === card.stage) : chartData}
-                dataKey={card.dataKey}
-                color={card.color}
-                domain={card.dataKey === "timeMinutes" ? [0, "auto"] : [0, 100]}
-                suffix={card.suffix}
-              />
-            </article>
-          ))}
-        </section>
-
-        {/* ── Intelligence dock: diagnostic + section lanes ── */}
-        <section className="tests-intelligence-grid" data-reveal="">
-          <article className="glass panel tests-diagnostic-panel">
-            <div className="tests-panel-head">
-              <div>
-                <div className="eyebrow">Latest test</div>
-                <div className="display tests-panel-title tests-latest-title">{latestTest?.title ?? "No test yet"}</div>
-              </div>
-              <div className="pill">{latestPct}%</div>
-            </div>
-            <div className="tests-diagnostic-score">
-              <div>
-                <span>Latest score</span>
-                <strong>{latestTest ? `${latestTest.score}/${latestTest.totalMarks}` : "0/0"}</strong>
-              </div>
-              <div>
-                <span>Best score</span>
-                <strong>{bestTest ? `${bestPct}%` : "0%"}</strong>
-              </div>
-            </div>
-            <div className="tests-diagnostic-list">
-              {latestTest ? (
-                [
-                  ["Stage", latestTest.examStage],
-                  ["Type", latestTest.testType.replaceAll("_", " ")],
-                  ["Subject", latestTest.studyNode?.title ?? "General"],
-                  ["Accuracy", `${accuracy(latestTest.correctQuestions, latestTest.attemptedQuestions)}%`],
-                  ["Precision", `${precision(latestTest.correctQuestions, latestTest.incorrectQuestions, latestTest.attemptedQuestions)}%`],
-                  ["Time", `${latestTest.timeMinutes ?? 0} min`],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <span>{label}</span>
-                    <strong>{value}</strong>
-                  </div>
-                ))
+              {group.items.length ? (
+                <table className="ts-table">
+                  <thead>
+                    <tr><th>Lane</th><th>Tests</th><th>Score</th><th>Acc.</th></tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((item) => (
+                      <tr key={item.label}>
+                        <td>
+                          <b>{item.label.toLowerCase()}</b>
+                          <small>latest {item.latestDate}</small>
+                        </td>
+                        <td>{item.count}</td>
+                        <td>
+                          <span className="ts-bar" style={{ "--p": item.avgScore / 100 } as React.CSSProperties}><i /></span>
+                          {Math.round(item.avgScore)}%
+                        </td>
+                        <td>{Math.round(item.avgAccuracy)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
-                <div className="muted">Add your first test to build the diagnostic panel.</div>
+                <p className="su-muted">No lanes recorded yet.</p>
               )}
             </div>
-          </article>
-
-          <article className="glass panel tests-section-panel">
-            <div className="tests-panel-head">
-              <div>
-                <div className="eyebrow">Section analysis</div>
-                <div className="display tests-panel-title">Separate tracking lanes</div>
-              </div>
-              <div className="pill">{sectionGroups.reduce((sum, group) => sum + group.items.length, 0)} lanes</div>
-            </div>
-            <div className="tests-section-grid">
-              {sectionGroups.map((group) => (
-                <div key={group.title} className="tests-section-card">
-                  <div className="tests-section-card-head">
-                    <span>{group.label}</span>
-                    <strong>{group.title}</strong>
-                  </div>
-                  <div className="tests-section-rows">
-                    {group.items.length ? (
-                      group.items.map((item) => (
-                        <div key={item.label} className="tests-section-row">
-                          <div>
-                            <strong>{item.label}</strong>
-                            <span>{item.count} tests · latest {item.latestDate}</span>
-                          </div>
-                          <div className="tests-section-score">
-                            <span>{item.avgScore}% score</span>
-                            <span>{item.avgAccuracy}% acc</span>
-                            <span>{item.avgPrecision}% prec</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="muted tests-empty-state">No lanes recorded yet.</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        {/* ── Capture dock: form + ledger ── */}
-        <div data-reveal="">
-          <TestsClient
-            tests={tests.map((test) => ({
-              ...test,
-              studyNode: test.studyNode ? { id: test.studyNode.id, title: test.studyNode.title } : null,
-            }))}
-            subjects={subjects.map((subject) => ({ id: subject.id, title: subject.title }))}
-          />
+          ))}
         </div>
-
-        {/* ── Error lab CTA banner ── */}
-        <Link href="/tests/error-analysis" className="glass panel tests-error-entry-card" data-reveal="">
-          <div>
-            <div className="pill"><BrainCircuit size={13} />Method and Error Analysis</div>
-            <div className="display tests-error-entry-title">Open question-wise error lab.</div>
-            <p className="muted tests-error-entry-copy">
-              Create a test, set its question count, log every question, and generate AI reports for repeated mistakes, recovery signals and next-test correction.
-            </p>
-          </div>
-          <div className="tests-error-entry-action">
-            Start logging <ArrowRight size={16} />
-          </div>
-        </Link>
-
       </section>
-    </RevealGroup>
+
+      <section className="su-sect" id="log">
+        <div className="su-sect-head">
+          <span className="su-idx">04</span>
+          <h2>Log a test · ledger</h2>
+          <p>Capture a mock on the left; every record sits in the ledger on the right, editable.</p>
+        </div>
+        <TestsClient
+          tests={tests.map((test) => ({
+            ...test,
+            studyNode: test.studyNode ? { id: test.studyNode.id, title: test.studyNode.title } : null,
+          }))}
+          subjects={subjects.map((subject) => ({ id: subject.id, title: subject.title }))}
+        />
+      </section>
+
+      <Link href="/tests/error-analysis" className="ts-errorlab">
+        <span className="su-fig-label">Method &amp; error analysis</span>
+        <strong>Open the question-wise error lab</strong>
+        <span className="su-muted">Log every question of a test, then let the AI find the mistakes you keep repeating.</span>
+        <ArrowUpRight size={28} aria-hidden="true" />
+      </Link>
+    </main>
   );
 }

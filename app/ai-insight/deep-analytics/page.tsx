@@ -1,144 +1,219 @@
-import { format } from "date-fns";
-import { Activity, BrainCircuit, ChartColumnBig, Orbit } from "lucide-react";
+import type { CSSProperties } from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
-import { AreaTrendChart, TrendChart } from "@/components/charts/analytics-charts";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
-import { getDashboardSummary, getPerformanceSummary } from "@/lib/dashboard";
+import { getPerformanceSummary } from "@/lib/dashboard";
+
+export const metadata = { title: "Deep analytics · Sacred Attempt" };
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
+
+function pearson(pairs: Array<[number, number]>) {
+  if (pairs.length < 3) return null;
+  const ax = avg(pairs.map((p) => p[0]));
+  const ay = avg(pairs.map((p) => p[1]));
+  let num = 0;
+  let dx = 0;
+  let dy = 0;
+  for (const [x, y] of pairs) {
+    num += (x - ax) * (y - ay);
+    dx += (x - ax) ** 2;
+    dy += (y - ay) ** 2;
+  }
+  return dx && dy ? num / Math.sqrt(dx * dy) : null;
+}
+
+function readR(r: number | null) {
+  if (r === null) return "not enough paired days yet";
+  const a = Math.abs(r);
+  const strength = a > 0.6 ? "strong" : a > 0.35 ? "moderate" : a > 0.15 ? "weak" : "no real";
+  return `${strength} ${r >= 0 ? "positive" : "negative"} link`;
+}
 
 export default async function DeepAnalyticsPage() {
   await requireSession();
+  const perf = await getPerformanceSummary();
+  const days = perf.dailyLogs;
 
-  const [summary, performance] = await Promise.all([
-    getDashboardSummary(),
-    getPerformanceSummary(),
-  ]);
+  // Weekday rhythm (IST dates are stored at UTC midnight → getUTCDay).
+  const byWeekday = WEEKDAYS.map(() => [] as number[]);
+  for (const d of days) byWeekday[(d.logDate.getUTCDay() + 6) % 7].push(d.totalHours);
+  const weekday = byWeekday.map((hrs, i) => ({ label: WEEKDAYS[i], avg: avg(hrs), n: hrs.length }));
+  const wkMax = Math.max(1, ...weekday.map((w) => w.avg));
+  const ranked = [...weekday].filter((w) => w.n).sort((a, b) => b.avg - a.avg);
 
-  const scoreCurve = performance.tests.map((test) => ({
-    label: format(test.testDate, "dd MMM"),
-    value: Number(((test.score / Math.max(test.totalMarks, 1)) * 100).toFixed(1)),
+  // Monthly arc.
+  const months = new Map<string, number[]>();
+  for (const d of days) {
+    const key = d.logDate.toISOString().slice(0, 7);
+    months.set(key, [...(months.get(key) ?? []), d.totalHours]);
+  }
+  const monthly = [...months.entries()].map(([key, hrs]) => ({
+    label: new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" }),
+    total: hrs.reduce((s, h) => s + h, 0),
+    avg: avg(hrs),
+    n: hrs.length,
   }));
+  const mMax = Math.max(1, ...monthly.map((m) => m.total));
 
-  const disciplineCurve = performance.dailyLogs.map((day) => ({
-    label: format(day.logDate, "dd MMM"),
-    value: day.disciplineScore,
-    secondary: day.completion,
-  }));
+  // Distribution of daily hours.
+  const bins = [0, 2, 4, 6, 8, 10, 12, 14];
+  const hist = bins.map((lo, i) => {
+    const hi = bins[i + 1] ?? Infinity;
+    return { label: hi === Infinity ? `${lo}h+` : `${lo}–${hi}`, n: days.filter((d) => d.totalHours >= lo && d.totalHours < hi).length, lo };
+  });
+  const hMax = Math.max(1, ...hist.map((h) => h.n));
 
-  const moodCurve = performance.moods.map((mood) => ({
-    label: format(mood.moodDate, "dd MMM"),
-    value: mood.focus,
-    secondary: mood.stress,
-  }));
+  // Consistency.
+  const hrs = days.map((d) => d.totalHours);
+  const mean = avg(hrs);
+  const sd = Math.sqrt(avg(hrs.map((h) => (h - mean) ** 2)));
+  let streak = 0;
+  let best = 0;
+  for (const h of hrs) {
+    streak = h >= 8 ? streak + 1 : 0;
+    best = Math.max(best, streak);
+  }
 
-  const subjectHours = Object.values(
-    performance.studyLogs.reduce<Record<string, { label: string; value: number }>>((acc, log) => {
-      const key = log.studyNode?.title ?? "General";
-      acc[key] = {
-        label: key,
-        value: Number(((acc[key]?.value ?? 0) + log.hours).toFixed(1)),
-      };
-      return acc;
-    }, {}),
-  )
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+  // Discipline × completion scatter (only days where both were scored).
+  const pairs = days.filter((d) => d.disciplineScore > 0 && d.completion > 0).map((d) => [d.disciplineScore, d.completion] as [number, number]);
+  const r = pearson(pairs);
+  const hoursVsCompletion = pearson(days.filter((d) => d.completion > 0).map((d) => [d.totalHours, d.completion] as [number, number]));
+
+  const W = 520;
+  const H = 300;
+  const pad = 34;
+  const sx = (v: number) => pad + (v / 100) * (W - pad * 2);
+  const sy = (v: number) => H - pad - (v / 100) * (H - pad * 2);
 
   return (
-    <main className="page-shell editorial-page editorial-analytics editorial-deep-analytics">
+    <main className="page-shell editorial-page editorial-analytics su-page su-legacy pg-deep">
       <PageIntro
         eyebrow="Deep Analytics"
-        title="Read the pattern, not just the number."
-        description="Scores, discipline, completion, hours and mood pressure in one analytics desk."
-        glyph="analytics"
+        title="Read the pattern"
+        description="Not the numbers again — the shape behind them: which days you show up, how steady you are, and which habits actually move together."
       />
 
-      <section className="section-stack">
-        <div className="grid grid-4">
-          {summary.metrics.map((metric) => (
-            <article key={metric.label} className="glass panel metric-card">
-              <div className="muted">{metric.label}</div>
-              <div className="display metric-value">{metric.value}</div>
-              <div className="muted">{metric.hint}</div>
-            </article>
+      <div className="su-figs">
+        <div className="su-fig">
+          <span className="su-fig-label">Steadiness</span>
+          <span className="su-fig-value">±{sd.toFixed(1)}<small>h</small></span>
+          <span className="su-fig-note">daily swing around {mean.toFixed(1)}h</span>
+        </div>
+        <div className="su-fig">
+          <span className="su-fig-label">Strongest day</span>
+          <span className="su-fig-value">{ranked[0]?.label ?? "—"}</span>
+          <span className="su-fig-note">{ranked[0] ? `${ranked[0].avg.toFixed(1)}h average` : "log more days"}</span>
+        </div>
+        <div className="su-fig">
+          <span className="su-fig-label">Weakest day</span>
+          <span className="su-fig-value">{ranked.at(-1)?.label ?? "—"}</span>
+          <span className="su-fig-note">{ranked.at(-1) ? `${ranked.at(-1)!.avg.toFixed(1)}h average` : "—"}</span>
+        </div>
+        <div className="su-fig">
+          <span className="su-fig-label">Longest 8h run</span>
+          <span className="su-fig-value">{best}<small>logs</small></span>
+          <span className="su-fig-note">consecutive logged days</span>
+        </div>
+      </div>
+
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">01</span>
+          <h2>Weekly rhythm</h2>
+          <p>Average hours by weekday. Plan the heavy subjects for the days you reliably show up.</p>
+        </div>
+        <div className="dp-cols dp-week">
+          {weekday.map((w, i) => (
+            <div key={w.label} className={`dp-col${ranked[0]?.label === w.label ? " is-best" : ""}`} style={{ "--h": w.avg / wkMax, "--i": i } as CSSProperties} title={`${w.n} logged ${w.label}s`}>
+              <b>{w.avg ? w.avg.toFixed(1) : "—"}</b>
+              <span className="dp-bar"><i /></span>
+              <small>{w.label}</small>
+            </div>
           ))}
         </div>
+      </section>
 
-        <div className="command-grid">
-          <article className="glass panel span-8">
-            <div className="panel-title-row">
-              <div>
-                <div className="eyebrow">Score curve</div>
-                <div className="display" style={{ fontSize: "2rem", marginTop: 8 }}>Tests over time</div>
-              </div>
-              <div className="pill">
-                <ChartColumnBig size={14} />
-                Performance
-              </div>
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <AreaTrendChart data={scoreCurve} color="#5ea1ff" />
-            </div>
-          </article>
-
-          <article className="glass panel span-4">
-            <div className="eyebrow">Interpretation</div>
-            <div className="metric-stack" style={{ marginTop: 16 }}>
-              <div className="glass" style={{ borderRadius: 20, padding: 16 }}>
-                <div className="pill"><Activity size={14} /> Discipline</div>
-                <div className="muted" style={{ marginTop: 12, lineHeight: 1.7 }}>
-                  The dashboard keeps daily discipline and completion together because good hours without completion can become self-deception.
-                </div>
-              </div>
-              <div className="glass" style={{ borderRadius: 20, padding: 16 }}>
-                <div className="pill"><Orbit size={14} /> Mood pressure</div>
-                <div className="muted" style={{ marginTop: 12, lineHeight: 1.7 }}>
-                  Focus rising while stress rises too usually means you are forcing output instead of building a sustainable loop.
-                </div>
-              </div>
-              <div className="glass" style={{ borderRadius: 20, padding: 16 }}>
-                <div className="pill"><BrainCircuit size={14} /> AI usage</div>
-                <div className="muted" style={{ marginTop: 12, lineHeight: 1.7 }}>
-                  Ask UPSC Guru when any curve breaks sharply. That is where mentoring is more useful than generic advice.
-                </div>
-              </div>
-            </div>
-          </article>
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">02</span>
+          <h2>Month by month</h2>
+          <p>Total hours per month, with the average per logged day beneath.</p>
         </div>
-
-        <div className="grid grid-2">
-          <article className="glass panel">
-            <div className="eyebrow">Discipline vs completion</div>
-            <div style={{ marginTop: 12 }}>
-              <TrendChart data={disciplineCurve} secondaryKey="secondary" color="#65f0b5" secondaryColor="#ffcc75" />
+        <div className="dp-cols dp-month">
+          {monthly.map((m, i) => (
+            <div key={m.label + i} className="dp-col" style={{ "--h": m.total / mMax, "--i": i } as CSSProperties}>
+              <b>{Math.round(m.total)}h</b>
+              <span className="dp-bar"><i /></span>
+              <small>{m.label}</small>
+              <em>{m.avg.toFixed(1)}h · {m.n}d</em>
             </div>
-          </article>
-
-          <article className="glass panel">
-            <div className="eyebrow">Focus vs stress</div>
-            <div style={{ marginTop: 12 }}>
-              <TrendChart data={moodCurve} secondaryKey="secondary" color="#54d2ff" secondaryColor="#ff8aa1" />
-            </div>
-          </article>
+          ))}
         </div>
+      </section>
 
-        <article className="glass panel">
-          <div className="eyebrow">Study distribution</div>
-          <div className="grid grid-4" style={{ marginTop: 16 }}>
-            {subjectHours.length ? (
-              subjectHours.map((subject) => (
-                <div key={subject.label} className="glass" style={{ borderRadius: 22, padding: 16 }}>
-                  <div className="muted">{subject.label}</div>
-                  <div className="display" style={{ fontSize: "2rem", marginTop: 10 }}>
-                    {subject.value}h
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="muted">No subject study hours have been logged yet.</div>
-            )}
-          </div>
-        </article>
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">03</span>
+          <h2>How your days are distributed</h2>
+          <p>How many logged days fell in each band. A healthy prep leans right of 8h, with few days below 4h.</p>
+        </div>
+        <div className="dp-cols dp-hist">
+          {hist.map((b, i) => (
+            <div key={b.label} className={`dp-col${b.lo >= 8 ? " is-good" : b.lo < 4 ? " is-low" : ""}`} style={{ "--h": b.n / hMax, "--i": i } as CSSProperties}>
+              <b>{b.n}</b>
+              <span className="dp-bar"><i /></span>
+              <small>{b.label}</small>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">04</span>
+          <h2>What moves together</h2>
+          <p>Each dot is a day with both scores logged. A tight diagonal means discipline and completion rise together.</p>
+        </div>
+        <div className="dp-corr">
+          <svg viewBox={`0 0 ${W} ${H}`} className="dp-scatter" role="img" aria-label="Discipline against completion, one dot per day">
+            {[25, 50, 75, 100].map((v) => (
+              <g key={v} className="dp-grid">
+                <line x1={sx(0)} x2={sx(100)} y1={sy(v)} y2={sy(v)} />
+                <line x1={sx(v)} x2={sx(v)} y1={sy(0)} y2={sy(100)} />
+                <text x={sx(0) - 6} y={sy(v) + 3} textAnchor="end">{v}</text>
+                <text x={sx(v)} y={sy(0) + 16} textAnchor="middle">{v}</text>
+              </g>
+            ))}
+            <line className="dp-diag" x1={sx(0)} y1={sy(0)} x2={sx(100)} y2={sy(100)} />
+            {pairs.map(([x, y], i) => (
+              <circle key={i} className="dp-dot" cx={sx(x)} cy={sy(y)} r={4.5} style={{ "--i": i } as CSSProperties}>
+                <title>{`discipline ${x}, completion ${y}%`}</title>
+              </circle>
+            ))}
+            <text className="dp-axis" x={sx(100)} y={H - 4} textAnchor="end">discipline →</text>
+            <text className="dp-axis" x={6} y={pad - 12}>completion ↑</text>
+          </svg>
+          <dl className="dp-read">
+            <div>
+              <dt>Discipline × completion</dt>
+              <dd>{r === null ? "—" : r.toFixed(2)}</dd>
+              <span>{readR(r)} · {pairs.length} days</span>
+            </div>
+            <div>
+              <dt>Hours × completion</dt>
+              <dd>{hoursVsCompletion === null ? "—" : hoursVsCompletion.toFixed(2)}</dd>
+              <span>{readR(hoursVsCompletion)}</span>
+            </div>
+            <p className="su-muted">
+              Long hours with low completion is the classic trap: time spent, plan unfinished. When the second number is weak, plan smaller and finish more.
+            </p>
+            <Link href="/ai-insight/guru" className="su-btn su-btn-sm">Ask the Guru about it <ArrowUpRight size={14} /></Link>
+          </dl>
+        </div>
       </section>
     </main>
   );

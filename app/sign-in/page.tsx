@@ -3,6 +3,10 @@ import { ArrowLeft } from "lucide-react";
 
 import { signInAction } from "@/app/actions";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { Chakra } from "@/components/ui/chakra";
+
+export const metadata = { title: "Sign in · Sacred Attempt" };
 
 export default async function SignInPage({
   searchParams,
@@ -12,27 +16,26 @@ export default async function SignInPage({
   const params = await searchParams;
 
   return (
-    <div className="si-shell editorial-signin">
+    <main className="si3">
+      <div className="si3-wheel" aria-hidden="true">
+        <Chakra size={1100} />
+      </div>
+      <ThemeToggle className="si3-theme su-glass" />
       <div>
-        <div className="glass si-card">
-          <div className="si-brand">
+        <div className="si3-card su-glass">
+          <div className="si3-brand">
             <SacredLogoMark size="lg" />
-            <div>
-              <h1 className="si-title">Welcome back</h1>
-              <p className="si-sub">
-                Sign in to your private UPSC CSE 2027 workspace.
-              </p>
-            </div>
+            <h1 className="si3-title">Welcome back.</h1>
+            <p className="si3-sub">Your private UPSC CSE 2027 workspace.</p>
           </div>
 
-          <form action={signInAction} className="si-form">
+          <form action={signInAction} className="si3-form">
             <div>
-              <label htmlFor="email" className="si-label">
+              <label htmlFor="email" className="si3-label">
                 Email
               </label>
               <input
                 id="email"
-                className="field"
                 type="email"
                 name="email"
                 defaultValue={process.env.NODE_ENV === "development" ? process.env.AUTH_EMAIL : ""}
@@ -43,12 +46,11 @@ export default async function SignInPage({
             </div>
 
             <div>
-              <label htmlFor="password" className="si-label">
+              <label htmlFor="password" className="si3-label">
                 Password
               </label>
               <input
                 id="password"
-                className="field"
                 type="password"
                 name="password"
                 defaultValue={process.env.NODE_ENV === "development" ? process.env.AUTH_PASSWORD : ""}
@@ -59,30 +61,28 @@ export default async function SignInPage({
             </div>
 
             {params.error ? (
-              <div className="si-error" role="alert">
+              <div className="si3-error" role="alert">
                 {params.error === "ratelimited"
                   ? "Too many attempts. Wait a few minutes and try again."
                   : "Invalid credentials. Check your configured email and password."}
               </div>
             ) : null}
 
-            <button className="button" type="submit" style={{ width: "100%", minHeight: 48 }}>
+            <button className="su-btn su-btn-ink si3-submit" type="submit">
               Sign in
             </button>
           </form>
 
-          <p className="si-foot">
-            Private database · no third-party analytics · no tracking
-          </p>
+          <p className="si3-foot">Private database · no third-party analytics · no tracking</p>
         </div>
 
         <div style={{ textAlign: "center" }}>
-          <Link href="/" className="si-back">
+          <Link href="/" className="si3-back">
             <ArrowLeft size={14} />
             Back to landing
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -8,11 +8,11 @@ export default async function MissionControlPage() {
   const snapshot = await getMissionControlSnapshot();
 
   return (
-    <main className="page-shell editorial-page editorial-mission-control">
+    <main className="page-shell editorial-page editorial-mission-control su-page su-legacy pg-mission">
       <PageIntro
         eyebrow="Mission Control"
-        title="Agentic Execution"
-        description="Launch a deliberate planning pass, then send the output into daily goals and todos."
+        title="Plan, then act"
+        description="Launch a deliberate planning pass with the agent, then send what it proposes into your daily goals and todo board."
         glyph="guru"
       />
       <MissionControlPanel

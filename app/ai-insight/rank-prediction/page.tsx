@@ -1,42 +1,43 @@
-import { Trophy } from "lucide-react";
+import { OddsEngine } from "@/components/dashboard/odds-engine";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
+import { getInsights } from "@/lib/insights";
 import { RankPredictionClient } from "./client";
+
+export const metadata = { title: "Rank prediction · Sacred Attempt" };
 
 export default async function RankPredictionPage() {
   await requireSession();
+  const insights = await getInsights();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell su-page su-legacy pg-rank">
       <PageIntro
         eyebrow="AI Rank Prediction"
-        title="Where will you finish?"
-        description="A three-layer engine projects prelims, mains and final-list readiness from live tracker data."
-        glyph="rank"
-        actions={
-          <div className="pill">
-            <Trophy size={14} />
-            Prelims · Mains · Final List
-          </div>
-        }
+        title="Where you finish"
+        description="Two reads on the same question. The live model updates every time you log; the AI engine writes a full three-layer projection on demand."
       />
 
-      <section className="section-stack rank-prediction-workspace">
-        {/* Context cards */}
-        <div className="grid grid-3">
-          {[
-            { label: "Layer 1", title: "Prelims Prediction", desc: "Projected score vs cutoff, subject readiness radar, negative marking risk and qualifying chance." },
-            { label: "Layer 2", title: "Mains Projection", desc: "Paper-wise GS + PSIR + Essay score projection and grand total against topper benchmarks." },
-            { label: "Layer 3", title: "Final List", desc: "Rank band, service projection, IAS cutoff gap, monthly action plan, strengths and critical gaps." },
-          ].map((card) => (
-            <article key={card.label} className="glass panel">
-              <div className="eyebrow">{card.label}</div>
-              <div style={{ fontWeight: 800, fontSize: "1.1rem", margin: "10px 0 8px" }}>{card.title}</div>
-              <p className="muted" style={{ fontSize: "13px", lineHeight: 1.7 }}>{card.desc}</p>
-            </article>
-          ))}
-        </div>
+      {insights ? (
+        <section className="su-sect">
+          <div className="su-sect-head">
+            <span className="su-idx">01</span>
+            <h2>Live model</h2>
+            <p>Computed from your logs right now — no AI call. Pull the levers to test a routine.</p>
+          </div>
+          <OddsEngine inputs={insights.model.inputs} observed={insights.model.observed} />
+        </section>
+      ) : null}
 
+      <section className="su-sect rank-prediction-workspace">
+        <div className="su-sect-head">
+          <span className="su-idx">{insights ? "02" : "01"}</span>
+          <h2>AI projection</h2>
+          <p>
+            Layer 1 Prelims score vs cut-off and negative-marking risk · Layer 2 paper-wise Mains total · Layer 3 rank band,
+            service projection and a monthly plan.
+          </p>
+        </div>
         <RankPredictionClient />
       </section>
     </main>

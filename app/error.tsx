@@ -1,7 +1,10 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import Link from "next/link";
 import { useEffect } from "react";
+
+import { SystemState } from "@/components/su/system-state";
 
 export default function AppError({
   error,
@@ -15,20 +18,16 @@ export default function AppError({
   }, [error]);
 
   return (
-    <main className="page-shell editorial-page">
-      <section className="glass panel" style={{ maxWidth: 760, margin: "64px auto", borderRadius: 32 }}>
-        <div className="eyebrow">Temporary sync issue</div>
-        <h1 className="display" style={{ fontSize: "clamp(2.4rem, 5vw, 4rem)", margin: "14px 0" }}>
-          The tracker could not reach the live database.
-        </h1>
-        <p className="muted" style={{ lineHeight: 1.8, marginBottom: 24 }}>
-          Your local interface is still running. Retry once the TiDB Cloud gateway responds again.
-        </p>
-        <button type="button" className="button" onClick={reset}>
-          <RotateCcw size={16} />
-          Retry
-        </button>
-      </section>
-    </main>
+    <SystemState
+      kicker="Temporary sync issue"
+      title="The live database didn't answer."
+      body="Your interface is fine — the TiDB gateway is slow to wake. Retry in a moment; nothing you logged is lost."
+      code="503"
+    >
+      <button type="button" className="su-btn su-btn-ink" onClick={reset}>
+        <RotateCcw size={15} /> Retry
+      </button>
+      <Link href="/dashboard" className="su-btn">Overview</Link>
+    </SystemState>
   );
 }

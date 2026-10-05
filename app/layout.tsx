@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Inter, Newsreader, Noto_Serif_Devanagari } from "next/font/google";
+import { Doto, Funnel_Display, Geist, Geist_Mono, Noto_Serif_Devanagari } from "next/font/google";
 
 import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
 import { AppChrome } from "@/components/shell/app-chrome";
 import { PaletteCycler } from "@/components/shell/palette-cycler";
+import { RouteProgress } from "@/components/shell/route-progress";
 
 import "./globals.css";
 import "./redesign.css";
@@ -15,10 +16,19 @@ import "./editorial.css";
 import "./nova.css";
 import "./nova-goals.css";
 import "./nova-study.css";
+import "./sutra.css";
+import "./sutra-pages.css";
 
-const bodyFont = Inter({
+// Sutra type system: Funnel Display for display and big figures, Geist for
+// reading, Geist Mono for labels/data, Doto (dot-matrix) only for countdowns.
+const bodyFont = Geist({
   subsets: ["latin"],
   variable: "--font-body",
+});
+
+const displayFont = Funnel_Display({
+  subsets: ["latin"],
+  variable: "--font-su-display",
 });
 
 const devanagariFont = Noto_Serif_Devanagari({
@@ -26,15 +36,15 @@ const devanagariFont = Noto_Serif_Devanagari({
   variable: "--font-devanagari",
 });
 
-const monoFont = IBM_Plex_Mono({
+const monoFont = Geist_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
   variable: "--font-mono",
 });
 
-const editorialFont = Newsreader({
+const dotFont = Doto({
   subsets: ["latin"],
-  variable: "--font-editorial",
+  weight: ["700", "900"],
+  variable: "--font-dot",
 });
 
 export const metadata: Metadata = {
@@ -63,7 +73,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b0d11",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#09090a" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f1ec" },
+  ],
   // Keyboard resizes the layout, so fixed composers stay visible while typing
   interactiveWidget: "resizes-content",
 };
@@ -81,7 +94,7 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
-      <body className={`${bodyFont.variable} ${editorialFont.variable} ${devanagariFont.variable} ${monoFont.variable}`}>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${devanagariFont.variable} ${monoFont.variable} ${dotFont.variable}`}>
         <script
           dangerouslySetInnerHTML={{
             __html:
@@ -91,6 +104,7 @@ export default function RootLayout({
         <LaunchSplash />
         <PwaRegister />
         <PaletteCycler />
+        <RouteProgress />
         <AppChrome>{children}</AppChrome>
       </body>
     </html>

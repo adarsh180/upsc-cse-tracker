@@ -17,10 +17,10 @@ export default async function EssayCheckerPage() {
   const latest = essays[0];
 
   return (
-    <main className="page-shell editorial-page editorial-essay-checker">
+    <main className="page-shell editorial-page editorial-essay-checker su-page su-legacy pg-essay">
       <PageIntro
         eyebrow="Essay Checker"
-        title="Turn drafts into a review loop."
+        title="Essay lab"
         description="Submit, score, review and revisit essays without leaving the writing lab."
         glyph="essay"
         actions={

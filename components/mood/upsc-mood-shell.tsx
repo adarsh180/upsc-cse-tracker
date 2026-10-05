@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Brain, CalendarDays, Flame, HeartPulse, Save, ShieldCheck, Target, Zap } from "lucide-react";
 
-import { MoodSignalChart } from "@/components/charts/analytics-charts";
-import { MotionGlyph } from "@/components/ui/animated-icons";
+import { MetricLine } from "@/components/su/metric-line";
+import { LiquidMeter } from "@/components/ui/liquid-meter";
 import { PageIntro } from "@/components/ui/sections";
 
 type MoodEntry = {
@@ -124,39 +124,30 @@ function MoodMark({ mood, large = false }: { mood: MoodOption; large?: boolean }
 }
 
 function MoodSlider({
-  icon: Icon,
   label,
   value,
   color,
   onChange,
 }: {
-  icon: typeof Zap;
   label: string;
   value: number;
   color: string;
   onChange: (value: number) => void;
 }) {
+  const fill = (clampMetric(value) - 1) / 9;
   return (
-    <div className="mood-v2-slider">
-      <div className="mood-v2-slider-head">
-        <span style={{ color }}>
-          <Icon size={16} />
-          {label}
-        </span>
-        <strong style={{ color }}>{value}/10</strong>
-      </div>
-      <div className="mood-v2-slider-track">
-        <span style={{ width: `${clampMetric(value) * 10}%`, background: color }} />
-        <input
-          type="range"
-          min={1}
-          max={10}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
-          aria-label={label}
-        />
-      </div>
-    </div>
+    <label className="od-slider md-slider" style={{ "--fill": fill, "--su-acc": color } as CSSProperties}>
+      <span className="od-slider-top">
+        <span>{label}</span>
+        <b>
+          {value}
+          <small>/10</small>
+        </b>
+      </span>
+      <span className="od-track">
+        <input type="range" min={1} max={10} value={value} onChange={(event) => onChange(Number(event.target.value))} aria-label={label} />
+      </span>
+    </label>
   );
 }
 
@@ -254,223 +245,187 @@ export function UpscMoodShell({ initialEntries }: { initialEntries: MoodEntry[] 
   const avgFocus = average(recentEntries.map((entry) => entry.focus));
   const avgStress = average(recentEntries.map((entry) => entry.stress));
   const avgConfidence = average(recentEntries.map((entry) => entry.confidence));
-  const chartData = [...entries]
-    .reverse()
-    .map((entry) => ({
-      label: formatIstLabel(new Date(entry.date), { day: "2-digit", month: "short" }),
+  const series = [...entries].reverse().map((entry) => ({
+    x: formatIstLabel(new Date(entry.date), { day: "2-digit", month: "short" }),
+    sub: entry.label,
+    values: {
       focus: entry.focus,
       energy: entry.energy,
       stress: entry.stress,
       confidence: entry.confidence,
       consistency: entry.consistency,
-    }));
+    },
+  }));
+  const set = (key: "energy" | "focus" | "stress" | "confidence" | "consistency") => (value: number) =>
+    setForm((current) => ({ ...current, [key]: value }));
 
   return (
-    <main className="page-shell editorial-page editorial-mood mood-page-v2">
+    <main className="page-shell editorial-page editorial-mood su-page su-legacy pg-mood">
       <PageIntro
         eyebrow="Mood Tracker"
-        title="Mental state cockpit."
-        description="Focus, energy, stress, confidence and consistency without clutter."
-        glyph="mood"
-        actions={<div className="pill">{recentEntries.length} recent entries</div>}
+        title="Mind check"
+        description="Twenty seconds a day: how you feel, how focused, how stressed. Burnout shows up here before it shows up in your scores."
+        actions={
+          <button type="button" className="su-btn su-btn-ink" onClick={() => void saveMood()} disabled={saving}>
+            <Save size={15} />
+            {saved ? "Saved" : saving ? "Saving…" : "Save check-in"}
+          </button>
+        }
       />
 
-      <section className="section-stack mood-v2-stack">
-        <section className="mood-v2-hero-grid">
-          <article className="glass panel mood-v2-current">
-            <div className="mood-v2-current-top">
-              <MoodMark mood={currentMood} large />
-              <div>
-                <div className="eyebrow">Selected state</div>
-                <div className="display mood-v2-title">{currentMood.key}</div>
-                <div className="mood-v2-date-label">
-                  <CalendarDays size={14} />
-                  {formatIstLabel(selectedDateObject, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
-                </div>
-              </div>
+      <section className="su-sect md-checkin" style={{ "--mood": currentMood.color } as CSSProperties}>
+        <div className="md-state">
+          <div className="md-orb nv-root" style={{ "--sx-accent": currentMood.color } as CSSProperties}>
+            <LiquidMeter pct={moodScore * 10} id={`mood-${selectedDate}`} label={`Mood score ${moodScore} of 10`}>
+              <strong>
+                {moodScore}
+                <em>/10</em>
+              </strong>
+              <span>mood score</span>
+            </LiquidMeter>
+          </div>
+          <div className="md-state-copy">
+            <span className="su-fig-label">State · {formatIstLabel(selectedDateObject, { weekday: "short", day: "numeric", month: "short" })}</span>
+            <strong className="md-state-name">{currentMood.key}</strong>
+            <label className="md-date">
+              <CalendarDays size={14} />
+              <input type="date" value={selectedDate} max={formatIstDateKey(new Date())} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Check-in date" />
+            </label>
+            <div className="md-options" role="radiogroup" aria-label="Mood state">
+              {moodOptions.map((mood) => {
+                const active = form.label === mood.key;
+                return (
+                  <button
+                    key={mood.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`md-option${active ? " active" : ""}`}
+                    style={{ "--mood-color": mood.color, "--mood-bg": mood.bg, "--mood-border": mood.border } as CSSProperties}
+                    onClick={() => setForm((current) => ({ ...current, label: mood.key }))}
+                  >
+                    <MoodMark mood={mood} />
+                    <span>{mood.key}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="mood-v2-score-ring" style={{ "--mood-score": `${moodScore * 10}%`, color: currentMood.color } as CSSProperties}>
-              <div>
-                <strong>{moodScore}</strong>
-                <span>/10</span>
-              </div>
-            </div>
-          </article>
+          </div>
+        </div>
 
-          <article className="glass panel mood-v2-date-panel">
-            <div>
-              <div className="eyebrow">Date</div>
-              <div className="display mood-v2-panel-title">Daily check-in</div>
-            </div>
-            <input
-              className="field"
-              type="date"
-              value={selectedDate}
-              max={formatIstDateKey(new Date())}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            />
-            <button type="button" className="button mood-v2-save" onClick={() => void saveMood()} disabled={saving}>
-              <Save size={16} />
-              {saved ? "Saved" : saving ? "Saving..." : "Save mood"}
-            </button>
-          </article>
+        <div className="md-dials">
+          <MoodSlider label="Energy" value={form.energy} color="var(--su-warn)" onChange={set("energy")} />
+          <MoodSlider label="Focus" value={form.focus} color="var(--nv-a1)" onChange={set("focus")} />
+          <MoodSlider label="Stress" value={form.stress} color={form.stress >= 7 ? "var(--su-bad)" : "var(--su-good)"} onChange={set("stress")} />
+          <MoodSlider label="Confidence" value={form.confidence} color="var(--su-good)" onChange={set("confidence")} />
+          <MoodSlider label="Consistency" value={form.consistency} color="var(--nv-a2)" onChange={set("consistency")} />
+          <textarea
+            className="textarea md-note"
+            placeholder="What affected preparation today?"
+            value={form.notes}
+            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+          />
+        </div>
+      </section>
 
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">01</span>
+          <h2>Thirty days</h2>
+          <p>Each mark is a day you checked in, coloured by state. Tap one to open it above.</p>
+        </div>
+        <div className="md-strip">
+          {last30.map((day) => {
+            const entry = entriesByDate.get(day.key);
+            const mood = moodOptions.find((option) => option.key === entry?.label);
+            const selected = day.key === selectedDate;
+            return (
+              <button
+                key={day.key}
+                type="button"
+                className={`md-day${selected ? " selected" : ""}${entry ? " logged" : ""}`}
+                style={mood ? ({ "--mood-color": mood.color } as CSSProperties) : undefined}
+                onClick={() => setSelectedDate(day.key)}
+                title={entry ? `${day.key}: ${entry.label}` : day.key}
+              >
+                <i />
+                <span>{day.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="su-figs md-avgs">
           {[
-            { label: "Energy", value: avgEnergy, icon: Zap, color: "var(--gold)" },
-            { label: "Focus", value: avgFocus, icon: Brain, color: "var(--physics)" },
-            { label: "Stress", value: avgStress, icon: HeartPulse, color: avgStress >= 7 ? "var(--rose-bright)" : "var(--botany)" },
-            { label: "Confidence", value: avgConfidence, icon: ShieldCheck, color: "var(--botany)" },
-          ].map((metric) => (
-            <article key={metric.label} className="glass panel mood-v2-stat">
-              <span style={{ color: metric.color }}>
-                <metric.icon size={16} />
+            { label: "Energy · last 7", value: avgEnergy },
+            { label: "Focus", value: avgFocus },
+            { label: "Stress", value: avgStress },
+            { label: "Confidence", value: avgConfidence },
+          ].map((m) => (
+            <div className="su-fig" key={m.label}>
+              <span className="su-fig-label">{m.label}</span>
+              <span className="su-fig-value">
+                {recentEntries.length ? m.value : "—"}
+                <small>/10</small>
               </span>
-              <small>{metric.label}</small>
-              <strong style={{ color: metric.color }}>{metric.value}/10</strong>
-            </article>
+            </div>
           ))}
-        </section>
+        </div>
+      </section>
 
-        <section className="mood-v2-layout">
-          <div className="mood-v2-left">
-            <article className="glass panel mood-v2-card">
-              <div className="mood-v2-card-head">
-                <div>
-                  <div className="eyebrow">Mood</div>
-                  <div className="display mood-v2-panel-title">State selector</div>
-                </div>
-                <MotionGlyph name="mood" size={42} />
-              </div>
-              <div className="mood-v2-options">
-                {moodOptions.map((mood) => {
-                  const Icon = mood.icon;
-                  const active = form.label === mood.key;
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">02</span>
+          <h2>Signals</h2>
+          <p>Switch between the five signals; scrub to read a check-in.</p>
+        </div>
+        <MetricLine
+          series={series}
+          height={260}
+          emptyText="Save a check-in to start the curve."
+          metrics={[
+            { key: "focus", label: "Focus", max: 10, decimals: 0 },
+            { key: "energy", label: "Energy", max: 10, tone: "warn", decimals: 0 },
+            { key: "stress", label: "Stress", max: 10, tone: "bad", decimals: 0 },
+            { key: "confidence", label: "Confidence", max: 10, tone: "good", decimals: 0 },
+            { key: "consistency", label: "Consistency", max: 10, tone: "ink", decimals: 0 },
+          ]}
+        />
+      </section>
 
-                  return (
-                    <button
-                      key={mood.key}
-                      type="button"
-                      className={`mood-v2-option${active ? " active" : ""}`}
-                      style={{ "--mood-color": mood.color, "--mood-bg": mood.bg, "--mood-border": mood.border } as CSSProperties}
-                      onClick={() => setForm((current) => ({ ...current, label: mood.key }))}
-                    >
-                      <MoodMark mood={mood} />
-                      <span>
-                        <Icon size={14} />
-                        {mood.key}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-
-            <article className="glass panel mood-v2-card">
-              <div className="eyebrow">Metrics</div>
-              <div className="mood-v2-slider-stack">
-                <MoodSlider icon={Zap} label="Energy" value={form.energy} color="var(--gold)" onChange={(value) => setForm((current) => ({ ...current, energy: value }))} />
-                <MoodSlider icon={Brain} label="Focus" value={form.focus} color="var(--physics)" onChange={(value) => setForm((current) => ({ ...current, focus: value }))} />
-                <MoodSlider icon={HeartPulse} label="Stress" value={form.stress} color={form.stress >= 7 ? "var(--rose-bright)" : "var(--botany)"} onChange={(value) => setForm((current) => ({ ...current, stress: value }))} />
-                <MoodSlider icon={ShieldCheck} label="Confidence" value={form.confidence} color="var(--botany)" onChange={(value) => setForm((current) => ({ ...current, confidence: value }))} />
-                <MoodSlider icon={Target} label="Consistency" value={form.consistency} color="var(--lotus-bright)" onChange={(value) => setForm((current) => ({ ...current, consistency: value }))} />
-              </div>
-            </article>
-
-            <article className="glass panel mood-v2-card">
-              <div className="eyebrow">Note</div>
-              <textarea
-                className="textarea mood-v2-note"
-                placeholder="What affected preparation today?"
-                value={form.notes}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-              />
-            </article>
-          </div>
-
-          <div className="mood-v2-right">
-            <article className="glass panel mood-v2-card mood-v2-chart-card">
-              <div className="mood-v2-card-head">
-                <div>
-                  <div className="eyebrow">Signal curve</div>
-                  <div className="display mood-v2-panel-title">30-day mood graph</div>
-                </div>
-                <div className="pill">Live</div>
-              </div>
-              <MoodSignalChart data={chartData} />
-            </article>
-
-            <article className="glass panel mood-v2-card">
-              <div className="mood-v2-card-head">
-                <div>
-                  <div className="eyebrow">Calendar</div>
-                  <div className="display mood-v2-panel-title">Last 30 days</div>
-                </div>
-                <div className="pill">IST</div>
-              </div>
-              <div className="mood-v2-calendar">
-                {last30.map((day) => {
-                  const entry = entriesByDate.get(day.key);
-                  const mood = moodOptions.find((option) => option.key === entry?.label);
-                  const selected = day.key === selectedDate;
-
-                  return (
-                    <button
-                      key={day.key}
-                      type="button"
-                      className={`mood-v2-day${selected ? " selected" : ""}${entry ? " logged" : ""}`}
-                      style={
-                        mood
-                          ? ({ "--mood-color": mood.color, "--mood-bg": mood.bg, "--mood-border": mood.border } as CSSProperties)
-                          : undefined
-                      }
-                      onClick={() => setSelectedDate(day.key)}
-                      title={entry ? `${day.key}: ${entry.label}` : day.key}
-                    >
-                      {entry ? <MoodMark mood={mood ?? moodOptions[1]} /> : <span>{day.label}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-
-            <article className="glass panel mood-v2-card">
-              <div className="mood-v2-card-head">
-                <div>
-                  <div className="eyebrow">Recent</div>
-                  <div className="display mood-v2-panel-title">Mood ledger</div>
-                </div>
-                <div className="pill">{recentEntries.length}</div>
-              </div>
-              <div className="mood-v2-entry-list">
-                {recentEntries.length ? (
-                  recentEntries.map((entry) => {
-                    const mood = moodOptions.find((option) => option.key === entry.label) ?? moodOptions[1];
-
-                    return (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        className="mood-v2-entry"
-                        style={{ "--mood-color": mood.color, "--mood-bg": mood.bg, "--mood-border": mood.border } as CSSProperties}
-                        onClick={() => setSelectedDate(entryKey(entry))}
-                      >
-                        <MoodMark mood={mood} />
-                        <span>
-                          <strong>{entry.label}</strong>
-                          <small>
-                            {formatIstLabel(new Date(entry.date), { day: "2-digit", month: "short" })} | focus {entry.focus}/10 | stress {entry.stress}/10
-                          </small>
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="muted mood-v2-empty">No mood entries yet.</div>
-                )}
-              </div>
-            </article>
-          </div>
-        </section>
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">03</span>
+          <h2>Ledger</h2>
+        </div>
+        <div className="md-ledger">
+          {recentEntries.length ? (
+            recentEntries.map((entry) => {
+              const mood = moodOptions.find((option) => option.key === entry.label) ?? moodOptions[1];
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="md-entry"
+                  style={{ "--mood-color": mood.color, "--mood-bg": mood.bg, "--mood-border": mood.border } as CSSProperties}
+                  onClick={() => setSelectedDate(entryKey(entry))}
+                >
+                  <MoodMark mood={mood} />
+                  <strong>{entry.label}</strong>
+                  <span>{formatIstLabel(new Date(entry.date), { weekday: "short", day: "2-digit", month: "short" })}</span>
+                  <span className="md-entry-nums">
+                    focus <b>{entry.focus}</b> · stress <b>{entry.stress}</b> · energy <b>{entry.energy}</b>
+                  </span>
+                  {entry.notes ? <em>{entry.notes}</em> : null}
+                </button>
+              );
+            })
+          ) : (
+            <div className="su-empty">
+              <strong>No check-ins yet</strong>
+              Save your first one above.
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );

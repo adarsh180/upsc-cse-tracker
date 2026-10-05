@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ClipboardList,
@@ -19,7 +19,7 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { SyllabusCommand } from "@/components/ui/syllabus-command";
 import { cn } from "@/lib/utils";
 
-/* Primary destinations — desktop top nav + mobile bottom tabs */
+/* Primary destinations — desktop island + mobile dock */
 const primaryTabs = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/goals", label: "Goals", icon: Target },
@@ -28,17 +28,77 @@ const primaryTabs = [
 ] as const;
 
 const desktopNav = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Overview" },
   { href: "/goals", label: "Goals" },
   { href: "/tests", label: "Tests" },
   { href: "/performance", label: "Performance" },
   { href: "/ai-insight/guru", label: "Guru" },
-  { href: "/report-card", label: "Report Card" },
+  { href: "/report-card", label: "Report" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * Liquid indicator: one glass "drop" inside a nav that sits under the active
+ * item and slides (with a little stretch) to whatever the pointer is over.
+ * Position lives in CSS custom properties on the container, so moving it
+ * never re-renders React.
+ */
+function useLiquidIndicator(pathname: string) {
+  const ref = useRef<HTMLElement | null>(null);
+
+  const moveTo = useCallback((target: Element | null) => {
+    const host = ref.current;
+    if (!host) return;
+    if (!target) {
+      host.style.setProperty("--blob-o", "0");
+      return;
+    }
+    const hostBox = host.getBoundingClientRect();
+    const box = target.getBoundingClientRect();
+    host.style.setProperty("--blob-x", `${box.left - hostBox.left}px`);
+    host.style.setProperty("--blob-w", `${box.width}px`);
+    host.style.setProperty("--blob-o", "1");
+  }, []);
+
+  const toActive = useCallback(() => {
+    moveTo(ref.current?.querySelector("[data-active='true']") ?? null);
+  }, [moveTo]);
+
+  useIsoLayoutEffect(() => {
+    toActive();
+  }, [pathname, toActive]);
+
+  useEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    // Enable the transition only after the first placement, so the drop
+    // doesn't fly in from the left edge on load.
+    const raf = window.requestAnimationFrame(() => host.classList.add("is-ready"));
+    const onOver = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const item = (event.target as HTMLElement).closest("[data-item]");
+      if (item && host.contains(item)) moveTo(item);
+    };
+    const onResize = () => toActive();
+    host.addEventListener("pointerover", onOver);
+    host.addEventListener("pointerleave", toActive);
+    window.addEventListener("resize", onResize);
+    document.fonts?.ready.then(toActive).catch(() => undefined);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      host.removeEventListener("pointerover", onOver);
+      host.removeEventListener("pointerleave", toActive);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [moveTo, toActive]);
+
+  return ref;
 }
 
 /* ── More sheet: every destination, grouped ─────────────────────── */
@@ -68,26 +128,27 @@ function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         aria-label="Close navigation"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
-        className={cn("v2-sheet-backdrop", open && "open")}
+        className={cn("su-sheet-backdrop", open && "open")}
       />
       <div
-        className={cn("v2-sheet", open && "open")}
+        className={cn("su-sheet su-glass", open && "open")}
         role="dialog"
         aria-modal="true"
         aria-label="All pages"
         aria-hidden={!open}
+        inert={!open}
       >
-        <div className="v2-sheet-grab" aria-hidden="true" />
-        <div className="v2-sheet-head">
-          <span className="v2-sheet-title">All pages</span>
+        <div className="su-sheet-grab" aria-hidden="true" />
+        <div className="su-sheet-head">
+          <span>Everything</span>
           <button type="button" className="v2-iconbtn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
-        <nav className="v2-sheet-scroll">
-          {navGroups.map((group) => (
-            <div key={group.label} className="v2-sheet-group">
-              <div className="v2-sheet-group-label">{group.label}</div>
+        <nav className="su-sheet-scroll">
+          {navGroups.map((group, gi) => (
+            <div key={group.label} className="su-sheet-group" style={{ "--g": gi } as React.CSSProperties}>
+              <div className="su-sheet-label">{group.label}</div>
               {group.items.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -95,10 +156,10 @@ function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className={cn("v2-sheet-link", isActive(pathname, item.href) && "active")}
+                    className={cn("su-sheet-link", isActive(pathname, item.href) && "active")}
                     style={{ "--nav-accent": item.accent } as React.CSSProperties}
                   >
-                    <span className="v2-sheet-link-icon">
+                    <span className="su-sheet-icon">
                       <Icon size={15} />
                     </span>
                     {item.label}
@@ -118,11 +179,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicPage = pathname === "/" || pathname === "/sign-in";
   // Guru is a full-screen chat surface on phones: it brings its own header,
-  // so the global top bar + tab bar step aside below 860px.
+  // so the global top bar + dock step aside below 860px.
   const isGuruPage = pathname.startsWith("/ai-insight/guru");
-  const keepsSpecializedVisuals = isGuruPage || pathname.startsWith("/ai-insight/rank-prediction");
   const [moreOpen, setMoreOpen] = useState(false);
   const closeMore = useCallback(() => setMoreOpen(false), []);
+  const navRef = useLiquidIndicator(pathname);
+  const dockRef = useLiquidIndicator(pathname);
 
   useEffect(() => {
     setMoreOpen(false);
@@ -139,79 +201,94 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Top bar */}
-      <header className={cn("v2-topbar", !keepsSpecializedVisuals && "editorial-chrome", isGuruPage && "v2-mobile-hidden")}>
-        <div className="v2-topbar-inner">
-          <Link href="/dashboard" className="v2-brand">
-            <SacredLogoMark size="sm" />
-            <span>
-              <span className="v2-brand-title">Sacred Attempt</span>
-              <span className="v2-brand-sub">UPSC CSE 2027</span>
-            </span>
-          </Link>
+      <header className={cn("su-top", isGuruPage && "su-mobile-hidden")}>
+        <Link href="/dashboard" className="su-brand su-glass" aria-label="Sacred Attempt — overview">
+          <SacredLogoMark size="sm" />
+          <span className="su-brand-copy">
+            <span className="su-brand-title">Sacred Attempt</span>
+            <span className="su-brand-sub">CSE · 2027</span>
+          </span>
+        </Link>
 
-          <ThemeToggle className="theme-toggle-inline" />
-
-          <nav className="v2-topnav" aria-label="Primary">
-            {desktopNav.map((item) => (
+        <nav
+          className="su-nav su-glass"
+          aria-label="Primary"
+          ref={navRef as React.RefObject<HTMLElement>}
+        >
+          <span className="su-blob" aria-hidden="true" />
+          {desktopNav.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn("v2-topnav-link", isActive(pathname, item.href) && "active")}
+                data-item=""
+                data-active={active}
+                aria-current={active ? "page" : undefined}
+                className={cn("su-nav-link", active && "active")}
               >
                 {item.label}
               </Link>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
 
-          <div className="v2-topbar-actions">
-            <SyllabusCommand />
-            <div className={cn("notify-host-inline", isGuruPage && "notify-host-guru")}>
-              <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
-            </div>
-            <button
-              type="button"
-              className="v2-iconbtn"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-label="All pages"
-              aria-expanded={moreOpen}
-            >
-              <LayoutGrid size={17} />
-            </button>
+        <div className="su-actions su-glass">
+          <SyllabusCommand />
+          <div className={cn("notify-host-inline", isGuruPage && "notify-host-guru")}>
+            <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
           </div>
+          <ThemeToggle className="theme-toggle-inline" />
+          <button
+            type="button"
+            className="v2-iconbtn su-more-btn"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-label="All pages"
+            aria-expanded={moreOpen}
+          >
+            <LayoutGrid size={17} />
+          </button>
         </div>
       </header>
 
-      {/* Page content */}
-      <div className={cn("app-shell", !keepsSpecializedVisuals && "editorial-app")}>
+      <div className="app-shell su-shell">
         <div className="app-shell-inner">{children}</div>
       </div>
 
-      {/* Bottom tab bar — mobile */}
-      <nav className={cn("v2-tabbar", isGuruPage && "v2-mobile-hidden")} aria-label="Primary">
+      {/* Bottom dock — phones and small tablets */}
+      <nav
+        className={cn("su-dock su-glass", isGuruPage && "su-mobile-hidden")}
+        aria-label="Primary"
+        ref={dockRef as React.RefObject<HTMLElement>}
+      >
+        <span className="su-blob" aria-hidden="true" />
         {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const active = isActive(pathname, tab.href);
           return (
-            <Link key={tab.href} href={tab.href} className={cn("v2-tab", active && "active")}>
-              <span className="v2-tab-icon">
-                <Icon size={19} strokeWidth={active ? 2.4 : 2} />
-              </span>
-              {tab.label}
+            <Link
+              key={tab.href}
+              href={tab.href}
+              data-item=""
+              data-active={active}
+              aria-current={active ? "page" : undefined}
+              className={cn("su-dock-tab", active && "active")}
+            >
+              <Icon size={19} strokeWidth={active ? 2.3 : 1.9} />
+              <span>{tab.label}</span>
             </Link>
           );
         })}
         <button
           type="button"
-          className={cn("v2-tab", moreOpen && "active")}
+          data-item=""
+          className={cn("su-dock-tab", moreOpen && "active")}
           onClick={() => setMoreOpen((v) => !v)}
           aria-label="More pages"
           aria-expanded={moreOpen}
         >
-          <span className="v2-tab-icon">
-            <LayoutGrid size={19} strokeWidth={moreOpen ? 2.4 : 2} />
-          </span>
-          More
+          <LayoutGrid size={19} strokeWidth={moreOpen ? 2.3 : 1.9} />
+          <span>More</span>
         </button>
       </nav>
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BrainCircuit, GraduationCap, ListTodo, Newspaper, PenSquare, ScanSearch, Target, Timer, Trophy } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowUpRight, BrainCircuit, GraduationCap, ListTodo, Newspaper, PenSquare, ScanSearch, Target, Timer, Trophy } from "lucide-react";
 
-import { MetricCard, PageIntro } from "@/components/ui/sections";
+import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/dashboard";
 
@@ -85,36 +86,37 @@ export default async function AIInsightPage() {
   const summary = await getDashboardSummary();
 
   return (
-    <main className="page-shell editorial-page editorial-ai-hub">
+    <main className="page-shell editorial-page editorial-ai-hub su-page su-legacy pg-ai">
       <PageIntro
         eyebrow="AI Insight"
-        title="Your AI workspaces."
+        title="AI workspaces"
         description="Every tool reads the same live tracker context — discipline, tests, mood and study signals. No ornamental AI."
-        glyph="guru"
       />
 
-      <div className="grid grid-4">
-        {summary.metrics.map((metric) => (
-          <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
-        ))}
+      <div className="su-figs">
+        {summary.metrics.map((metric) => {
+          const m = metric.value.match(/^(-?[\d.]+)(.*)$/);
+          return (
+            <div className="su-fig" key={metric.label}>
+              <span className="su-fig-label">{metric.label}</span>
+              <span className="su-fig-value">{m ? m[1] : metric.value}<small>{m ? m[2] : ""}</small></span>
+              <span className="su-fig-note">{metric.hint}</span>
+            </div>
+          );
+        })}
       </div>
 
-      <section className="db-section">
-        <div className="db-actions-row" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-          {tools.map((tool) => (
-            <Link key={tool.href} href={tool.href} className="glass card-link db-action">
-              <div className="db-stat-label">
-                <tool.icon size={16} style={{ color: tool.color }} />
-                <span style={{ fontSize: 15, fontWeight: 650, color: "var(--text)" }}>{tool.title}</span>
-              </div>
-              <p className="db-action-desc">{tool.desc}</p>
-              <span className="db-section-link">
-                {tool.cta} <ArrowRight size={13} />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <nav className="ai-index" aria-label="AI tools">
+        {tools.map((tool, i) => (
+          <Link key={tool.href} href={tool.href} className="ai-row su-reveal" style={{ "--tone": tool.color, "--i": i } as CSSProperties}>
+            <span className="ai-num">{String(i + 1).padStart(2, "0")}</span>
+            <span className="ai-icon"><tool.icon size={18} /></span>
+            <span className="ai-title">{tool.title}</span>
+            <span className="ai-desc">{tool.desc}</span>
+            <span className="ai-cta">{tool.cta} <ArrowUpRight size={16} /></span>
+          </Link>
+        ))}
+      </nav>
     </main>
   );
 }

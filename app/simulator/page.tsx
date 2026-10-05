@@ -10,10 +10,10 @@ export default async function SimulatorPage() {
   await requireSession();
 
   return (
-    <main className="page-shell editorial-page editorial-simulator">
+    <main className="page-shell editorial-page editorial-simulator su-page su-legacy pg-simulator">
       <PageIntro
         eyebrow="Prelims Simulator"
-        title="Timed mocks built from your mistakes."
+        title="Mocks from mistakes"
         description="Every paper is generated from your logged weak topics, revision debt and stored PYQs — then saved back into your test analytics."
         glyph="essay"
         actions={

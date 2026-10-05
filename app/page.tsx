@@ -1,284 +1,155 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BookOpen,
-  BrainCircuit,
-  CalendarClock,
-  Check,
-  Flame,
-  LineChart,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  Trophy,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, ShieldCheck } from "lucide-react";
 
+import { Countdown } from "@/components/dashboard/countdown";
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
-import { CountUp, NovaStage } from "@/components/ui/nova-fx";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { Chakra } from "@/components/ui/chakra";
 import { getSession } from "@/lib/auth";
-import { examCountdown } from "@/lib/utils";
 
-const papers = ["GS 1", "GS 2", "GS 3", "GS 4", "PSIR Optional", "CSAT", "Essay", "Current Affairs", "Ethics case studies", "Answer writing"];
-
-const loop = [
-  { icon: Target, title: "Decide", desc: "Set the few outcomes that deserve today's attention — nothing more." },
-  { icon: BookOpen, title: "Execute", desc: "Study, revise and test inside one structured, connected system." },
-  { icon: LineChart, title: "Adapt", desc: "Let honest evidence reveal exactly what tomorrow needs from you." },
+const METHOD = [
+  { word: "Decide", line: "Choose the few outcomes that deserve today. Nothing more." },
+  { word: "Execute", line: "Study, revise and test inside one connected record." },
+  { word: "Measure", line: "Hours, tests and syllabus turn into odds you can read." },
+  { word: "Adapt", line: "The evidence says what tomorrow needs. You listen." },
 ];
 
-const features = [
-  {
-    icon: Target,
-    title: "Daily execution ledger",
-    desc: "Log hours, subjects, output and discipline. An 8h good-day and 12h peak-day bar keeps the grading honest.",
-    tone: "gold",
-    size: "wide",
-  },
-  { icon: Trophy, title: "Stage-aware tests", desc: "Prelims and mains get their own lanes and error analysis.", tone: "blue", size: "" },
-  { icon: BrainCircuit, title: "Contextual AI mentor", desc: "A Guru that reads your live data — not generic advice.", tone: "violet", size: "" },
-  { icon: BookOpen, title: "Complete study tree", desc: "GS 1–4, Optional, CSAT and Essay down to every topic and revision.", tone: "green", size: "" },
-  {
-    icon: LineChart,
-    title: "Performance signals",
-    desc: "Trend, readiness and subject drift, one precise chart at a time — no noisy dashboards.",
-    tone: "rose",
-    size: "wide",
-  },
-  { icon: CalendarClock, title: "Exam horizon", desc: "Countdowns tied to the work behind them.", tone: "saffron", size: "" },
+const INSIDE = [
+  { title: "Selection odds", note: "Prelims × Mains × Interview, from your own records — with levers to test a routine." },
+  { title: "Daily ledger", note: "Hours, subjects, output, distraction. 8h is a good day; 12h is a peak." },
+  { title: "Syllabus map", note: "GS 1–4, PSIR, CSAT and Essay down to every topic, revision and session." },
+  { title: "Test lab", note: "Score against cut-off, accuracy, negative marking and a question-wise error log." },
+  { title: "The Guru", note: "An AI mentor that reads your live data, not a generic chatbot." },
+  { title: "Mind check", note: "Twenty-second mood check-ins — burnout shows up here first." },
 ];
 
 export default async function LandingPage() {
   const session = await getSession();
-  const prelims = examCountdown(process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30");
-  const mains = examCountdown(process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30");
   const entryHref = session ? "/dashboard" : "/sign-in";
-  const readiness = 72;
+  const prelimsDate = process.env.PRELIMS_DATE ?? "2027-05-23T00:00:00+05:30";
+  const mainsDate = process.env.MAINS_DATE ?? "2027-08-20T00:00:00+05:30";
+  const now = Date.now();
 
   return (
-    <NovaStage className="nv-root nv-landing">
-      <div className="nv-aurora" aria-hidden="true">
-        <span className="nv-aurora-a" />
-        <span className="nv-aurora-b" />
-        <span className="nv-aurora-c" />
-        <i className="nv-gridlines" />
-      </div>
-
-      <header className="nv-lnav">
-        <Link href="/" className="v2-brand nv-lnav-brand">
+    <div className="ld3">
+      <header className="ld3-nav">
+        <Link href="/" className="su-brand su-glass" aria-label="Sacred Attempt">
           <SacredLogoMark size="sm" />
-          <span>
-            <span className="v2-brand-title">Sacred Attempt</span>
-            <span className="v2-brand-sub">UPSC CSE 2027</span>
+          <span className="su-brand-copy">
+            <span className="su-brand-title">Sacred Attempt</span>
+            <span className="su-brand-sub">CSE · 2027</span>
           </span>
         </Link>
-        <nav className="nv-lnav-links" aria-label="Sections">
-          <a href="#loop">Method</a>
-          <a href="#features">Features</a>
+        <nav className="ld3-links su-glass" aria-label="Sections">
+          <a href="#method">Method</a>
+          <a href="#inside">Inside</a>
           <a href="#horizon">Horizon</a>
+          <ThemeToggle className="ld3-theme" />
+          <Link href={entryHref} className="ld3-enter">
+            {session ? "Open" : "Sign in"} <ArrowRight size={14} />
+          </Link>
         </nav>
-        <Link href={entryHref} className="nv-btn nv-btn-glass nv-btn-sm">
-          {session ? "Dashboard" : "Sign in"}
-          <ArrowRight size={14} />
-        </Link>
       </header>
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="nv-lhero">
-        <div className="nv-lhero-copy">
-          <div className="nv-pill nv-rise" style={{ "--d": 0 } as CSSProperties}>
-            <span className="nv-live-dot" />
-            Private workspace for UPSC CSE 2027
-          </div>
-          <h1 className="nv-display nv-rise" style={{ "--d": 1 } as CSSProperties}>
-            Prepare with evidence.
-            <br />
-            <span className="nv-gradient-text">Execute with clarity.</span>
-          </h1>
-          <p className="nv-lead nv-rise" style={{ "--d": 2 } as CSSProperties}>
-            One calm command room for syllabus mastery, daily discipline, tests, revision, wellbeing and AI
-            guidance — designed around the attempt that matters.
-          </p>
-          <div className="nv-lhero-actions nv-rise" style={{ "--d": 3 } as CSSProperties}>
-            <Link href={entryHref} className="nv-btn nv-btn-primary nv-btn-lg">
-              {session ? "Open your workspace" : "Start your workspace"}
-              <ArrowRight size={17} />
-            </Link>
-            <a href="#loop" className="nv-btn nv-btn-ghost nv-btn-lg">
-              See how it works
-            </a>
-          </div>
-          <ul className="nv-proof nv-rise" style={{ "--d": 4 } as CSSProperties}>
-            <li><Check size={14} /> Real data only</li>
-            <li><Check size={14} /> No vanity scores</li>
-            <li><Check size={14} /> Works on every device</li>
-          </ul>
-        </div>
-
-        <div className="nv-lhero-visual nv-rise" style={{ "--d": 2 } as CSSProperties} aria-label="Workspace preview">
-          <div className="nv-device">
-            <div className="nv-device-card nv-glass nv-border-flow">
-              <div className="nv-device-bar">
-                <span className="nv-dots"><i /><i /><i /></span>
-                <span>Today&apos;s command</span>
-                <span className="nv-chip nv-chip-live"><span className="nv-live-dot" /> Live</span>
-              </div>
-              <div className="nv-device-main">
-                <div className="nv-device-copy">
-                  <small>Primary focus</small>
-                  <strong>Build the next honest day.</strong>
-                  <p>Every plan, test and revision updates one connected preparation record.</p>
-                </div>
-                <div className="nv-ring" style={{ "--p": readiness } as CSSProperties}>
-                  <svg viewBox="0 0 120 120" aria-hidden="true">
-                    <circle className="nv-ring-track" cx="60" cy="60" r="52" />
-                    <circle className="nv-ring-fill" cx="60" cy="60" r="52" pathLength="100" />
-                  </svg>
-                  <div className="nv-ring-core">
-                    <CountUp value={readiness} className="nv-ring-num" />
-                    <span>readiness</span>
-                  </div>
-                </div>
-              </div>
-              <div className="nv-device-bars">
-                {[
-                  { label: "Discipline", value: 84, tone: "gold" },
-                  { label: "Completion", value: 76, tone: "blue" },
-                  { label: "Focus", value: 68, tone: "green" },
-                ].map((bar) => (
-                  <div key={bar.label} className={`nv-meter tone-${bar.tone}`}>
-                    <div className="nv-meter-head">
-                      <span>{bar.label}</span>
-                      <strong>{bar.value}%</strong>
-                    </div>
-                    <div className="nv-meter-track"><span style={{ "--w": `${bar.value}%` } as CSSProperties} /></div>
-                  </div>
-                ))}
-              </div>
-              <div className="nv-device-spark" aria-hidden="true">
-                {[38, 52, 44, 66, 58, 74, 62, 80, 72, 88, 76, 92].map((h, i) => (
-                  <span key={i} style={{ "--h": `${h}%`, "--i": i } as CSSProperties} />
-                ))}
-              </div>
-            </div>
-
-            <div className="nv-float nv-float-a nv-glass">
-              <span className="nv-float-ico tone-saffron"><Flame size={16} /></span>
-              <span><strong>5 day</strong><small>8h streak</small></span>
-            </div>
-            <div className="nv-float nv-float-b nv-glass">
-              <span className="nv-float-ico tone-blue"><CalendarClock size={16} /></span>
-              <span><strong>{prelims.days} days</strong><small>to Prelims</small></span>
-            </div>
-            <div className="nv-float nv-float-c nv-glass">
-              <span className="nv-float-ico tone-violet"><Sparkles size={16} /></span>
-              <span><strong>Guru</strong><small>revise Polity today</small></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Paper marquee ────────────────────────────────────── */}
-      <div className="nv-marquee" aria-label="Supported papers">
-        <div className="nv-marquee-track">
-          {[...papers, ...papers].map((paper, i) => (
-            <span key={`${paper}-${i}`} aria-hidden={i >= papers.length}>
-              <i /> {paper}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Loop ─────────────────────────────────────────────── */}
-      <section className="nv-lsection" id="loop">
-        <div className="nv-lhead" data-nv="">
-          <span className="nv-kicker">The preparation loop</span>
-          <h2 className="nv-h2">A calmer way to stay accountable.</h2>
-          <p>Clarity comes from connecting today&apos;s work with the larger attempt.</p>
-        </div>
-        <div className="nv-loop">
-          <div className="nv-loop-line" aria-hidden="true"><span /></div>
-          {loop.map((step, i) => (
-            <article key={step.title} className="nv-loop-step nv-glass nv-spot" data-nv="" style={{ "--nv-i": i } as CSSProperties}>
-              <span className="nv-loop-num">0{i + 1}</span>
-              <span className="nv-icon-tile"><step.icon size={20} /></span>
-              <h3>{step.title}</h3>
-              <p>{step.desc}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Bento features ───────────────────────────────────── */}
-      <section className="nv-lsection" id="features">
-        <div className="nv-lhead" data-nv="">
-          <span className="nv-kicker">Connected by design</span>
-          <h2 className="nv-h2">Everything important. Nothing noisy.</h2>
-        </div>
-        <div className="nv-bento">
-          {features.map((item, i) => (
-            <article
-              key={item.title}
-              className={`nv-bento-card nv-glass nv-spot tone-${item.tone} ${item.size === "wide" ? "is-wide" : ""}`}
-              data-nv=""
-              style={{ "--nv-i": i } as CSSProperties}
-            >
-              <span className="nv-icon-tile"><item.icon size={19} /></span>
-              <h3>{item.title}</h3>
-              <p>{item.desc}</p>
-              <ArrowUpRight className="nv-bento-arrow" size={18} aria-hidden="true" />
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Horizon ──────────────────────────────────────────── */}
-      <section className="nv-lsection" id="horizon">
-        <div className="nv-horizon nv-glass" data-nv="">
-          <div className="nv-horizon-copy">
-            <span className="nv-kicker">Exam horizon</span>
-            <h2 className="nv-h2">The clock is honest. So is the record.</h2>
-            <p>Every day logged moves these numbers from pressure into a plan.</p>
-          </div>
-          <div className="nv-horizon-grid">
-            <div className="nv-horizon-cell tone-gold">
-              <span>Prelims 2027</span>
-              <CountUp value={prelims.days} className="nv-horizon-num" />
-              <small>days remaining</small>
-            </div>
-            <div className="nv-horizon-cell tone-blue">
-              <span>Mains 2027</span>
-              <CountUp value={mains.days} className="nv-horizon-num" />
-              <small>days remaining</small>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Final CTA ────────────────────────────────────────── */}
-      <section className="nv-lsection">
-        <div className="nv-final nv-glass nv-border-flow" data-nv="">
-          <div className="nv-final-mark">
-            <span className="nv-final-halo" aria-hidden="true" />
+      <section className="ld3-hero">
+        <div className="ld3-wheel" aria-hidden="true">
+          <Chakra size={900} />
+          <div className="ld3-lens su-glass">
             <SacredLogoMark size="lg" />
           </div>
-          <div className="nv-final-copy">
-            <span className="nv-kicker">Sacred Attempt</span>
-            <h2 className="nv-h2">Build the preparation you can trust.</h2>
-            <p><ShieldCheck size={15} /> Private, single-user and synced across laptop, tablet and phone.</p>
+        </div>
+        <div className="ld3-hero-copy">
+          <span className="ld3-kicker">
+            <span className="su-live">Private workspace</span>
+            <span className="su-deva">सत्यमेव जयते</span>
+          </span>
+          <h1 className="ld3-title">
+            <span className="su-line"><span style={{ "--l": 0 } as CSSProperties}>One attempt.</span></span>
+            <span className="su-line"><span style={{ "--l": 1 } as CSSProperties}><em>Done properly.</em></span></span>
+          </h1>
+          <p className="ld3-lede">
+            A quiet command room for UPSC CSE 2027 — syllabus, daily discipline, tests, revision and an honest estimate of
+            your selection odds, all computed from what you actually log.
+          </p>
+          <div className="ld3-cta">
+            <Link href={entryHref} className="su-btn su-btn-ink ld3-big">
+              {session ? "Open your workspace" : "Enter the workspace"} <ArrowRight size={17} />
+            </Link>
+            <a href="#method" className="su-btn su-btn-ghost ld3-big">How it works</a>
           </div>
-          <Link href={entryHref} className="nv-btn nv-btn-primary nv-btn-lg">
-            {session ? "Go to dashboard" : "Begin the attempt"}
-            <ArrowRight size={17} />
-          </Link>
+        </div>
+        <div className="ld3-hero-foot">
+          <Countdown target={prelimsDate} label="Prelims" initialNow={now} />
+          <ul className="ld3-proof">
+            <li>Real data only</li>
+            <li>No vanity scores</li>
+            <li>Laptop · tablet · phone</li>
+          </ul>
         </div>
       </section>
 
-      <footer className="nv-lfoot">
+      <section className="ld3-sect" id="method">
+        <span className="ld3-label">01 — Method</span>
+        <ol className="ld3-method">
+          {METHOD.map((m, i) => (
+            <li key={m.word} className="su-reveal" style={{ "--i": i } as CSSProperties}>
+              <span className="ld3-n">0{i + 1}</span>
+              <strong>{m.word}</strong>
+              <p>{m.line}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="ld3-sect" id="inside">
+        <span className="ld3-label">02 — Inside</span>
+        <h2 className="ld3-h2">
+          Everything that matters.
+          <br />
+          <em>Nothing that doesn&apos;t.</em>
+        </h2>
+        <div className="ld3-inside">
+          {INSIDE.map((item, i) => (
+            <div key={item.title} className="ld3-item su-reveal" style={{ "--i": i } as CSSProperties}>
+              <span className="ld3-n">{String(i + 1).padStart(2, "0")}</span>
+              <strong>{item.title}</strong>
+              <p>{item.note}</p>
+            </div>
+          ))}
+        </div>
+        <p className="ld3-papers">
+          GS 1 · GS 2 · GS 3 · GS 4 · PSIR Optional · CSAT · Essay · Current Affairs · Ethics case studies · Answer writing
+        </p>
+      </section>
+
+      <section className="ld3-sect ld3-horizon" id="horizon">
+        <span className="ld3-label">03 — Horizon</span>
+        <h2 className="ld3-h2">
+          The clock is honest.
+          <br />
+          <em>So is the record.</em>
+        </h2>
+        <div className="ld3-clocks">
+          <Countdown target={prelimsDate} label="Prelims 2027" initialNow={now} />
+          <Countdown target={mainsDate} label="Mains 2027" initialNow={now} />
+        </div>
+      </section>
+
+      <section className="ld3-final">
+        <h2>Build the preparation you can trust.</h2>
+        <Link href={entryHref} className="su-btn su-btn-acc ld3-big">
+          {session ? "Go to overview" : "Begin the attempt"} <ArrowUpRight size={17} />
+        </Link>
+        <p>
+          <ShieldCheck size={15} /> Private, single-user, synced across every device.
+        </p>
+      </section>
+
+      <footer className="ld3-foot">
         <span>© {new Date().getFullYear()} Sacred Attempt</span>
         <span>Built for one attempt, done properly.</span>
       </footer>
-    </NovaStage>
+    </div>
   );
 }

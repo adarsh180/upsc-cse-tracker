@@ -1,13 +1,15 @@
 import { format, subDays } from "date-fns";
 
 import { ReportCardClient } from "@/components/ai/report-card-client";
-import { ProgressTrends, type CaTrendPoint, type WeeklyTrendPoint } from "@/components/charts/progress-trends";
+import type { CaTrendPoint, WeeklyTrendPoint } from "@/components/charts/progress-trends";
+import { MetricLine } from "@/components/su/metric-line";
 import { PageIntro } from "@/components/ui/sections";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { serializeReviewForClient } from "@/lib/report-card";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Report card · Sacred Attempt" };
 
 function safeJson<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
@@ -72,19 +74,55 @@ export default async function ReportCardPage() {
   ]);
 
   return (
-    <main className="page-shell editorial-page editorial-report-card">
+    <main className="page-shell editorial-page editorial-report-card su-page su-legacy pg-report">
       <PageIntro
         eyebrow="Report Card"
-        title="Your mentor's verdict, on the record."
+        title="The verdict"
         description="Weekly and monthly report cards: the numbers, the honest read on how you logged them, and a UPSC-style viva drawn only from what you claimed to study."
         glyph="essay"
       />
-      <section className="db-section">
-        <div className="db-section-title">Progress at a glance</div>
-        <ProgressTrends weekly={weeklyTrend} caDaily={caTrend} />
+      <section className="su-sect">
+        <div className="su-sect-head">
+          <span className="su-idx">01</span>
+          <h2>Week over week</h2>
+          <p>Hours, honesty and viva accuracy from each weekly card. Integrity is how consistent your logs are with the work they claim.</p>
+        </div>
+        <MetricLine
+          series={weeklyTrend.map((w) => ({
+            x: w.label,
+            values: { hours: w.hours, integrity: w.integrity, viva: w.vivaAccuracy, discipline: w.discipline },
+          }))}
+          emptyText="Your first weekly card appears after Sunday."
+          metrics={[
+            { key: "hours", label: "Hours", suffix: "h", decimals: 1 },
+            { key: "integrity", label: "Integrity", max: 100, tone: "good", decimals: 0 },
+            { key: "viva", label: "Viva accuracy", suffix: "%", max: 100, tone: "warn", decimals: 0 },
+            { key: "discipline", label: "Discipline", max: 100, tone: "ink", decimals: 0 },
+          ]}
+        />
       </section>
 
-      <section className="db-section">
+      {caTrend.length ? (
+        <section className="su-sect">
+          <div className="su-sect-head">
+            <span className="su-idx">02</span>
+            <h2>Current-affairs quiz</h2>
+            <p>Daily digest self-check accuracy over the last 30 days.</p>
+          </div>
+          <MetricLine
+            series={caTrend.map((c) => ({ x: c.label, sub: `${c.attempted} answered`, values: { acc: c.accuracyPct } }))}
+            height={220}
+            metrics={[{ key: "acc", label: "Accuracy", suffix: "%", max: 100, tone: "good", decimals: 0 }]}
+          />
+        </section>
+      ) : null}
+
+      <section className="su-sect rc-cards">
+        <div className="su-sect-head">
+          <span className="su-idx">{caTrend.length ? "03" : "02"}</span>
+          <h2>The cards</h2>
+          <p>Each verdict, its numbers and the viva — open any week or month.</p>
+        </div>
         <ReportCardClient
           initialWeekly={weekly.map((review) => serializeReviewForClient(review, review.weekStart, "weekly")) as never}
           initialMonthly={monthly.map((review) => serializeReviewForClient(review, review.monthStart, "monthly")) as never}

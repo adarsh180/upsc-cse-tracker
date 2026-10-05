@@ -8,11 +8,11 @@ export default async function TodoPage() {
   const snapshot = await getTodoBoardSnapshot();
 
   return (
-    <main className="page-shell editorial-page editorial-todo">
+    <main className="page-shell editorial-page editorial-todo su-page su-legacy pg-todo">
       <PageIntro
         eyebrow="Todo Workspace"
-        title="Execution Board"
-        description="Manual tasks and mission tasks share one clean board with immediate state changes."
+        title="Execution board"
+        description="Your own tasks and the ones Mission Control sends share one board. Every change saves immediately."
         glyph="goals"
         actions={
           <>

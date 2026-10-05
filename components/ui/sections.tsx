@@ -5,13 +5,31 @@ import { MotionGlyph, type MotionGlyphName } from "@/components/ui/animated-icon
 import { StudySubjectIcon } from "@/components/ui/study-subject-icon";
 import { cn } from "@/lib/utils";
 
+// Devanagari marginalia for page heads — a quiet signature, not decoration.
+const DEVA: Array<[RegExp, string]> = [
+  [/test|error/i, "परीक्षा"],
+  [/performance|analytic/i, "विश्लेषण"],
+  [/mood/i, "मनोदशा"],
+  [/todo/i, "कार्य"],
+  [/mission/i, "अभियान"],
+  [/simulat/i, "अभ्यास"],
+  [/current/i, "समसामयिकी"],
+  [/report/i, "प्रतिवेदन"],
+  [/essay/i, "निबंध"],
+  [/rank/i, "श्रेणी"],
+  [/guru|ai/i, "गुरु"],
+];
+
+/**
+ * Page head (Sutra): a mono kicker line, a very large title whose lines rise
+ * in from a mask, a short lede, and actions. Titles should be short — two to
+ * four words — with the explanation in the description.
+ */
 export function PageIntro({
   eyebrow,
   title,
   description,
   actions,
-  glyph = "dashboard",
-  icon,
 }: {
   eyebrow: string;
   title: string;
@@ -20,18 +38,32 @@ export function PageIntro({
   glyph?: MotionGlyphName;
   icon?: React.ReactNode;
 }) {
+  const deva = DEVA.find(([re]) => re.test(eyebrow))?.[1];
+  const words = title.trim().split(/\s+/);
+  // Two balanced lines when the title is long enough to need them.
+  const lines =
+    words.length >= 3
+      ? [words.slice(0, Math.ceil(words.length / 2)).join(" "), words.slice(Math.ceil(words.length / 2)).join(" ")]
+      : [title];
   return (
-    <section className="pi2">
-      <div className="pi2-copy">
-        <div className="pi2-kicker">
-          <span className="pi2-glyph">{icon ?? <MotionGlyph name={glyph} size={26} />}</span>
-          <span className="eyebrow">{eyebrow}</span>
-        </div>
-        <h1 className="pi2-title">{title}</h1>
-        <p className="pi2-description">{description}</p>
+    <header className="su-head su-intro">
+      <div className="su-head-line">
+        <span>{eyebrow}</span>
+        {deva ? <span className="su-deva">{deva}</span> : null}
+        <span className="su-live">Live</span>
       </div>
-      {actions ? <div className="pi2-actions">{actions}</div> : null}
-    </section>
+      <h1 className="su-title su-title-sm">
+        {lines.map((line, i) => (
+          <span className="su-line" key={i}>
+            <span style={{ "--l": i } as React.CSSProperties}>{i === lines.length - 1 ? <>{line.replace(/[.]$/, "")}<em>.</em></> : line}</span>
+          </span>
+        ))}
+      </h1>
+      <div className="su-head-foot">
+        <p className="su-lede">{description}</p>
+        {actions ? <div className="su-head-tools pi2-actions">{actions}</div> : null}
+      </div>
+    </header>
   );
 }
 
