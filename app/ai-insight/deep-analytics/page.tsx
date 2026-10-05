@@ -122,7 +122,7 @@ export default async function DeepAnalyticsPage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Weekly rhythm</h2>
           <p>Average hours by weekday. Plan the heavy subjects for the days you reliably show up.</p>
         </div>
@@ -139,7 +139,7 @@ export default async function DeepAnalyticsPage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">02</span>
+          <span className="su-idx">२</span>
           <h2>Month by month</h2>
           <p>Total hours per month, with the average per logged day beneath.</p>
         </div>
@@ -157,7 +157,7 @@ export default async function DeepAnalyticsPage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">03</span>
+          <span className="su-idx">३</span>
           <h2>How your days are distributed</h2>
           <p>How many logged days fell in each band. A healthy prep leans right of 8h, with few days below 4h.</p>
         </div>
@@ -174,7 +174,7 @@ export default async function DeepAnalyticsPage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">04</span>
+          <span className="su-idx">४</span>
           <h2>What moves together</h2>
           <p>Each dot is a day with both scores logged. A tight diagonal means discipline and completion rise together.</p>
         </div>

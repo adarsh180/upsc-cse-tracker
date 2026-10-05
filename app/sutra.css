@@ -12,23 +12,23 @@
 
 /* ── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --su-bg: #09090a;
-  --su-bg-2: #101012;
-  --su-ink: #f2efe9;
-  --su-ink-2: #b8b3aa;
-  --su-ink-3: #7c776f;
-  --su-ink-4: #57534d;
-  --su-line: rgba(255, 248, 235, 0.085);
-  --su-line-2: rgba(255, 248, 235, 0.15);
-  --su-well: rgba(255, 248, 235, 0.032);
-  --su-well-2: rgba(255, 248, 235, 0.055);
+  --su-bg: #070a12;
+  --su-bg-2: #0c1120;
+  --su-ink: #eef1f7;
+  --su-ink-2: #b2bacb;
+  --su-ink-3: #7a8398;
+  --su-ink-4: #4f586d;
+  --su-line: rgba(196, 210, 255, 0.09);
+  --su-line-2: rgba(196, 210, 255, 0.16);
+  --su-well: rgba(196, 210, 255, 0.035);
+  --su-well-2: rgba(196, 210, 255, 0.06);
   --su-acc: var(--nv-a1);
   --su-acc-2: var(--nv-a2);
   --su-on-acc: #121006;
   --su-good: #6fd6a0;
   --su-warn: #f2a65a;
   --su-bad: #f27b8e;
-  --su-glass-bg: rgba(26, 26, 29, 0.58);
+  --su-glass-bg: rgba(14, 19, 34, 0.6);
   --su-glass-rim: rgba(255, 255, 255, 0.5);
   --su-glass-shadow:
     0 14px 34px -14px rgba(0, 0, 0, 0.75),
@@ -51,7 +51,7 @@
   --nv-faint: var(--su-ink-3);
   --nv-line: var(--su-line);
   --nv-surface: rgba(255, 248, 235, 0.035);
-  --nv-surface-solid: #141416;
+  --nv-surface-solid: #0f1424;
   --nv-surface-hi: rgba(255, 248, 235, 0.06);
   --nv-green: var(--su-good);
   --nv-rose: var(--su-bad);
@@ -64,8 +64,8 @@
   --bg-void: var(--su-bg);
   --bg-deep: var(--su-bg);
   --bg-base: var(--su-bg);
-  --bg-surface: #121214;
-  --bg-raised: #18181b;
+  --bg-surface: #0e1322;
+  --bg-raised: #141a2c;
   --glass-border: var(--su-line);
   --glass-border-mid: var(--su-line-2);
   --text: var(--su-ink);
@@ -81,16 +81,16 @@
 }
 
 html[data-theme="light"] {
-  --su-bg: #f3f1ec;
-  --su-bg-2: #ebe8e1;
-  --su-ink: #121212;
-  --su-ink-2: #4d4a45;
-  --su-ink-3: #7f7a72;
-  --su-ink-4: #a7a299;
-  --su-line: rgba(28, 24, 18, 0.1);
-  --su-line-2: rgba(28, 24, 18, 0.18);
-  --su-well: rgba(28, 24, 18, 0.035);
-  --su-well-2: rgba(28, 24, 18, 0.06);
+  --su-bg: #f3f5f9;
+  --su-bg-2: #e8ecf3;
+  --su-ink: #0d1324;
+  --su-ink-2: #3f4860;
+  --su-ink-3: #6d7690;
+  --su-ink-4: #a0a8bc;
+  --su-line: rgba(13, 25, 60, 0.1);
+  --su-line-2: rgba(13, 25, 60, 0.18);
+  --su-well: rgba(13, 25, 60, 0.035);
+  --su-well-2: rgba(13, 25, 60, 0.06);
   --su-on-acc: #ffffff;
   --su-good: #1d8a55;
   --su-warn: #b35d0d;
@@ -110,7 +110,7 @@ html[data-theme="light"] {
   --nv-faint: var(--su-ink-3);
   --nv-line: var(--su-line);
   --nv-surface: rgba(255, 255, 255, 0.55);
-  --nv-surface-solid: #fbfaf7;
+  --nv-surface-solid: #ffffff;
   --nv-surface-hi: rgba(255, 255, 255, 0.8);
   --nv-green: var(--su-good);
   --nv-rose: var(--su-bad);
@@ -121,7 +121,7 @@ html[data-theme="light"] {
   --bg-void: var(--su-bg);
   --bg-deep: var(--su-bg);
   --bg-base: var(--su-bg);
-  --bg-surface: #fbfaf7;
+  --bg-surface: #ffffff;
   --bg-raised: #ffffff;
   --text: var(--su-ink);
   --text-secondary: var(--su-ink-2);
@@ -182,9 +182,7 @@ body::before, body::after { display: none !important; }
   position: relative;
   isolation: isolate;
   border-radius: 999px;
-  background: var(--su-glass-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.04);
-  backdrop-filter: blur(24px) saturate(190%) brightness(1.04);
+  background: transparent;
   box-shadow: var(--su-glass-shadow);
 }
 /* Lensed rim: bright where light hits (top-left), fading round the edge. */
@@ -204,16 +202,21 @@ body::before, body::after { display: none !important; }
   opacity: 0.55;
 }
 /* Specular sheen across the upper half. */
+/* The blur lives on a pseudo-layer, never on the element itself: a
+   backdrop-filter on the element would trap position:fixed popovers (search,
+   notifications) inside it. */
 .su-glass::after {
   content: "";
   position: absolute;
-  inset: 1px;
+  inset: 0;
   z-index: -1;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent 48%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent 48%), var(--su-glass-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(24px) saturate(190%) brightness(1.04);
 }
-html[data-theme="light"] .su-glass::after { background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 55%); }
+html[data-theme="light"] .su-glass::after { background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), transparent 55%), var(--su-glass-bg); }
 
 /* ── Chrome: three floating islands ─────────────────────────────────────── */
 .su-top {
@@ -536,66 +539,64 @@ html[data-theme="light"] .su-blob {
   from { opacity: 0; transform: translateY(10px); }
 }
 
-/* ── Loader: chakra + liquid, coloured by the live accent ───────────────── */
-.su-loader {
+/* ── Loader + splash: the official seal ─────────────────────────────────── */
+.su-loader { display: grid; place-items: center; align-content: center; gap: 26px; min-height: 62vh; }
+.su-seal { position: relative; display: grid; place-items: center; width: var(--seal, 168px); height: var(--seal, 168px); flex: none; }
+.su-seal-ring { position: absolute; inset: 0; width: 100%; max-width: none; height: 100%; overflow: visible; }
+.su-seal-track { fill: none; stroke: var(--su-line-2); stroke-width: 1.2; }
+.su-seal-arc {
+  fill: none;
+  stroke: var(--su-acc);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 18 100;
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--su-acc) 70%, transparent));
+  animation: su-seal-arc 1.8s cubic-bezier(0.55, 0, 0.3, 1) infinite;
+}
+@keyframes su-seal-arc {
+  0% { stroke-dasharray: 3 100; transform: rotate(-90deg); }
+  50% { stroke-dasharray: 55 100; transform: rotate(80deg); }
+  100% { stroke-dasharray: 3 100; transform: rotate(270deg); }
+}
+.su-seal-inner { fill: color-mix(in srgb, var(--su-acc) 6%, transparent); stroke: color-mix(in srgb, var(--su-acc) 30%, transparent); stroke-width: 1; }
+.su-seal-text { transform-box: view-box; transform-origin: 100px 100px; animation: nv-turn 24s linear infinite; }
+.su-seal-text text { fill: var(--su-ink-2); font: 600 9.5px/1 var(--font-mono), monospace; text-transform: uppercase; }
+.su-seal-core {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: 22px;
-  min-height: 62vh;
-  color: var(--su-acc);
-}
-.su-loader-orb {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 112px;
+  width: 54%;
   aspect-ratio: 1;
-}
-.su-loader-orb .nv-chakra {
-  position: absolute;
-  inset: -34%;
-  width: 168%;
-  max-width: none;
-  height: auto;
-  opacity: 0.42;
-  color: var(--su-acc);
-  -webkit-mask-image: radial-gradient(closest-side, transparent 58%, #000 66%, #000 88%, transparent 100%);
-  mask-image: radial-gradient(closest-side, transparent 58%, #000 66%, #000 88%, transparent 100%);
-  animation: nv-turn 6s linear infinite;
-}
-.su-loader-bowl {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: hidden;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 42%, transparent 55%, color-mix(in srgb, var(--su-ink) 8%, transparent));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--su-ink) 12%, transparent), 0 0 40px -10px color-mix(in srgb, var(--su-acc) 50%, transparent);
+  isolation: isolate;
+  box-shadow: var(--su-glass-shadow), 0 0 0 1px color-mix(in srgb, var(--su-acc) 35%, transparent), 0 0 40px -8px color-mix(in srgb, var(--su-acc) 60%, transparent);
+  animation: su-stamp 1.8s cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
 }
-.su-loader-bowl svg { position: absolute; left: 0; width: 200%; max-width: none; height: 100%; }
-.su-loader-bowl .w1 { fill: color-mix(in srgb, var(--su-acc) 55%, transparent); animation: su-wave 2.4s linear infinite, su-tide 3.6s ease-in-out infinite alternate; }
-.su-loader-bowl .w2 { fill: color-mix(in srgb, var(--su-acc) 25%, transparent); animation: su-wave 3.6s linear infinite reverse, su-tide 3.6s ease-in-out -1.2s infinite alternate; }
-@keyframes su-wave { to { translate: -50% 0; } }
-@keyframes su-tide { from { top: 58%; } to { top: 34%; } }
-.su-loader-bowl::after {
+.su-seal-core::before {
   content: "";
   position: absolute;
-  inset: 12% 52% 56% 16%;
+  inset: 0;
+  z-index: -1;
   border-radius: 50%;
-  border-top: 2px solid rgba(255, 255, 255, 0.35);
-  transform: rotate(-30deg);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.16), transparent 55%), var(--su-glass-bg);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
 }
-.su-loader-text { color: var(--su-ink-3); font: 500 11px/1 var(--font-mono), monospace; letter-spacing: 0.22em; text-transform: uppercase; }
-.su-loader-text b {
-  font-weight: 500;
-  background: linear-gradient(90deg, var(--su-ink-3) 0%, var(--su-ink) 45%, var(--su-ink-3) 90%) 0 0 / 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: su-shimmer 1.8s linear infinite;
+.su-seal-core .nv-chakra {
+  position: static;
+  width: 78%;
+  height: auto;
+  max-width: none;
+  color: var(--su-acc);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--su-acc) 50%, transparent));
+  animation: nv-turn 9s linear infinite;
 }
-@keyframes su-shimmer { to { background-position: -200% 0; } }
+@keyframes su-stamp { 0%, 100% { transform: scale(1); } 14% { transform: scale(0.95); } 30% { transform: scale(1.025); } 44% { transform: scale(1); } }
+.su-loader-text { color: var(--su-ink-2); font: 500 14px/1 var(--font-body), sans-serif; }
 
 /* ── Page primitives ────────────────────────────────────────────────────── */
 .su-page {
@@ -887,35 +888,15 @@ html[data-theme="light"] .su-seg::before { background: #fff; box-shadow: 0 4px 1
   transition: opacity 0.6s var(--su-ease), filter 0.6s var(--su-ease);
 }
 .su-splash.leaving { opacity: 0; filter: blur(8px); pointer-events: none; }
-.su-splash-mark { position: relative; display: grid; place-items: center; width: 132px; aspect-ratio: 1; }
-.su-splash-mark .nv-chakra {
-  position: absolute;
-  inset: -60%;
-  width: 220%;
-  max-width: none;
-  height: auto;
-  color: var(--su-acc);
-  opacity: 0.5;
-  -webkit-mask-image: radial-gradient(closest-side, transparent 46%, #000 56%, #000 86%, transparent 100%);
-  mask-image: radial-gradient(closest-side, transparent 46%, #000 56%, #000 86%, transparent 100%);
-  animation: su-splash-turn 2.2s var(--su-ease) both, nv-turn 30s linear 2.2s infinite;
-}
+.su-splash .su-seal { animation: su-splash-in 0.9s var(--su-spring) 0.05s backwards; }
+@keyframes su-splash-in { from { opacity: 0; transform: scale(0.8) rotate(-30deg); } }
 @keyframes su-splash-turn { from { opacity: 0; transform: rotate(-90deg) scale(0.8); } }
-.su-splash-lens {
-  display: grid;
-  place-items: center;
-  width: 132px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  animation: su-splash-pop 0.9s var(--su-spring) 0.1s backwards;
-}
-.su-splash-lens img { width: 92px; height: 92px; object-fit: contain; }
 @keyframes su-splash-pop { from { opacity: 0; transform: scale(0.7); } }
 .su-splash-copy { display: grid; justify-items: center; gap: 10px; text-align: center; }
 .su-splash-copy span { color: var(--su-ink-3); font: 500 11px/1 var(--font-mono), monospace; letter-spacing: 0.2em; text-transform: uppercase; animation: su-rise 0.8s var(--su-ease) 0.35s backwards; }
 .su-splash-copy strong { font: 600 clamp(3rem, 12vw, 5.6rem)/0.9 var(--font-su-display), sans-serif; letter-spacing: -0.055em; animation: su-rise 0.9s var(--su-ease) 0.45s backwards; }
 @media (prefers-reduced-motion: reduce) {
-  .su-splash-mark .nv-chakra, .su-splash-lens, .su-splash-copy span, .su-splash-copy strong { animation: none; }
+  .su-splash .su-seal, .su-splash-copy span, .su-splash-copy strong, .su-seal-arc, .su-seal-text, .su-seal-core, .su-seal-core .nv-chakra { animation: none; }
 }
 
 /* ── Rolling figures ────────────────────────────────────────────────────── */
@@ -925,3 +906,7 @@ html[data-theme="light"] .su-seg::before { background: #fff; box-shadow: 0 4px 1
 .su-roll-fix { line-height: 1; }
 .su-roll-suffix { line-height: 1; }
 @media (prefers-reduced-motion: reduce) { .su-roll-digit > span { transition: none; } }
+
+/* Peacock replaces terracotta in the minute rotation (too close to a familiar brand orange). */
+html:not([data-theme="light"])[data-palette="peacock"] { --nv-a1: #3fb6d6; --nv-a2: #6f8cff; --nv-a3: #2fd3a6; }
+html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3550c4; --nv-a3: #0f8a6a; }

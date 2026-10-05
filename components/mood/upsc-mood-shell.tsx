@@ -330,7 +330,7 @@ export function UpscMoodShell({ initialEntries }: { initialEntries: MoodEntry[] 
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Thirty days</h2>
           <p>Each mark is a day you checked in, coloured by state. Tap one to open it above.</p>
         </div>
@@ -374,7 +374,7 @@ export function UpscMoodShell({ initialEntries }: { initialEntries: MoodEntry[] 
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">02</span>
+          <span className="su-idx">२</span>
           <h2>Signals</h2>
           <p>Switch between the five signals; scrub to read a check-in.</p>
         </div>
@@ -394,7 +394,7 @@ export function UpscMoodShell({ initialEntries }: { initialEntries: MoodEntry[] 
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">03</span>
+          <span className="su-idx">३</span>
           <h2>Ledger</h2>
         </div>
         <div className="md-ledger">

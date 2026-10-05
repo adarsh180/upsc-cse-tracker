@@ -1132,3 +1132,53 @@ html[data-theme] .su-legacy .button-secondary {
 
 /* Todo: stack the intro on tablets and phones (the 320px minimum squeezed it). */
 @media (max-width: 960px) { .pg-todo .todo-hero-layout { grid-template-columns: minmax(0, 1fr) !important; } }
+
+/* ══ Identity pass — Indian, not generic ════════════════════════════════════
+   · labels are plain sentence case in the body face (no letter-spaced mono caps)
+   · section numerals are Devanagari, set large in the live accent
+   · page titles carry a thin tricolour rule */
+:is(.su-head-line, .su-fig-label, .od-kicker, .ml-kicker, .cd-label, .od-gate-name, .od-proj dt, .ct-legend dt, .rk-stage, .od-evidence, .su-sheet-label, .su-brand-sub, .hr-legend, .tl-axis, .rk-sev, .jump-note, .ld3-kicker, .ld3-label, .ld3-proof, .ld3-papers, .ss-copy .su-fig-label, .db-today-bar span) {
+  font-family: var(--font-body), sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.su-head-line { font-size: 14px !important; color: var(--su-ink-2) !important; }
+.su-fig-label, .od-proj dt, .ct-legend dt, .cd-label, .od-gate-name { font-size: 13px !important; color: var(--su-ink-2) !important; }
+.od-kicker, .ml-kicker { font-size: 14px !important; color: var(--su-ink-2) !important; }
+.rk-stage { font-size: 12.5px !important; color: var(--su-ink-3) !important; }
+.rk-sev { font-size: 12.5px !important; font-weight: 600 !important; }
+.su-brand-sub { font-size: 11px !important; color: var(--su-ink-3) !important; }
+.su-sheet-label { font-size: 12.5px !important; }
+.ld3-label { font-size: 15px !important; color: var(--su-acc) !important; font-weight: 600 !important; }
+
+.su-idx {
+  align-self: center;
+  color: var(--su-acc) !important;
+  font: 600 clamp(1.8rem, 3vw, 2.6rem)/1 var(--font-devanagari), serif !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--su-acc) 35%, transparent);
+}
+
+.su-title::after {
+  content: "";
+  display: block;
+  width: 108px;
+  height: 4px;
+  margin-top: clamp(16px, 2vw, 24px);
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ff9933 0 33.3%, color-mix(in srgb, var(--su-ink) 85%, transparent) 33.3% 66.6%, #138808 66.6%);
+  box-shadow: 0 0 18px -4px rgba(255, 153, 51, 0.55);
+  transform-origin: left;
+  animation: su-tricolour 1.2s var(--su-ease) 0.5s backwards;
+}
+@keyframes su-tricolour { from { transform: scaleX(0); } }
+.ld3-title::after {
+  content: "";
+  display: block;
+  width: 140px;
+  height: 5px;
+  margin-top: 22px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #ff9933 0 33.3%, color-mix(in srgb, var(--su-ink) 85%, transparent) 33.3% 66.6%, #138808 66.6%);
+}

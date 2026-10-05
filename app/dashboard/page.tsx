@@ -153,7 +153,7 @@ export default async function DashboardPage() {
       {/* ── 01 Odds ────────────────────────────────────────────────── */}
       <section className="su-sect" id="odds">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Selection odds</h2>
           <p>Prelims × Mains × Interview, estimated from your tests, hours and syllabus — then pull the levers to see what changes them.</p>
         </div>
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
       {/* ── 02 Risk register ───────────────────────────────────────── */}
       <section className="su-sect" id="risks">
         <div className="su-sect-head">
-          <span className="su-idx">02</span>
+          <span className="su-idx">२</span>
           <h2>What could fail you</h2>
           <p>Ranked by how much they threaten the attempt. Each one is computed from your records and links to the fix.</p>
         </div>
@@ -205,7 +205,7 @@ export default async function DashboardPage() {
       {/* ── 03 Hours ───────────────────────────────────────────────── */}
       <section className="su-sect" id="hours">
         <div className="su-sect-head">
-          <span className="su-idx">03</span>
+          <span className="su-idx">३</span>
           <h2>Hours, day by day</h2>
           <p>Every logged day since you started. Scrub across to read a day; gaps are days with no log.</p>
         </div>
@@ -249,7 +249,7 @@ export default async function DashboardPage() {
       {/* ── 04 Syllabus ────────────────────────────────────────────── */}
       <section className="su-sect" id="syllabus">
         <div className="su-sect-head">
-          <span className="su-idx">04</span>
+          <span className="su-idx">४</span>
           <h2>Syllabus trajectory</h2>
           <p>Topics you&apos;ve ticked, where your current pace lands, and the pace that finishes the map before Mains.</p>
         </div>
@@ -286,7 +286,7 @@ export default async function DashboardPage() {
       {/* ── 05 Tests ───────────────────────────────────────────────── */}
       <section className="su-sect" id="tests">
         <div className="su-sect-head">
-          <span className="su-idx">05</span>
+          <span className="su-idx">५</span>
           <h2>Test lab</h2>
           <p>Score against cut-off for every test, with accuracy beside it. Hover a row for the breakdown.</p>
           <div className="su-sect-tools">
@@ -328,7 +328,7 @@ export default async function DashboardPage() {
       {/* ── 06 Briefings ───────────────────────────────────────────── */}
       <section className="su-sect" id="briefings">
         <div className="su-sect-head">
-          <span className="su-idx">06</span>
+          <span className="su-idx">६</span>
           <h2>Briefings &amp; links</h2>
         </div>
         <div className="db-brief-grid">

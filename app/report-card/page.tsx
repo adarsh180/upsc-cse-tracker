@@ -83,7 +83,7 @@ export default async function ReportCardPage() {
       />
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Week over week</h2>
           <p>Hours, honesty and viva accuracy from each weekly card. Integrity is how consistent your logs are with the work they claim.</p>
         </div>
@@ -105,7 +105,7 @@ export default async function ReportCardPage() {
       {caTrend.length ? (
         <section className="su-sect">
           <div className="su-sect-head">
-            <span className="su-idx">02</span>
+            <span className="su-idx">२</span>
             <h2>Current-affairs quiz</h2>
             <p>Daily digest self-check accuracy over the last 30 days.</p>
           </div>
@@ -119,7 +119,7 @@ export default async function ReportCardPage() {
 
       <section className="su-sect rc-cards">
         <div className="su-sect-head">
-          <span className="su-idx">{caTrend.length ? "03" : "02"}</span>
+          <span className="su-idx">{caTrend.length ? "३" : "२"}</span>
           <h2>The cards</h2>
           <p>Each verdict, its numbers and the viva — open any week or month.</p>
         </div>

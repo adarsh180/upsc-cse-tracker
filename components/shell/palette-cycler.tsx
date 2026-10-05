@@ -9,7 +9,7 @@ import { useEffect } from "react";
  * properties in app/nova.css; the pre-paint script in layout.tsx sets the
  * first palette before hydration so there is no flash.
  */
-export const PALETTES = ["brass", "saffron", "lotus", "banyan", "monsoon", "terracotta"] as const;
+export const PALETTES = ["brass", "saffron", "lotus", "banyan", "monsoon", "peacock"] as const;
 
 export function paletteForNow(now = Date.now()) {
   return PALETTES[Math.floor(now / 60000) % PALETTES.length];

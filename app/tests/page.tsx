@@ -183,7 +183,7 @@ export default async function TestsPage() {
 
       <section className="su-sect" id="trends">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Trend</h2>
           <p>One instrument for every signal. Switch the metric, scrub across to read any test.</p>
         </div>
@@ -202,7 +202,7 @@ export default async function TestsPage() {
 
       <section className="su-sect" id="every-test">
         <div className="su-sect-head">
-          <span className="su-idx">02</span>
+          <span className="su-idx">२</span>
           <h2>Every test, against its cut-off</h2>
           <p>The notch is the cut-off, the ring is you. Green stretch: cleared by. Red: short by. Hover for the breakdown.</p>
         </div>
@@ -211,7 +211,7 @@ export default async function TestsPage() {
 
       <section className="su-sect" id="lanes">
         <div className="su-sect-head">
-          <span className="su-idx">03</span>
+          <span className="su-idx">३</span>
           <h2>Lanes</h2>
           <p>Averages split by stage, format and subject — where you are strong, and where a lane is thin.</p>
         </div>
@@ -254,7 +254,7 @@ export default async function TestsPage() {
 
       <section className="su-sect" id="log">
         <div className="su-sect-head">
-          <span className="su-idx">04</span>
+          <span className="su-idx">४</span>
           <h2>Log a test · ledger</h2>
           <p>Capture a mock on the left; every record sits in the ledger on the right, editable.</p>
         </div>

@@ -78,7 +78,7 @@ export default async function PerformancePage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">01</span>
+          <span className="su-idx">१</span>
           <h2>Daily execution</h2>
           <p>Every logged day. Switch between hours, discipline and completion; scrub to read a day.</p>
         </div>
@@ -95,7 +95,7 @@ export default async function PerformancePage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">02</span>
+          <span className="su-idx">२</span>
           <h2>Scores</h2>
           <p>Score as a share of maximum marks, test by test.</p>
         </div>
@@ -104,7 +104,7 @@ export default async function PerformancePage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">03</span>
+          <span className="su-idx">३</span>
           <h2>Where the hours went</h2>
           <p>Study sessions by subject. Longer bar, more hours.</p>
         </div>
@@ -125,7 +125,7 @@ export default async function PerformancePage() {
 
       <section className="su-sect">
         <div className="su-sect-head">
-          <span className="su-idx">04</span>
+          <span className="su-idx">४</span>
           <h2>Mind</h2>
           <p>Focus and stress from your mood check-ins.</p>
         </div>

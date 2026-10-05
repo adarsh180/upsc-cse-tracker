@@ -98,7 +98,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t;var P=["brass","saffron","lotus","banyan","monsoon","terracotta"];d.dataset.palette=P[Math.floor(Date.now()/60000)%P.length]}catch(e){}',
+              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t;var P=["brass","saffron","lotus","banyan","monsoon","peacock"];d.dataset.palette=P[Math.floor(Date.now()/60000)%P.length]}catch(e){}',
           }}
         />
         <LaunchSplash />

@@ -21,7 +21,7 @@ export default async function RankPredictionPage() {
       {insights ? (
         <section className="su-sect">
           <div className="su-sect-head">
-            <span className="su-idx">01</span>
+            <span className="su-idx">१</span>
             <h2>Live model</h2>
             <p>Computed from your logs right now — no AI call. Pull the levers to test a routine.</p>
           </div>
@@ -31,7 +31,7 @@ export default async function RankPredictionPage() {
 
       <section className="su-sect rank-prediction-workspace">
         <div className="su-sect-head">
-          <span className="su-idx">{insights ? "02" : "01"}</span>
+          <span className="su-idx">{insights ? "२" : "१"}</span>
           <h2>AI projection</h2>
           <p>
             Layer 1 Prelims score vs cut-off and negative-marking risk · Layer 2 paper-wise Mains total · Layer 3 rank band,
