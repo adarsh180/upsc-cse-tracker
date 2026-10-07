@@ -23,9 +23,9 @@ export function ReadinessBoard({ readiness, syllabus }: { readiness: Readiness; 
   const activePart = readiness.parts.find((p) => p.key === active) ?? null;
 
   const rings = [
-    { key: "effective", label: "Effective coverage", value: syllabus.effective, note: "ticks blended with hours studied", r: 84 },
-    { key: "ticked", label: "Topics ticked", value: syllabus.ticked, note: `${syllabus.done.toLocaleString("en-IN")} of ${syllabus.leaves.toLocaleString("en-IN")}`, r: 68 },
-    { key: "revised", label: "Revised at least once", value: syllabus.revisedShare, note: `${syllabus.revised.toLocaleString("en-IN")} topics`, r: 52 },
+    { key: "effective", label: "Prelims syllabus", value: syllabus.prelimsEffective, note: `by GS Paper I question share · ${pct(syllabus.prelims, 1)}% by ticks`, r: 84 },
+    { key: "ticked", label: "Mains syllabus", value: syllabus.mainsEffective, note: `by the 1,750 written marks · ${pct(syllabus.mains, 1)}% by ticks`, r: 68 },
+    { key: "revised", label: "Revised at least once", value: syllabus.revisedWeighted, note: `${syllabus.revised.toLocaleString("en-IN")} topics, weighted by marks`, r: 52 },
   ];
 
   return (
@@ -53,7 +53,7 @@ export function ReadinessBoard({ readiness, syllabus }: { readiness: Readiness; 
               {pct(syllabus.effective)}
               <small>%</small>
             </strong>
-            <span>syllabus covered</span>
+            <span>of exam marks covered</span>
           </div>
           <figcaption>
             <span className="rd-cap-title">Syllabus completion</span>
@@ -68,7 +68,7 @@ export function ReadinessBoard({ readiness, syllabus }: { readiness: Readiness; 
               ))}
             </ul>
             <p className="rd-split">
-              Prelims GS 1–3 <b>{pct(syllabus.prelims, 1)}%</b> ticked · Mains papers <b>{pct(syllabus.mains, 1)}%</b>
+              <b>{syllabus.done.toLocaleString("en-IN")}</b> of {syllabus.leaves.toLocaleString("en-IN")} topics ticked · <b>{Math.round(syllabus.hours).toLocaleString("en-IN")}h</b> studied (ticks lag study, so hours count too)
             </p>
           </figcaption>
         </figure>
@@ -117,9 +117,7 @@ export function ReadinessBoard({ readiness, syllabus }: { readiness: Readiness; 
           </div>
           <figcaption>
             <span className="rd-cap-title">Exam readiness today</span>
-            <p className="rd-cap-note">
-              Where you stand now — not a forecast. Eight signals, each weighted by how much it decides the result.
-            </p>
+            <p className="rd-cap-note">Where you stand now — not a forecast. {readiness.basis}</p>
             <div className="rd-bands" aria-label={`Band: ${readiness.band}`}>
               {["Foundation", "Building", "Competitive", "Strong", "Exam-ready"].map((b) => (
                 <span key={b} className={b === readiness.band ? "is-on" : ""}>{b}</span>
@@ -144,6 +142,7 @@ export function ReadinessBoard({ readiness, syllabus }: { readiness: Readiness; 
                 <Link href={p.href} className="rd-row">
                   <span className="rd-name">
                     <b>{p.label}</b>
+                    <em className={`rd-stage is-${p.stage.toLowerCase()}`}>{p.stage}</em>
                     <small>{p.value}</small>
                   </span>
                   <span className="rd-bar" aria-hidden="true"><i /></span>

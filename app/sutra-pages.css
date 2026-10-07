@@ -1259,3 +1259,6 @@ html[data-theme] .su-legacy .button-secondary {
   .rd-go { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .rd-fill, .rd-bar i, .rd-ledger li { animation: none; } }
+.rd-stage { padding: 2px 7px; border-radius: 99px; color: var(--su-ink-3); font-size: 10.5px; font-style: normal; box-shadow: inset 0 0 0 1px var(--su-line-2); }
+.rd-stage.is-prelims { color: var(--su-acc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--su-acc) 40%, transparent); }
+.rd-stage.is-mains { color: var(--su-acc-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--su-acc-2) 40%, transparent); }

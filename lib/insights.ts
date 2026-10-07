@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { isRetryableDbError, withDbRetry } from "@/lib/db-retry";
 import { ensureSeeded } from "@/lib/seed";
-import { computeReadiness, effectiveCoverage, type Readiness, type SyllabusCompletion } from "@/lib/readiness";
+import { subjectWeights } from "@/lib/exam-weights";
+import { computeReadiness, effectiveCoverage, prelimsPhase, FULL_PASS_HOURS, type Readiness, type SyllabusCompletion } from "@/lib/readiness";
 import { observedLevers, type Levers, type ModelInputs } from "@/lib/selection-model";
 
 /**
@@ -215,6 +216,17 @@ export async function getInsights(): Promise<Insights | null> {
     const checkDates: number[] = [];
     let undated = 0;
     const papers: PaperCoverage[] = [];
+    // Per-subject tallies (children of each paper) for exam-marks weighting.
+    const tally = (id: string): { leaves: number; done: number; revised: number } => {
+      const kids = children.get(id) ?? [];
+      if (!kids.length) {
+        const tp = byId.get(id)?.topicProgress;
+        return { leaves: 1, done: tp?.checked ? 1 : 0, revised: (tp?.revisionCount ?? 0) > 0 ? 1 : 0 };
+      }
+      return kids.map(tally).reduce((a, b) => ({ leaves: a.leaves + b.leaves, done: a.done + b.done, revised: a.revised + b.revised }), { leaves: 0, done: 0, revised: 0 });
+    };
+    const subjectRows: Array<{ paper: string; title: string; leaves: number; done: number; revised: number }> = [];
+    for (const root of roots) for (const id of children.get(root.id) ?? []) subjectRows.push({ paper: root.slug, title: byId.get(id)?.title ?? "", ...tally(id) });
     for (const root of roots) {
       const queue = [...(children.get(root.id) ?? [])];
       let leaves = 0;
@@ -247,6 +259,23 @@ export async function getInsights(): Promise<Insights | null> {
     const prelimsDone = sumOf(PRELIMS_PAPERS, "done");
     const mainsLeaves = sumOf(MAINS_PAPERS, "leaves");
     const mainsDone = sumOf(MAINS_PAPERS, "done");
+    // Marks-weighted shares: each subject counts for what it carries in the
+    // exam (lib/exam-weights.ts), not for how many topics it was split into.
+    const weights = subjectWeights(subjectRows);
+    const weighted = (pick: "prelims" | "mains", of: "done" | "revised") => {
+      let num = 0;
+      let den = 0;
+      subjectRows.forEach((row, i) => {
+        const w = weights[i][pick];
+        if (!w || !row.leaves) return;
+        num += (w * row[of]) / row.leaves;
+        den += w;
+      });
+      return den ? num / den : 0;
+    };
+    const prelimsWeighted = weighted("prelims", "done");
+    const mainsWeighted = weighted("mains", "done");
+    const revisedWeighted = 0.5 * weighted("prelims", "revised") + 0.5 * weighted("mains", "revised");
 
     // Weekly cumulative ticks, from the first tick to today.
     checkDates.sort((a, b) => a - b);
@@ -333,9 +362,10 @@ export async function getInsights(): Promise<Insights | null> {
       daysToPrelims,
       daysToMains,
       prelimsLeaves,
-      prelimsDone,
+      // Weighted equivalents, so the odds model also counts topics by marks.
+      prelimsDone: Math.round(prelimsWeighted * prelimsLeaves),
       mainsLeaves,
-      mainsDone,
+      mainsDone: Math.round(mainsWeighted * mainsLeaves),
       hoursSoFar: totalHours,
       prelimsTestScore: wSum ? wScore / wSum : null,
       prelimsTestCount: prelimsTests.length,
@@ -483,21 +513,35 @@ export async function getInsights(): Promise<Insights | null> {
       });
     }
     /* ── Syllabus completion & readiness today ──────────────────────── */
+    const afterPrelims = daysToPrelims === 0 && daysToMains > 0;
+    const prelimsShare = afterPrelims ? 0.2 : 0.55 + 0.2 * prelimsPhase(daysToPrelims);
+    const prelimsEffective = effectiveCoverage(prelimsWeighted, totalHours);
+    const mainsEffective = effectiveCoverage(mainsWeighted, totalHours);
     const syllabus: SyllabusCompletion = {
       leaves,
       done,
       revised,
       ticked: tickShare,
       revisedShare: leaves ? revised / leaves : 0,
-      effective: effectiveCoverage(tickShare, totalHours),
       hours: totalHours,
-      prelims: prelimsLeaves ? prelimsDone / prelimsLeaves : 0,
-      mains: mainsLeaves ? mainsDone / mainsLeaves : 0,
+      hoursCover: Math.min(1, totalHours / FULL_PASS_HOURS),
+      prelims: prelimsWeighted,
+      mains: mainsWeighted,
+      prelimsEffective,
+      mainsEffective,
+      revisedWeighted,
+      effective: prelimsShare * prelimsEffective + (1 - prelimsShare) * mainsEffective,
+      prelimsShare,
     };
+    const mainsTests = tests.filter((t) => t.examStage === "MAINS" && t.totalMarks > 0);
     const loggedDays28 = Array.from({ length: 28 }, (_, d) => shiftKey(todayKey, -d)).filter((k) => (hoursByKey.get(k) ?? 0) > 0).length;
     const stress10 = moods.length ? avg(moods.slice(0, 10).map((m) => m.stress)) : null;
     const readiness = computeReadiness({
       syllabus,
+      daysToPrelims,
+      daysToMains,
+      csatScore: inputs.csatScore,
+      mainsTestScore: mainsTests.length ? avg(mainsTests.map((t) => t.score / t.totalMarks)) : null,
       avgRevisionPasses: avg(checkedRevisions),
       testScore: inputs.prelimsTestScore,
       testCount: list.length,

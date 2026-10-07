@@ -25,8 +25,9 @@ const LEVERS: Array<{
 
 const PRESETS: Array<{ id: string; label: string; levers: Omit<Levers, never> | null }> = [
   { id: "you", label: "Your pace", levers: null },
-  { id: "steady", label: "Steady", levers: { hoursPerDay: 8, topicsPerDay: 8, testsPerMonth: 4, accuracy: 0.8, revisionPasses: 1.5 } },
-  { id: "topper", label: "Topper routine", levers: { hoursPerDay: 10, topicsPerDay: 15, testsPerMonth: 8, accuracy: 0.86, revisionPasses: 3 } },
+  // Push-hard benchmarks: 12h a day for both, every other lever +20% (accuracy capped at the slider's 98%).
+  { id: "steady", label: "Steady", levers: { hoursPerDay: 12, topicsPerDay: 9.5, testsPerMonth: 5, accuracy: 0.96, revisionPasses: 2 } },
+  { id: "topper", label: "Topper routine", levers: { hoursPerDay: 12, topicsPerDay: 18, testsPerMonth: 10, accuracy: 0.98, revisionPasses: 3.5 } },
 ];
 
 const pct = (v: number, d = 1) => `${(v * 100).toFixed(d)}%`;

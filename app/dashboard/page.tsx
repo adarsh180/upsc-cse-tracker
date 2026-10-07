@@ -156,7 +156,7 @@ export default async function DashboardPage() {
         <div className="su-sect-head">
           <span className="su-idx">१</span>
           <h2>Where you stand</h2>
-          <p>How much of the syllabus is done, and how ready you are for the exam today — built from chapters, revision, tests, accuracy, writing, consistency and mood. Hover a part to see what it adds.</p>
+          <p>Coverage counted by exam marks — Prelims by each subject’s share of GS Paper I questions, Mains by the 1,750 written marks — and readiness for a top-service rank today, from coverage, tests, CSAT, writing, revision, consistency and mood. Hover a part to see what it adds.</p>
         </div>
         <ReadinessBoard readiness={insights.readiness} syllabus={insights.syllabus} />
       </section>
