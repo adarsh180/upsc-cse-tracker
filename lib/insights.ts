@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { isRetryableDbError, withDbRetry } from "@/lib/db-retry";
 import { ensureSeeded } from "@/lib/seed";
+import { computeReadiness, effectiveCoverage, type Readiness, type SyllabusCompletion } from "@/lib/readiness";
 import { observedLevers, type Levers, type ModelInputs } from "@/lib/selection-model";
 
 /**
@@ -84,6 +85,8 @@ export type Insights = {
     subjects: string[];
   };
   mood: { entries: number; focus: number | null; stress: number | null; confidence: number | null; latest: string | null };
+  syllabus: SyllabusCompletion;
+  readiness: Readiness;
   risks: Risk[];
   strengths: Strength[];
 };
@@ -479,6 +482,36 @@ export async function getInsights(): Promise<Insights | null> {
         href: "/mood",
       });
     }
+    /* ── Syllabus completion & readiness today ──────────────────────── */
+    const syllabus: SyllabusCompletion = {
+      leaves,
+      done,
+      revised,
+      ticked: tickShare,
+      revisedShare: leaves ? revised / leaves : 0,
+      effective: effectiveCoverage(tickShare, totalHours),
+      hours: totalHours,
+      prelims: prelimsLeaves ? prelimsDone / prelimsLeaves : 0,
+      mains: mainsLeaves ? mainsDone / mainsLeaves : 0,
+    };
+    const loggedDays28 = Array.from({ length: 28 }, (_, d) => shiftKey(todayKey, -d)).filter((k) => (hoursByKey.get(k) ?? 0) > 0).length;
+    const stress10 = moods.length ? avg(moods.slice(0, 10).map((m) => m.stress)) : null;
+    const readiness = computeReadiness({
+      syllabus,
+      avgRevisionPasses: avg(checkedRevisions),
+      testScore: inputs.prelimsTestScore,
+      testCount: list.length,
+      prelimsTests: prelimsTests.length,
+      tests30,
+      testedSubjects: subjects.size,
+      accuracy: inputs.observedAccuracy,
+      mainsEvidence: inputs.mainsEvidence,
+      hoursPerDay28: perCalendarDay28,
+      loggedDays28,
+      confidence,
+      stress: stress10,
+    });
+
     const order = { high: 0, medium: 1, low: 2 } as const;
     risks.sort((a, b) => order[a.severity] - order[b.severity]);
 
@@ -531,6 +564,8 @@ export async function getInsights(): Promise<Insights | null> {
         confidence: confidence === null ? null : confidence * 10,
         latest: moods[0]?.label ?? null,
       },
+      syllabus,
+      readiness,
       risks,
       strengths,
     };

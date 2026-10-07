@@ -9,6 +9,7 @@ import { CoverageTrajectory } from "@/components/dashboard/coverage-trajectory";
 import { Countdown } from "@/components/dashboard/countdown";
 import { HoursRiver } from "@/components/dashboard/hours-river";
 import { OddsEngine } from "@/components/dashboard/odds-engine";
+import { ReadinessBoard } from "@/components/dashboard/readiness-board";
 import { TestLab } from "@/components/dashboard/test-lab";
 import { requireSession } from "@/lib/auth";
 import { getTodayPlan } from "@/lib/day-plan";
@@ -150,20 +151,30 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      {/* ── 01 Odds ────────────────────────────────────────────────── */}
-      <section className="su-sect" id="odds">
+      {/* ── 01 Where you stand ─────────────────────────────────────── */}
+      <section className="su-sect" id="readiness">
         <div className="su-sect-head">
           <span className="su-idx">१</span>
+          <h2>Where you stand</h2>
+          <p>How much of the syllabus is done, and how ready you are for the exam today — built from chapters, revision, tests, accuracy, writing, consistency and mood. Hover a part to see what it adds.</p>
+        </div>
+        <ReadinessBoard readiness={insights.readiness} syllabus={insights.syllabus} />
+      </section>
+
+      {/* ── 02 Odds ────────────────────────────────────────────────── */}
+      <section className="su-sect" id="odds">
+        <div className="su-sect-head">
+          <span className="su-idx">२</span>
           <h2>Selection odds</h2>
           <p>Prelims × Mains × Interview, estimated from your tests, hours and syllabus — then pull the levers to see what changes them.</p>
         </div>
         <OddsEngine inputs={insights.model.inputs} observed={insights.model.observed} />
       </section>
 
-      {/* ── 02 Risk register ───────────────────────────────────────── */}
+      {/* ── 03 Risk register ───────────────────────────────────────── */}
       <section className="su-sect" id="risks">
         <div className="su-sect-head">
-          <span className="su-idx">२</span>
+          <span className="su-idx">३</span>
           <h2>What could fail you</h2>
           <p>Ranked by how much they threaten the attempt. Each one is computed from your records and links to the fix.</p>
         </div>
@@ -202,10 +213,10 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 03 Hours ───────────────────────────────────────────────── */}
+      {/* ── 04 Hours ───────────────────────────────────────────────── */}
       <section className="su-sect" id="hours">
         <div className="su-sect-head">
-          <span className="su-idx">३</span>
+          <span className="su-idx">४</span>
           <h2>Hours, day by day</h2>
           <p>Every logged day since you started. Scrub across to read a day; gaps are days with no log.</p>
         </div>
@@ -246,10 +257,10 @@ export default async function DashboardPage() {
         <HoursRiver series={hours.series} today={today} />
       </section>
 
-      {/* ── 04 Syllabus ────────────────────────────────────────────── */}
+      {/* ── 05 Syllabus ────────────────────────────────────────────── */}
       <section className="su-sect" id="syllabus">
         <div className="su-sect-head">
-          <span className="su-idx">४</span>
+          <span className="su-idx">५</span>
           <h2>Syllabus trajectory</h2>
           <p>Topics you&apos;ve ticked, where your current pace lands, and the pace that finishes the map before Mains.</p>
         </div>
@@ -283,10 +294,10 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 05 Tests ───────────────────────────────────────────────── */}
+      {/* ── 06 Tests ───────────────────────────────────────────────── */}
       <section className="su-sect" id="tests">
         <div className="su-sect-head">
-          <span className="su-idx">५</span>
+          <span className="su-idx">६</span>
           <h2>Test lab</h2>
           <p>Score against cut-off for every test, with accuracy beside it. Hover a row for the breakdown.</p>
           <div className="su-sect-tools">
@@ -325,10 +336,10 @@ export default async function DashboardPage() {
         <TestLab tests={tests.list} />
       </section>
 
-      {/* ── 06 Briefings ───────────────────────────────────────────── */}
+      {/* ── 07 Briefings ───────────────────────────────────────────── */}
       <section className="su-sect" id="briefings">
         <div className="su-sect-head">
-          <span className="su-idx">६</span>
+          <span className="su-idx">७</span>
           <h2>Briefings &amp; links</h2>
         </div>
         <div className="db-brief-grid">
