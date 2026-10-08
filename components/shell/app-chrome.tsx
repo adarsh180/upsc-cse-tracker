@@ -34,6 +34,7 @@ const desktopNav = [
   { href: "/performance", label: "Performance" },
   { href: "/ai-insight/guru", label: "Guru" },
   { href: "/report-card", label: "Report" },
+  { href: "/vault", label: "AI-ML" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -189,6 +190,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMoreOpen(false);
   }, [pathname]);
+
+  // The AI-ML vault is a separate arena with its own chrome.
+  if (pathname.startsWith("/vault")) return <>{children}</>;
 
   if (isPublicPage) {
     return (

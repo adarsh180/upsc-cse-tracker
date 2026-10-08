@@ -1,0 +1,1534 @@
+{
+  "source": "AI Engineering Field Manual — 2026 edition (50 pages, 13 stages, 48-week first pass)",
+  "cadence": {
+    "reading": 0.2,
+    "implementation": 0.55,
+    "adversarial": 0.15,
+    "review": 0.1
+  },
+  "weeklyHours": {
+    "min": 15,
+    "max": 20
+  },
+  "protocol": [
+    "Specify",
+    "Implement",
+    "Break",
+    "Measure",
+    "Improve",
+    "Release"
+  ],
+  "stages": [
+    {
+      "n": 1,
+      "title": "PYTHON + C++",
+      "subtitle": "Two languages; one engineering standard",
+      "weeks": [
+        1,
+        4
+      ],
+      "proof": "C++/Python parity benchmark",
+      "panel": "01 PROGRAMMING + SOFTWARE ENGINEERING",
+      "tags": [
+        "Machine model",
+        "Modern C++",
+        "Python runtime",
+        "Typed APIs",
+        "Benchmarks"
+      ],
+      "concepts": [
+        {
+          "title": "CPU + MEMORY",
+          "detail": "Stack vs heap, process address space, pointers/references, value vs identity, cache locality."
+        },
+        {
+          "title": "MODERN C++",
+          "detail": "RAII, vectors, spans, ownership, move semantics, templates, const, exceptions."
+        },
+        {
+          "title": "PYTHON CORE",
+          "detail": "Functions, iterators, exceptions, context managers, packaging, OOP and protocols."
+        },
+        {
+          "title": "TYPES",
+          "detail": "C++ compile-time checks; Python annotations plus mypy strict and runtime schema checks."
+        },
+        {
+          "title": "ASYNC I/O",
+          "detail": "Event loop, await suspension, cancellation, timeouts and bounded concurrency."
+        },
+        {
+          "title": "COMPLEXITY",
+          "detail": "Big-O is a bound; benchmark actual allocations, data sizes and hot paths."
+        },
+        {
+          "title": "DEBUGGING",
+          "detail": "GDB/lldb, sanitizers, tracemalloc, cProfile, tracebacks and logging context."
+        },
+        {
+          "title": "TESTING",
+          "detail": "pytest, hypothesis, GoogleTest/Catch2; deterministic fixtures and failure cases."
+        }
+      ],
+      "readiness": "Build an identical top-k scoring library in C++20 and typed Python, then compare behavior, memory and runtime on realistic vectors.",
+      "lab": {
+        "summary": "Build an identical top-k scoring library in C++20 and typed Python, then compare behavior, memory and runtime on realistic vectors.",
+        "components": [
+          "Input validation",
+          "Scoring kernel",
+          "Top-k selection",
+          "Property tests",
+          "Benchmark report"
+        ],
+        "milestones": [
+          "Define the same input contract in both languages: scores are finite floats, k is nonnegative, and ties are stable by original index.",
+          "Implement a reference Python sort and a C++ partial_sort/heap candidate. Record exact semantics of NaN rejection and empty arrays.",
+          "Expose a CLI accepting JSON and returning typed JSON; test error exit codes, malformed payloads and unicode file paths.",
+          "Benchmark for n=100, 10k, 1M and k=5/100. Measure allocations, wall time and p95 over repeated runs."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "0 correctness divergences",
+          "10k property cases",
+          "p95 + peak RSS reported"
+        ],
+        "failures": [
+          {
+            "title": "Overflow / nonfinite",
+            "detail": "NaN, infinity, oversized k, floating tie cases."
+          },
+          {
+            "title": "Ownership bugs",
+            "detail": "Dangling view or mutable shared state in C++."
+          },
+          {
+            "title": "Benchmark fraud",
+            "detail": "Compare algorithms with unequal semantics or include cold startup in one run."
+          },
+          {
+            "title": "Async misuse",
+            "detail": "CPU-bound loops blocking Python event loop; use process/native worker."
+          }
+        ],
+        "evidence": [
+          "For any finite input, outputs are unique in-range indices, and len(out)=min(k,n).",
+          "Compare C++ and Python outputs over 10k seeded random cases including ties and extremes.",
+          "ASan/UBSan clean; mypy --strict and ruff pass; benchmark warm-up documented."
+        ],
+        "adversarial": [
+          "Which data copies dominate peak RSS?",
+          "Why not use C++ for every service?",
+          "Which semantics must cross language boundaries?"
+        ],
+        "resources": [
+          "Python tutorial",
+          "LearnCpp",
+          "C++ reference",
+          "pytest docs"
+        ]
+      }
+    },
+    {
+      "n": 2,
+      "title": "CS + DEV ENGINEERING",
+      "subtitle": "Algorithms, OS, networks and reproducible delivery",
+      "weeks": [
+        5,
+        8
+      ],
+      "proof": "Idempotent worker queue",
+      "panel": "01 DEV ENGINEERING / GIT / LINUX / DOCKER",
+      "tags": [
+        "Git + Linux",
+        "DSA + OS",
+        "TCP + HTTP",
+        "CI + Docker",
+        "Load / faults"
+      ],
+      "concepts": [
+        {
+          "title": "DATA STRUCTURES",
+          "detail": "Arrays, maps, trees, heaps, bloom filters, priority queues; know complexity and memory shape."
+        },
+        {
+          "title": "OPERATING SYSTEMS",
+          "detail": "Processes, threads, file descriptors, memory mapping, signals and scheduling."
+        },
+        {
+          "title": "NETWORKING",
+          "detail": "DNS, TCP/TLS, HTTP/2, status codes, retries, idempotency and timeouts."
+        },
+        {
+          "title": "GIT",
+          "detail": "Small commits, bisect, rebasing, branch protection, reviewable diffs and release tags."
+        },
+        {
+          "title": "CONTAINERS",
+          "detail": "Images vs runtime, layer caching, build reproducibility, non-root users and health probes."
+        },
+        {
+          "title": "CONCURRENCY",
+          "detail": "Threads vs processes vs coroutines; queues, backpressure, race conditions and locks."
+        },
+        {
+          "title": "CI/CD",
+          "detail": "Format, lint, type-check, tests, SCA scan, container build and deployment gates."
+        },
+        {
+          "title": "OBSERVABILITY",
+          "detail": "Structured logs, trace IDs, basic metrics and measured service-level objectives."
+        }
+      ],
+      "readiness": "Create a small job execution service that accepts tasks, runs bounded workers and survives kill/restart without duplicate side effects.",
+      "lab": {
+        "summary": "Create a small job execution service that accepts tasks, runs bounded workers and survives kill/restart without duplicate side effects.",
+        "components": [
+          "Git commit",
+          "CI verification",
+          "Immutable image",
+          "Worker queue",
+          "Recovery drill"
+        ],
+        "milestones": [
+          "Use PostgreSQL job rows with unique idempotency keys and an explicit pending/running/succeeded/failed state machine.",
+          "Implement lease expiry and compare-and-swap job claiming in a transaction; worker termination must not lose work.",
+          "Write a multi-stage Dockerfile; scan dependencies and drop root privileges before deployment.",
+          "Exercise 100 concurrent submissions, random SIGKILL and DB outages. Document lost, duplicate and delayed work separately."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "No silently lost jobs",
+          "Idempotent side effects",
+          "Full CI on each PR"
+        ],
+        "failures": [
+          {
+            "title": "Poison task",
+            "detail": "Repeatedly failing input blocks queue without DLQ policy."
+          },
+          {
+            "title": "Partition",
+            "detail": "DB unreachable; bounded retry instead of unbounded loops."
+          },
+          {
+            "title": "Double execution",
+            "detail": "Lease expiry while old worker is still running."
+          },
+          {
+            "title": "Resource growth",
+            "detail": "Orphan subprocesses, file handles or unbounded logs."
+          }
+        ],
+        "evidence": [
+          "Prove concurrency safety with at least 20 competing workers.",
+          "Inject SIGKILL after side effect but before acknowledgement; handle retries idempotently.",
+          "Demonstrate p95 time-to-start and steady-state queue depth under load."
+        ],
+        "adversarial": [
+          "Explain your delivery guarantee: at-most, at-least or effectively once.",
+          "What protects side effects after a worker timeout?",
+          "How are secrets handled across CI and runtime?"
+        ],
+        "resources": [
+          "Git book",
+          "Linux man pages",
+          "Docker docs",
+          "Google SRE book"
+        ]
+      }
+    },
+    {
+      "n": 3,
+      "title": "FULL-STACK + DATA",
+      "subtitle": "Frontend, backend, SQL, cache and secure contracts",
+      "weeks": [
+        9,
+        12
+      ],
+      "proof": "Tenant-safe web dashboard",
+      "panel": "01 BACKEND + DATA (AND REQUIRED FRONTEND)",
+      "tags": [
+        "HTML / CSS",
+        "TypeScript + React",
+        "FastAPI",
+        "Postgres + Redis",
+        "Integration / deploy"
+      ],
+      "concepts": [
+        {
+          "title": "WEB FUNDAMENTALS",
+          "detail": "DOM, forms, accessibility, browser storage, HTTP, CORS and rendering behavior."
+        },
+        {
+          "title": "TYPESCRIPT",
+          "detail": "Discriminated unions, strict mode, async fetch, schema validation and typed API clients."
+        },
+        {
+          "title": "REACT",
+          "detail": "Component state, effects, mutations, loading/error UI, memoization only when measured."
+        },
+        {
+          "title": "HTTP APIS",
+          "detail": "Methods, status semantics, pagination, schema versioning, idempotency and rate limits."
+        },
+        {
+          "title": "FASTAPI",
+          "detail": "Dependency injection, Pydantic models, async handlers and request lifecycle."
+        },
+        {
+          "title": "POSTGRESQL",
+          "detail": "Keys, joins, transactions, isolation, indexes, EXPLAIN ANALYZE and migrations."
+        },
+        {
+          "title": "REDIS",
+          "detail": "Cache-aside, TTL, cache stampede, invalidation and why it is not a source of truth."
+        },
+        {
+          "title": "AUTHENTICATION",
+          "detail": "OIDC/session basics, authorization checks per resource, CSRF/XSS defenses."
+        }
+      ],
+      "readiness": "Build a multi-tenant project dashboard: React + TypeScript, FastAPI, PostgreSQL, Redis optional, authenticated audit records.",
+      "lab": {
+        "summary": "Build a multi-tenant project dashboard: React + TypeScript, FastAPI, PostgreSQL, Redis optional, authenticated audit records.",
+        "components": [
+          "React client",
+          "Typed API contract",
+          "FastAPI authz",
+          "PostgreSQL",
+          "Trace + alert"
+        ],
+        "milestones": [
+          "Define a versioned OpenAPI schema and generate a typed client. UI must render loading, empty, validation, outage and retry states.",
+          "Implement tenant-scoped SQL reads/writes and explicit ownership checks; never trust client-supplied tenant identifiers.",
+          "Create migrations with uniqueness constraints and rollback rehearsal. Measure queries with EXPLAIN (ANALYZE, BUFFERS).",
+          "Test browser-to-database flows; cover accessibility keyboard navigation and 401/403 distinctions."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "No cross-tenant access",
+          "p95 API < 250 ms*",
+          "Indexed hot queries"
+        ],
+        "failures": [
+          {
+            "title": "N+1 queries",
+            "detail": "List endpoint query count grows with returned records."
+          },
+          {
+            "title": "Race",
+            "detail": "Concurrent edits silently overwrite changes without version guard."
+          },
+          {
+            "title": "Caching",
+            "detail": "Wrong tenant data served due to incomplete cache key."
+          },
+          {
+            "title": "Authz bypass",
+            "detail": "Resource ID guessed; backend trusts UI restrictions."
+          }
+        ],
+        "evidence": [
+          "Verify cross-tenant reads/writes return 403 or 404 without data leakage.",
+          "Test transaction rollback under duplicate writes and simulated DB disconnect.",
+          "Use Playwright for one end-to-end path and EXPLAIN plans for slow queries."
+        ],
+        "adversarial": [
+          "Can you prove data isolation in automated tests?",
+          "Where is the transaction boundary and why?",
+          "What happens when Redis is down?"
+        ],
+        "resources": [
+          "React Learn",
+          "TypeScript handbook",
+          "FastAPI tutorial",
+          "PostgreSQL docs"
+        ]
+      }
+    },
+    {
+      "n": 4,
+      "title": "MATH + CLASSICAL ML",
+      "subtitle": "Linear algebra, probability, statistics and ML methodology",
+      "weeks": [
+        13,
+        16
+      ],
+      "proof": "Leakage-safe ML baseline",
+      "panel": "02 AI / ML FOUNDATION - MACHINE LEARNING",
+      "tags": [
+        "Linear algebra",
+        "Probability",
+        "Optimization",
+        "Models",
+        "Unbiased",
+        "evaluation"
+      ],
+      "concepts": [
+        {
+          "title": "LINEAR ALGEBRA",
+          "detail": "Vectors, dot products, matrix products, projections, SVD, norms and eigenspaces."
+        },
+        {
+          "title": "CALCULUS",
+          "detail": "Gradients, Jacobians, chain rule, partial derivatives and optimization surfaces."
+        },
+        {
+          "title": "PROBABILITY",
+          "detail": "Conditional probability, Bayes rule, distributions, expectation and variance."
+        },
+        {
+          "title": "STATISTICS",
+          "detail": "Confidence intervals, hypothesis tests, bootstrap, power and multiple comparisons."
+        },
+        {
+          "title": "SUPERVISED ML",
+          "detail": "Linear/logistic regression, trees, gradient boosting, regularization and bias-variance."
+        },
+        {
+          "title": "UNSUPERVISED",
+          "detail": "Clustering, dimensionality reduction, anomaly detection and representation quality."
+        },
+        {
+          "title": "DATA LEAKAGE",
+          "detail": "Feature construction, time-aware splits and target leakage detection."
+        },
+        {
+          "title": "METRICS",
+          "detail": "F1 vs AUROC vs PR-AUC, calibration, operating point, business cost of mistakes."
+        }
+      ],
+      "readiness": "Build an interpretable fraud/abuse classifier using tabular data with time-based validation, calibration and threshold selection.",
+      "lab": {
+        "summary": "Build an interpretable fraud/abuse classifier using tabular data with time-based validation, calibration and threshold selection.",
+        "components": [
+          "Data audit",
+          "Temporal split",
+          "Train baseline",
+          "Calibrate",
+          "Locked holdout"
+        ],
+        "milestones": [
+          "Write the data dictionary and event-time leakage policy before fitting; choose a naive baseline and log the class prevalence.",
+          "Use train/validation/test split chronologically. Keep preprocessing inside a fitted pipeline to prevent leakage.",
+          "Track PR-AUC plus recall at a fixed precision requirement; bootstrap intervals by user/session, not leaked rows.",
+          "Calibrate scores, choose decision threshold on validation only and report final untouched test metrics once."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "No future-feature leakage",
+          "Intervals + cohort slices",
+          "Locked test protocol"
+        ],
+        "failures": [
+          {
+            "title": "Label leakage",
+            "detail": "Predictor includes post-event status or chargeback field."
+          },
+          {
+            "title": "Wrong metric",
+            "detail": "AUROC hides low precision in rare-positive data."
+          },
+          {
+            "title": "Shift",
+            "detail": "Recent cohort distribution differs from historical training data."
+          },
+          {
+            "title": "P-hacking",
+            "detail": "Repeatedly inspect and tune on test data."
+          }
+        ],
+        "evidence": [
+          "Leakage audit: every feature timestamp <= prediction timestamp.",
+          "Report prevalence, PR-AUC, recall at precision target, and confidence interval.",
+          "Re-run with 5 seeds and show stability and worst cohort error."
+        ],
+        "adversarial": [
+          "Why is the chosen split faithful to deployment?",
+          "What operational cost selects the threshold?",
+          "How much confidence does the sample size justify?"
+        ],
+        "resources": [
+          "Mathematics for ML",
+          "StatQuest",
+          "scikit-learn user guide",
+          "Dive into DL"
+        ]
+      }
+    },
+    {
+      "n": 5,
+      "title": "DEEP LEARNING + TRANSFORMERS",
+      "subtitle": "Train, inspect and profile attention-based models",
+      "weeks": [
+        17,
+        20
+      ],
+      "proof": "Tiny GPT + profiler",
+      "panel": "02 DEEP LEARNING / NLP / TRANSFORMERS",
+      "tags": [
+        "Autograd",
+        "Training loops",
+        "Tokenization",
+        "Attention",
+        "GPU profiling"
+      ],
+      "concepts": [
+        {
+          "title": "OPTIMIZATION",
+          "detail": "SGD vs AdamW, learning-rate schedules, weight decay, gradient clipping and batch scaling."
+        },
+        {
+          "title": "PYTORCH",
+          "detail": "Tensor shapes, autograd graph, dataloaders, inference_mode, checkpoint state."
+        },
+        {
+          "title": "NEURAL NETWORKS",
+          "detail": "Activations, initialization, residuals, layer norm and gradients."
+        },
+        {
+          "title": "NLP",
+          "detail": "Byte/wordpiece tokenizers, OOV, special tokens, sequence length and padding."
+        },
+        {
+          "title": "ATTENTION",
+          "detail": "Q, K, V, masked softmax(QK^T/sqrt(d))V; causal vs bidirectional masks."
+        },
+        {
+          "title": "TRANSFORMERS",
+          "detail": "Residual attention + MLP blocks, positional representations, KV cache at inference."
+        },
+        {
+          "title": "GPU FUNDAMENTALS",
+          "detail": "Kernel launch, memory bandwidth, activation memory, batch size and mixed precision."
+        },
+        {
+          "title": "MODEL QUALITY",
+          "detail": "Train/val loss, overfit checks, reproducibility and benchmark datasets."
+        }
+      ],
+      "readiness": "Build and train a tiny autoregressive transformer on a small text corpus; then profile inference with and without KV caching.",
+      "lab": {
+        "summary": "Build and train a tiny autoregressive transformer on a small text corpus; then profile inference with and without KV caching.",
+        "components": [
+          "Tokenizer",
+          "Embedding",
+          "Causal blocks",
+          "Logits + loss",
+          "KV-cache decode"
+        ],
+        "milestones": [
+          "Implement a bigram baseline, then a transformer with causal attention and weight tying. Unit-test every tensor shape and mask.",
+          "Run a gradient-check on a tiny differentiable submodule; overfit one batch before full training.",
+          "Compare tokens/sec, GPU max allocated memory and train/validation perplexity across configurations.",
+          "Implement incremental decoding with KV cache; verify logits match full-prefill within a stated numerical tolerance."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "Mask causality proven",
+          "Perplexity tracked",
+          "Memory + tok/s measured"
+        ],
+        "failures": [
+          {
+            "title": "Future leakage",
+            "detail": "Attention mask permits model to see next tokens during training."
+          },
+          {
+            "title": "NaN loss",
+            "detail": "Overflow in mixed precision or unstable normalization."
+          },
+          {
+            "title": "Memory growth",
+            "detail": "Saved graphs accidentally retained across iterations."
+          },
+          {
+            "title": "Wrong benchmark",
+            "detail": "Compare unequal context lengths or warm-up states."
+          }
+        ],
+        "evidence": [
+          "Compare attention output to a trusted reference over small seeded tensors.",
+          "Assert future-token perturbations cannot affect earlier causal positions.",
+          "Profile eager attention vs optimized SDPA and explain speed/memory trade-offs."
+        ],
+        "adversarial": [
+          "Derive attention tensor dimensions on paper.",
+          "Where does memory scale quadratically in sequence length?",
+          "How do KV caches alter memory and latency?"
+        ],
+        "resources": [
+          "PyTorch tutorials",
+          "HF transformers",
+          "Karpathy nanoGPT",
+          "Attention paper"
+        ]
+      }
+    },
+    {
+      "n": 6,
+      "title": "GENAI + CONTEXT ENGINEERING",
+      "subtitle": "LLM inference, decoding, fine-tuning and context quality",
+      "weeks": [
+        21,
+        24
+      ],
+      "proof": "Context/model router",
+      "panel": "03 FOUNDATION MODELS / CONTEXT ENGINEERING",
+      "tags": [
+        "Tokens + decoding",
+        "Inference",
+        "economics",
+        "Prompt contracts",
+        "RAG vs tune",
+        "Context budgets"
+      ],
+      "concepts": [
+        {
+          "title": "LLM BASICS",
+          "detail": "Tokenization, context limit, prefill vs decode, temperature, top-p and stop sequences."
+        },
+        {
+          "title": "MODEL SELECTION",
+          "detail": "Quality/cost/latency/privacy trade-off, benchmark tasks and fallback policy."
+        },
+        {
+          "title": "INFERENCE",
+          "detail": "KV cache, batch scheduling, quantization, throughput and context-length penalty."
+        },
+        {
+          "title": "PROMPTING",
+          "detail": "Role hierarchy, system instructions, examples, negative constraints and task framing."
+        },
+        {
+          "title": "CONTEXT ENGINEERING",
+          "detail": "Selection, deduplication, ordering, compression, source metadata and freshness."
+        },
+        {
+          "title": "FINE-TUNING",
+          "detail": "SFT vs LoRA/PEFT vs full tuning; train when behavior/format is not solved by context."
+        },
+        {
+          "title": "MULTIMODAL",
+          "detail": "Images, audio, speech, document parsing and alignment of evidence across modalities."
+        },
+        {
+          "title": "GROUNDING",
+          "detail": "Provenance, uncertainty, citations, faithful synthesis and refusal when evidence absent."
+        }
+      ],
+      "readiness": "Ship a model router for text extraction and question answering, with explicit context budgets and a held-out task suite.",
+      "lab": {
+        "summary": "Ship a model router for text extraction and question answering, with explicit context budgets and a held-out task suite.",
+        "components": [
+          "Request + SLA",
+          "Context selection",
+          "Model policy",
+          "Typed output",
+          "Eval + cost"
+        ],
+        "milestones": [
+          "Create a task inventory and fixed evaluation set for extraction, classification, long context and multi-step reasoning.",
+          "Test three model configurations under identical prompts. Measure p50/p95 TTFT, completion time, output tokens and error rate.",
+          "Implement deterministic context budgeting: keep policies, select relevant evidence and reject overflow before request.",
+          "Explore LoRA only after documenting which failure types prompting/RAG cannot fix; protect against training contamination."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "No context overflow",
+          "Cost per success tracked",
+          "Router eval >= baseline"
+        ],
+        "failures": [
+          {
+            "title": "Lost in the middle",
+            "detail": "Relevant passage buried in excessively long context."
+          },
+          {
+            "title": "Prompt injection",
+            "detail": "Retrieved text masquerades as higher-priority instruction."
+          },
+          {
+            "title": "Model drift",
+            "detail": "New model version silently changes output behavior."
+          },
+          {
+            "title": "Spend explosion",
+            "detail": "Long context plus retries multiplies token costs."
+          }
+        ],
+        "evidence": [
+          "Token counting uses the selected model tokenizer or a conservative bound.",
+          "Measure loss in answer quality after removing irrelevant context.",
+          "Compare router policy with a single-model baseline for cost and accuracy."
+        ],
+        "adversarial": [
+          "When is retrieval better than fine-tuning?",
+          "Which tasks justify a larger model?",
+          "Why can a bigger context reduce answer quality?"
+        ],
+        "resources": [
+          "HF LLM course",
+          "OpenAI API docs",
+          "PEFT docs",
+          "vLLM docs"
+        ]
+      }
+    },
+    {
+      "n": 7,
+      "title": "LLM APPLICATION ENGINEERING",
+      "subtitle": "Tool contracts, reliable async execution and cost controls",
+      "weeks": [
+        25,
+        27
+      ],
+      "proof": "Typed async LLM API",
+      "panel": "04 LLM APPLICATION ENGINEERING",
+      "tags": [
+        "Schema",
+        "Provider adapter",
+        "Async execution",
+        "Retry + circuit",
+        "Usage accounting"
+      ],
+      "concepts": [
+        {
+          "title": "STRUCTURED OUTPUT",
+          "detail": "Model schema enforcement plus local Pydantic validation and unknown-value handling."
+        },
+        {
+          "title": "TOOL CALLING",
+          "detail": "Whitelist registry, typed arguments, authorization and explicit side-effect confirmation."
+        },
+        {
+          "title": "STREAMING",
+          "detail": "Server-sent events / websockets, cancellation, partial responses and client disconnect."
+        },
+        {
+          "title": "ASYNC CONCURRENCY",
+          "detail": "Semaphore limits, timeouts, cancellation propagation and connection pools."
+        },
+        {
+          "title": "RETRIES",
+          "detail": "Only retry transient failures; exponential backoff, jitter, deadlines and idempotency."
+        },
+        {
+          "title": "ROUTING",
+          "detail": "Model budgets, fallback paths, health checks and measured quality regression."
+        },
+        {
+          "title": "CACHING",
+          "detail": "Cache deterministic public work; never mix tenant/private contexts."
+        },
+        {
+          "title": "RATE ECONOMICS",
+          "detail": "Token reservations, per-tenant quotas, queue discipline and admission control."
+        }
+      ],
+      "readiness": "Implement a provider-agnostic typed extraction service that streams progress and enforces per-tenant dollar and token budgets.",
+      "lab": {
+        "summary": "Implement a provider-agnostic typed extraction service that streams progress and enforces per-tenant dollar and token budgets.",
+        "components": [
+          "Client",
+          "Validate + quota",
+          "Async provider",
+          "Schema parser",
+          "Meter + trace"
+        ],
+        "milestones": [
+          "Define a Provider protocol and a strongly typed Extraction model. Normalize errors into timeout, throttled, invalid output and provider outage.",
+          "Bound concurrency with a semaphore; pass an absolute deadline and cancel upstream work on client disconnect.",
+          "Use input idempotency keys and a durable usage ledger. Reserve projected spend then reconcile actual provider usage.",
+          "Run contract tests using a fake transport and one live provider sandbox; verify schema failures do not bypass billing controls."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "No unbounded concurrency",
+          "100% schema validation",
+          "Budget hard limit"
+        ],
+        "failures": [
+          {
+            "title": "Retry storm",
+            "detail": "Client and gateway both retry; effective QPS explodes."
+          },
+          {
+            "title": "Partial streaming",
+            "detail": "Disconnected consumers leave model requests running."
+          },
+          {
+            "title": "Output smuggling",
+            "detail": "Model produces valid JSON but unsafe or unauthorized action."
+          },
+          {
+            "title": "Semantic cache",
+            "detail": "Similar query returns another tenant context."
+          }
+        ],
+        "evidence": [
+          "pytest-asyncio: cancel 500 requests; no tasks or connections leak.",
+          "Hypothesis: malformed JSON, extra fields, empty strings and invalid numeric values.",
+          "Load: check error and cost metrics while quotas or provider rate limits trigger."
+        ],
+        "adversarial": [
+          "What exactly is idempotent across retries?",
+          "Do your p95s include provider timeouts?",
+          "How is usage reconciled after interrupted streaming?"
+        ],
+        "resources": [
+          "Structured outputs",
+          "Pydantic",
+          "HTTPX async",
+          "Tenacity"
+        ]
+      }
+    },
+    {
+      "n": 8,
+      "title": "RAG ENGINEERING",
+      "subtitle": "Treat retrieval and grounded generation as separate systems",
+      "weeks": [
+        28,
+        31
+      ],
+      "proof": "Cited hybrid RAG",
+      "panel": "05 RAG AND ADVANCED RETRIEVAL",
+      "tags": [
+        "Parse + chunk",
+        "Embed + index",
+        "Retrieve + filter",
+        "Rerank + cite",
+        "Faithfulness eval"
+      ],
+      "concepts": [
+        {
+          "title": "INGESTION",
+          "detail": "PDF/HTML/text parsing, tables, OCR confidence, de-duplication and document versions."
+        },
+        {
+          "title": "CHUNKING",
+          "detail": "Semantic boundaries, overlap, parent-child structure, source offsets and token limits."
+        },
+        {
+          "title": "VECTOR SEARCH",
+          "detail": "Embeddings, cosine/L2, exact vs ANN, HNSW tuning and recall trade-off."
+        },
+        {
+          "title": "LEXICAL SEARCH",
+          "detail": "BM25/FTS for exact terms, identifiers, numbers and rare proper nouns."
+        },
+        {
+          "title": "HYBRID",
+          "detail": "RRF or weighted fusion plus optional cross-encoder reranking on candidate pool."
+        },
+        {
+          "title": "FILTERING",
+          "detail": "Tenant, ACL, time, tags; apply authorization before handing documents to model."
+        },
+        {
+          "title": "GENERATION",
+          "detail": "Evidence packing, source IDs, attribution and evidence-insufficient responses."
+        },
+        {
+          "title": "ADVANCED RAG",
+          "detail": "Query rewriting, multi-query, self-correction and graph retrieval only if eval wins."
+        }
+      ],
+      "readiness": "Create a tenant-safe policy/document Q&A system with corpus versioning, hybrid retrieval, citations and a no-answer behavior.",
+      "lab": {
+        "summary": "Create a tenant-safe policy/document Q&A system with corpus versioning, hybrid retrieval, citations and a no-answer behavior.",
+        "components": [
+          "Parser / lineage",
+          "SQL + pgvector",
+          "Hybrid recall",
+          "Rerank / ACL",
+          "Answer + citations"
+        ],
+        "milestones": [
+          "Ingest a corpus with known source spans; store checksum, tenant ID, document version, ACL and chunk offsets.",
+          "Baseline lexical and dense retrieval independently; then combine using RRF and rank by a measured reranker.",
+          "Build a labeled query set: answerable, missing evidence, conflicting passages, stale revisions, and adversarial injections.",
+          "Compute recall@k, nDCG@k, citation precision, groundedness and end-to-end time/cost. Tune one component at a time."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "Recall@10 >= 0.90*",
+          "Citation precision >= 0.95*",
+          "0 ACL violations"
+        ],
+        "failures": [
+          {
+            "title": "Wrong evidence",
+            "detail": "High cosine similarity but wrong policy version."
+          },
+          {
+            "title": "Injection",
+            "detail": "Document text instructs model to reveal secrets or call tools."
+          },
+          {
+            "title": "Index regression",
+            "detail": "ANN index recall drops for filtered small subpopulations."
+          },
+          {
+            "title": "Stale answer",
+            "detail": "Deleted or superseded pages persist in embeddings."
+          }
+        ],
+        "evidence": [
+          "Gold queries split by category and time, not randomly duplicated paraphrases.",
+          "Verify each returned chunk passes permission and version checks.",
+          "Compare exact scan vs HNSW approximation recall; inspect filtered-query plans."
+        ],
+        "adversarial": [
+          "Is retrieval quality separable from generation quality?",
+          "What happens if no credible evidence exists?",
+          "How do you prove every citation resolves to its source span?"
+        ],
+        "resources": [
+          "pgvector",
+          "PostgreSQL FTS",
+          "BEIR benchmark",
+          "Sentence Transformers"
+        ]
+      }
+    },
+    {
+      "n": 9,
+      "title": "AI AGENTS + MCP",
+      "subtitle": "Actions, permissions, memory and tool boundaries",
+      "weeks": [
+        32,
+        34
+      ],
+      "proof": "Approved tool agent",
+      "panel": "06 AGENTS / TOOLS / MEMORY / REASONING / MCP",
+      "tags": [
+        "Intent + plan",
+        "Tool allowlist",
+        "Policy check",
+        "Side effect",
+        "Audit trail"
+      ],
+      "concepts": [
+        {
+          "title": "AGENT BOUNDARY",
+          "detail": "A model proposes; a deterministic executor authorizes and performs tools."
+        },
+        {
+          "title": "TOOLS",
+          "detail": "Typed JSON schemas, bounded arguments, allowlisted targets and safe error results."
+        },
+        {
+          "title": "MEMORY",
+          "detail": "Working context vs persistent user preferences vs event log; explicit retention policies."
+        },
+        {
+          "title": "REASONING PATTERNS",
+          "detail": "ReAct-style loops, planning, reflection and decomposition measured by task success."
+        },
+        {
+          "title": "MCP",
+          "detail": "Client/server protocol, exposed tools/resources/prompts and trust boundary for remote servers."
+        },
+        {
+          "title": "SECURITY",
+          "detail": "Scopes, least privilege, human approval and a sandbox for untrusted code or browsing."
+        },
+        {
+          "title": "STATE",
+          "detail": "Versioned execution record; dedupe side effects with action IDs and idempotency."
+        },
+        {
+          "title": "ECONOMICS",
+          "detail": "Max steps, tool cost, wall-clock deadline, tokens spent and termination policy."
+        }
+      ],
+      "readiness": "Build a read-only research agent first, then enable one narrowly scoped write tool behind explicit human approval.",
+      "lab": {
+        "summary": "Build a read-only research agent first, then enable one narrowly scoped write tool behind explicit human approval.",
+        "components": [
+          "User goal",
+          "Planner proposal",
+          "Policy engine",
+          "MCP tool exec",
+          "Audit + approval"
+        ],
+        "milestones": [
+          "Define a closed set of tool names and Pydantic argument types. Reject unknown actions regardless of model output.",
+          "Separate agent-generated arguments from authenticated user identity. Bind permissions server-side.",
+          "Keep an append-only event log: proposal, approval, tool request, response hash, budget and final outcome.",
+          "Simulate malicious tool responses, unavailable MCP servers, repeated tool calls and approval expiration."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "0 unauthorized actions",
+          "Explicit write approvals",
+          "Max steps enforced"
+        ],
+        "failures": [
+          {
+            "title": "Confused deputy",
+            "detail": "Tool uses server secrets on behalf of untrusted model output."
+          },
+          {
+            "title": "Unbounded loop",
+            "detail": "Agent repeatedly searches without progress or budget checks."
+          },
+          {
+            "title": "Memory leak",
+            "detail": "Stores secrets or personal data beyond retention policy."
+          },
+          {
+            "title": "Supply chain",
+            "detail": "Third-party MCP server changes tools/scopes without review."
+          }
+        ],
+        "evidence": [
+          "Prompt injection cannot grant scopes or bypass an approval check.",
+          "Repeated same action ID produces one external side effect.",
+          "Malformed MCP responses or resource updates do not crash orchestration."
+        ],
+        "adversarial": [
+          "What authority is delegated to the model?",
+          "Can a tool return instructions that override the developer policy?",
+          "What is the rollback/compensation path after a write?"
+        ],
+        "resources": [
+          "MCP specification",
+          "MCP docs",
+          "OWASP GenAI",
+          "OpenAI tools docs"
+        ]
+      }
+    },
+    {
+      "n": 10,
+      "title": "AGENT ORCHESTRATION",
+      "subtitle": "State machines before framework abstractions",
+      "weeks": [
+        35,
+        37
+      ],
+      "proof": "Durable workflow runner",
+      "panel": "07 ORCHESTRATION / WORKFLOWS / MULTI-AGENT",
+      "tags": [
+        "Durable state",
+        "Typed graph",
+        "Routing",
+        "Checkpoint +",
+        "resume",
+        "Human approval"
+      ],
+      "concepts": [
+        {
+          "title": "STATE MODEL",
+          "detail": "Explicit finite-state machine with transition preconditions and invariants."
+        },
+        {
+          "title": "PERSISTENCE",
+          "detail": "Save checkpoints and event history so a restart resumes with correct semantics."
+        },
+        {
+          "title": "WORKFLOWS",
+          "detail": "Sequential, parallel, conditional and event-driven executions with join barriers."
+        },
+        {
+          "title": "ROUTING",
+          "detail": "Select tool/model/agent based on policy, task state and confidence, not buzzwords."
+        },
+        {
+          "title": "MULTI-AGENT",
+          "detail": "Supervisor-worker, handoff or collaboration only when specialization is measurable."
+        },
+        {
+          "title": "HUMAN-IN-LOOP",
+          "detail": "Typed approval event, expiry, escalation, intervention and audit attribution."
+        },
+        {
+          "title": "COMPENSATION",
+          "detail": "Sagas, idempotent replay and partial failure recovery for external side effects."
+        },
+        {
+          "title": "FRAMEWORK CHOICE",
+          "detail": "Compare handwritten state machine with graph runtime on observability and reliability."
+        }
+      ],
+      "readiness": "Build a durable incident-triage workflow with research, classification, optional ticket creation and operator approval.",
+      "lab": {
+        "summary": "Build a durable incident-triage workflow with research, classification, optional ticket creation and operator approval.",
+        "components": [
+          "Intake",
+          "Classifier",
+          "Research branch",
+          "Approval gate",
+          "Idempotent commit"
+        ],
+        "milestones": [
+          "Model workflow transitions in an enum; persist state version and causality IDs in a transactional store.",
+          "Add parallel read-only research branches and a deterministic merge rule; never race concurrent writers blindly.",
+          "Checkpoint before external side effects. Write idempotency keys and compensating actions where atomic commits are impossible.",
+          "Compare single-agent and multi-agent variants on held-out tasks; retain the simpler design unless improvement is material."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "Replay is deterministic",
+          "Durable checkpoints",
+          "No duplicate side effects"
+        ],
+        "failures": [
+          {
+            "title": "Stale state",
+            "detail": "Node writes based on outdated version after parallel work."
+          },
+          {
+            "title": "Infinite graph",
+            "detail": "Looping planner cannot meet termination condition."
+          },
+          {
+            "title": "Bad handoff",
+            "detail": "Agent receives incomplete or overshared context."
+          },
+          {
+            "title": "Framework opacity",
+            "detail": "Automatic retries silently duplicate a payment/ticket action."
+          }
+        ],
+        "evidence": [
+          "Replay 10k event streams; end state must be deterministic.",
+          "Crash before/after tool commit and prove one externally visible action.",
+          "Test parallel join order, duplicate messages and stale operator approvals."
+        ],
+        "adversarial": [
+          "Show the complete transition graph with illegal edges.",
+          "Why use multiple agents rather than one with tools?",
+          "Where are replay safety and exactly-once illusions broken?"
+        ],
+        "resources": [
+          "LangGraph concepts",
+          "Temporal docs",
+          "PydanticAI",
+          "Distributed systems notes"
+        ]
+      }
+    },
+    {
+      "n": 11,
+      "title": "EVALUATION + OBSERVABILITY",
+      "subtitle": "Measure outputs, retrieval, actions and system behavior",
+      "weeks": [
+        38,
+        40
+      ],
+      "proof": "Eval harness + traces",
+      "panel": "08 AI EVALUATION ENGINEERING + 09 OBSERVABILITY",
+      "tags": [
+        "Golden dataset",
+        "Offline eval",
+        "Online experiment",
+        "Traces + metrics",
+        "Regression gate"
+      ],
+      "concepts": [
+        {
+          "title": "LLM EVAL",
+          "detail": "Task accuracy, relevance, hallucination, refusal, toxicity and calibrated judge rubrics."
+        },
+        {
+          "title": "RAG EVAL",
+          "detail": "Retrieval recall/precision/nDCG, support evidence, citation accuracy and abstention."
+        },
+        {
+          "title": "AGENT EVAL",
+          "detail": "Task success, tool choice, argument validity, trajectory safety and completion costs."
+        },
+        {
+          "title": "GOLDEN SETS",
+          "detail": "Stratified, deduplicated, adjudicated examples with answer criteria and versioning."
+        },
+        {
+          "title": "STATISTICAL RIGOR",
+          "detail": "Confidence intervals, paired bootstrap, sample size, multiple tests and selection bias."
+        },
+        {
+          "title": "TRACING",
+          "detail": "Request > LLM call > retrieval > tool > DB spans, correlation IDs, redaction."
+        },
+        {
+          "title": "METRICS",
+          "detail": "TTFT, end-to-end p50/p95/p99, tokens, spend, cache hit, errors, SLA burn rate."
+        },
+        {
+          "title": "EXPERIMENTATION",
+          "detail": "Shadow tests, canary rollout, A/B design and predeclared stop conditions."
+        }
+      ],
+      "readiness": "Build an evaluation harness that rejects a new retrieval/model configuration if quality, safety or cost regresses.",
+      "lab": {
+        "summary": "Build an evaluation harness that rejects a new retrieval/model configuration if quality, safety or cost regresses.",
+        "components": [
+          "Versioned cases",
+          "System under test",
+          "Typed judgments",
+          "Paired analysis",
+          "CI / canary gate"
+        ],
+        "milestones": [
+          "Create gold cases spanning normal, adversarial, rare and high-impact slices. Each item stores expected assertions and provenance.",
+          "Record raw model outputs, retrieval IDs, prompts, configuration hash, token usage and deterministic evaluator versions.",
+          "Apply paired bootstrap or stratified confidence intervals to quality deltas. Report statistical uncertainty, not just a winner.",
+          "Instrument OpenTelemetry spans; aggregate by model, task, tenant and deployment version without logging secrets."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "100% request tracing*",
+          "Quality CI published",
+          "p95 + cost dashboards"
+        ],
+        "failures": [
+          {
+            "title": "Judge gaming",
+            "detail": "LLM-as-judge rewards verbosity rather than factual correctness."
+          },
+          {
+            "title": "Missingness",
+            "detail": "Failed calls omitted from latency and outcome denominators."
+          },
+          {
+            "title": "PII in traces",
+            "detail": "Raw inputs or retrieved private text leak into telemetry."
+          },
+          {
+            "title": "A/B contamination",
+            "detail": "Same user receives mixed treatment or evaluation items enter training."
+          }
+        ],
+        "evidence": [
+          "Run blind adjudication for at least 30 disputed cases.",
+          "Inject retrieval failures and tool permission denials; ensure trace spans expose root cause.",
+          "Regression gate uses predeclared threshold with CIs and slices, not cherry-picked score."
+        ],
+        "adversarial": [
+          "What is your sampling unit: request, user or document?",
+          "How are scores audited for judge bias?",
+          "Which alert fires before customers report failure?"
+        ],
+        "resources": [
+          "OpenTelemetry",
+          "OTel GenAI conventions",
+          "NIST AI RMF",
+          "Google SRE workbook"
+        ]
+      }
+    },
+    {
+      "n": 12,
+      "title": "SECURITY + GENAI OPS",
+      "subtitle": "Threat models, release gates and operations at scale",
+      "weeks": [
+        41,
+        44
+      ],
+      "proof": "Security + canary pipeline",
+      "panel": "10 AI SECURITY + 11 GENAI OPS / AGENTOPS",
+      "tags": [
+        "Threat model",
+        "Guardrails",
+        "CI + version",
+        "Canary + rollback",
+        "Incident drills"
+      ],
+      "concepts": [
+        {
+          "title": "PROMPT INJECTION",
+          "detail": "Direct, indirect, tool-output and retrieval-borne instructions crossing trust boundaries."
+        },
+        {
+          "title": "DATA SAFETY",
+          "detail": "PII classification, retention, encryption, data egress controls and tenant isolation."
+        },
+        {
+          "title": "TOOL SECURITY",
+          "detail": "Least privilege, scoped credentials, per-action approval and sandbox isolation."
+        },
+        {
+          "title": "SAFETY GATES",
+          "detail": "Input and output policy checks; distinguish policy violations from model uncertainty."
+        },
+        {
+          "title": "SUPPLY CHAIN",
+          "detail": "Dependency lockfiles, image signing, SCA, model weights provenance and SBOM."
+        },
+        {
+          "title": "REPRODUCIBILITY",
+          "detail": "Dataset, prompt, model, embedding, chunker and evaluator version identifiers."
+        },
+        {
+          "title": "RELEASE ENGINEERING",
+          "detail": "Immutable images, staged rollout, shadow traffic, canaries and rollback triggers."
+        },
+        {
+          "title": "INCIDENT RESPONSE",
+          "detail": "Threat detection, log correlation, containment, root cause and blameless evidence."
+        }
+      ],
+      "readiness": "Hardening sprint: make an agentic document system resistant to injection, data exfiltration and release regressions.",
+      "lab": {
+        "summary": "Hardening sprint: make an agentic document system resistant to injection, data exfiltration and release regressions.",
+        "components": [
+          "Untrusted inputs",
+          "Policy boundaries",
+          "Sandboxed action",
+          "Release scan",
+          "Incident response"
+        ],
+        "milestones": [
+          "Write a threat model mapping assets, trust boundaries, attackers, entry points and impact; prioritize by likelihood x consequence.",
+          "Curate a red-team corpus with malicious PDFs, tool outputs, role spoofing, exfiltration requests and cross-tenant probes.",
+          "Add deterministic allow/deny rules around tools and validated output schemas; do not treat the LLM as the authorization layer.",
+          "Create CI/CD release policy: security tests, eval gate, canary, rollback and on-call runbook with secret rotation."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "0 secret exposures",
+          "0 unauthorized writes",
+          "Rollback drill completed"
+        ],
+        "failures": [
+          {
+            "title": "SSRF / redirect",
+            "detail": "Domain allowlist bypass via DNS rebinding or redirects."
+          },
+          {
+            "title": "Secret leakage",
+            "detail": "Prompt/model trace records credentials or sensitive docs."
+          },
+          {
+            "title": "Release collision",
+            "detail": "Prompt and dataset versions changed without linked evaluation."
+          },
+          {
+            "title": "Unsafe recovery",
+            "detail": "Rollback restores code but not incompatible DB schema or vector index."
+          }
+        ],
+        "evidence": [
+          "Attempt 100+ role, tool and retrieved-document injection payloads.",
+          "Secret canary must never be exposed in model output, logs, traces or tools.",
+          "Canary rollback is rehearsed after simulated rise in groundedness errors."
+        ],
+        "adversarial": [
+          "Can you enumerate all trust boundaries?",
+          "Are secrets ever visible to model-generated text?",
+          "What objective metric forces rollback?"
+        ],
+        "resources": [
+          "OWASP LLM Top 10",
+          "NIST AI RMF",
+          "GitHub Actions",
+          "Kubernetes concepts"
+        ]
+      }
+    },
+    {
+      "n": 13,
+      "title": "CLOUD + AI SYSTEM DESIGN",
+      "subtitle": "Architect reliable and economical end-to-end AI products",
+      "weeks": [
+        45,
+        48
+      ],
+      "proof": "Cloud capstone + runbooks",
+      "panel": "12 CLOUD AI ENGINEERING + 13 SYSTEM DESIGN",
+      "tags": [
+        "Requirements",
+        "Trade-off matrix",
+        "Capacity plan",
+        "Deploy + autoscale",
+        "Chaos + cost review"
+      ],
+      "concepts": [
+        {
+          "title": "ARCHITECTURE",
+          "detail": "Bounded contexts, API gateway, workers, data planes and control planes."
+        },
+        {
+          "title": "PROVIDER MAPPING",
+          "detail": "AWS Bedrock / SageMaker; GCP Vertex AI / Cloud Run; Azure AI / AKS."
+        },
+        {
+          "title": "COMPUTE",
+          "detail": "CPU vs GPU, throughput, cold starts, batching, reserved vs on-demand capacity."
+        },
+        {
+          "title": "STORAGE",
+          "detail": "OLTP PostgreSQL, object storage, vector indexes, queues and event logs."
+        },
+        {
+          "title": "SCALABILITY",
+          "detail": "Load shedding, queue length, autoscaling, tenant quotas and multi-region limits."
+        },
+        {
+          "title": "RELIABILITY",
+          "detail": "SLOs, error budgets, timeouts, circuit breakers, replay and disaster recovery."
+        },
+        {
+          "title": "LATENCY",
+          "detail": "Latency budget by hop, p99 tail amplification, prefill/decode and hot-path cache."
+        },
+        {
+          "title": "COST",
+          "detail": "Token pricing, GPU utilization, vector index costs, observability overhead and unit economics."
+        }
+      ],
+      "readiness": "Design and ship the final production-style AI knowledge/workflow platform in one cloud with portable contracts.",
+      "lab": {
+        "summary": "Design and ship the final production-style AI knowledge/workflow platform in one cloud with portable contracts.",
+        "components": [
+          "Ingress + auth",
+          "Service + queue",
+          "RAG / agent",
+          "Datastores / model",
+          "Telemetry + ops"
+        ],
+        "milestones": [
+          "Write a one-page architecture decision record with product SLO, security classification, traffic forecast and economic constraints.",
+          "Derive QPS, concurrency, queue capacity, provider rate quota and cost per successful request; choose managed vs self-hosted inference.",
+          "Use infrastructure-as-code, private secrets and zero-downtime schema strategy; deploy a canary and alert on error-budget burn.",
+          "Run outage drills: provider 429, DB read-only, object-store slowdown, model drift, zone failure and corrupted index."
+        ]
+      },
+      "gate": {
+        "targets": [
+          "SLO proven under load",
+          "RTO/RPO rehearsed",
+          "Cost/request justified"
+        ],
+        "failures": [
+          {
+            "title": "Tail latency",
+            "detail": "One slow dependency amplifies p99 across fan-out."
+          },
+          {
+            "title": "Noisy neighbor",
+            "detail": "Heavy tenant starves others without quotas and admission control."
+          },
+          {
+            "title": "Regional outage",
+            "detail": "Data sovereignty/recovery assumptions are undocumented."
+          },
+          {
+            "title": "Cost cliff",
+            "detail": "Autoscaling adds expensive GPU replicas at low utilization."
+          }
+        ],
+        "evidence": [
+          "Report p50/p95/p99, error rate, backlog and cost under load at forecast and 2x traffic.",
+          "Show restore from backup and vector reindex against an explicit RTO/RPO.",
+          "Run security and load tests on deployed infrastructure, not only laptops."
+        ],
+        "adversarial": [
+          "Draw a data flow and identify every trust boundary.",
+          "Can you bound worst-case spend during a retry storm?",
+          "What would make you change models or providers?"
+        ],
+        "resources": [
+          "AWS Bedrock",
+          "Google Vertex AI",
+          "Azure AI",
+          "Google SRE"
+        ]
+      }
+    }
+  ],
+  "capstone": {
+    "title": "EvidenceOps AI platform",
+    "weeks": [
+      49,
+      52
+    ],
+    "summary": "authenticated teams upload policy and incident documents, ask evidenced questions, and request bounded follow-up actions. A grounded answer must cite source spans; writes require approval. The platform logs usage, versions data, and supports offline replay of evaluations.",
+    "requirements": [
+      "Functional",
+      "Correctness",
+      "Security",
+      "Reliability",
+      "Performance",
+      "Operational"
+    ],
+    "budgets": [
+      {
+        "key": "p95",
+        "label": "p95 latency",
+        "target": "< 2.5 s"
+      },
+      {
+        "key": "support",
+        "label": "Cited factual support",
+        "target": ">= 95%"
+      },
+      {
+        "key": "success",
+        "label": "Service success",
+        "target": ">= 99.5%"
+      },
+      {
+        "key": "rps",
+        "label": "Load",
+        "target": "5 steady / 30 burst RPS"
+      }
+    ],
+    "drills": [
+      "429 / quota",
+      "DB unavailable",
+      "Index corruption",
+      "Model drift",
+      "Worker crash"
+    ]
+  },
+  "rubric": [
+    {
+      "key": "correctness",
+      "label": "Correctness + data contracts",
+      "points": 20
+    },
+    {
+      "key": "security",
+      "label": "Security + authorization",
+      "points": 20
+    },
+    {
+      "key": "evaluation",
+      "label": "Scientific evaluation",
+      "points": 20
+    },
+    {
+      "key": "reliability",
+      "label": "Reliability + concurrency",
+      "points": 15
+    },
+    {
+      "key": "performance",
+      "label": "Performance + unit economics",
+      "points": 15
+    },
+    {
+      "key": "leadership",
+      "label": "Leadership + architectural clarity",
+      "points": 10
+    }
+  ],
+  "exit": "≥ 85/100 in external code/design review, zero critical security defects, repeatable load and recovery drills, every claim reproducible from stored evidence."
+}

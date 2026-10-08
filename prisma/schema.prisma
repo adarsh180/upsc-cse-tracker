@@ -476,3 +476,105 @@ model CrossExamEntry {
   @@index([subjectLabel, topicLabel])
   @@index([askedAt])
 }
+
+// ── AI-ML Vault ───────────────────────────────────────────────────────────
+// A private workspace behind its own unlock. The roadmap itself is static
+// data (data/ai-roadmap-2026.json); these tables hold only progress and logs,
+// keyed by stable item keys such as "s8.c3" or "s8.gate.t1".
+
+model VaultAttempt {
+  id          String    @id @default(cuid())
+  keyHash     String    @unique @db.VarChar(64)
+  failures    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("vault_attempts")
+}
+
+model VaultEvent {
+  id        String   @id @default(cuid())
+  kind      String   @db.VarChar(32)
+  ipHash    String?  @db.VarChar(64)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("vault_events")
+}
+
+model AiVaultConfig {
+  id               String   @id @default("main")
+  startDate        DateTime
+  weeklyHourTarget Float    @default(20)
+  updatedAt        DateTime @updatedAt
+
+  @@map("ai_vault_config")
+}
+
+model AiProgress {
+  id          String    @id @default(cuid())
+  itemKey     String    @unique @db.VarChar(64)
+  status      String    @default("todo") @db.VarChar(16)
+  evidenceUrl String?   @db.VarChar(512)
+  note        String?   @db.Text
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("ai_progress")
+}
+
+model AiStudyLog {
+  id             String   @id @default(cuid())
+  logDate        DateTime @db.Date
+  stage          Int
+  readingMin     Int      @default(0)
+  implementMin   Int      @default(0)
+  adversarialMin Int      @default(0)
+  reviewMin      Int      @default(0)
+  focus          String?  @db.VarChar(200)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([logDate])
+  @@map("ai_study_logs")
+}
+
+model AiArtifact {
+  id         String   @id @default(cuid())
+  stage      Int
+  title      String   @db.VarChar(200)
+  repoUrl    String?  @db.VarChar(512)
+  tag        String?  @db.VarChar(80)
+  p50Ms      Float?
+  p95Ms      Float?
+  peakRssMb  Float?
+  costPerReq Float?
+  adrUrl     String?  @db.VarChar(512)
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([stage, createdAt])
+  @@map("ai_artifacts")
+}
+
+model AiWeeklyReview {
+  id         String   @id @default(cuid())
+  weekStart  DateTime @unique @db.Date
+  tag        String?  @db.VarChar(80)
+  wins       String?  @db.Text
+  risks      String?  @db.Text
+  rubricJson Json?
+  createdAt  DateTime @default(now())
+
+  @@map("ai_weekly_reviews")
+}
+
+model AiAnalysis {
+  id        String   @id @default(cuid())
+  model     String?  @db.VarChar(80)
+  text      String   @db.LongText
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ai_analyses")
+}

@@ -44,6 +44,8 @@ export async function createSession(email: string) {
 export async function destroySession() {
   const cookieStore = await cookies();
   cookieStore.delete(cookieName);
+  // Signing out also closes the AI-ML vault.
+  cookieStore.delete("upsc-vault");
 }
 
 export async function getSession(): Promise<SessionPayload | null> {

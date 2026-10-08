@@ -10,6 +10,7 @@ import {
   Goal,
   GraduationCap,
   HeartPulse,
+  LockKeyhole,
   LayoutDashboard,
   Newspaper,
   PenSquare,
@@ -32,6 +33,10 @@ export const navGroups = [
       { href: "/mission-control", label: "Mission Control", icon: BrainCircuit, accent: "var(--gold-bright)" },
       { href: "/todo", label: "Todo Board", icon: ListTodo, accent: "var(--botany)" },
     ],
+  },
+  {
+    label: "Private",
+    items: [{ href: "/vault", label: "AI-ML Vault", icon: LockKeyhole, accent: "hsl(190, 95%, 55%)" }],
   },
   {
     label: "AI Insight",

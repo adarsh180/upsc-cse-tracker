@@ -13,6 +13,16 @@ if (!rawSecret) {
 
 const secret = new TextEncoder().encode(rawSecret);
 
+// The AI-ML vault has its own token, signed with a key derived from the same
+// secret (see lib/vault/auth.ts) — an app session alone never opens it.
+let vaultKeyPromise: Promise<Uint8Array> | null = null;
+function vaultKey() {
+  vaultKeyPromise ??= crypto.subtle
+    .digest("SHA-256", new TextEncoder().encode(`vault-scope:${rawSecret}`))
+    .then((buf) => new TextEncoder().encode(Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("")));
+  return vaultKeyPromise;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -33,8 +43,19 @@ export async function proxy(request: NextRequest) {
 
   try {
     await jwtVerify(token, secret);
-    return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
+
+  if (pathname.startsWith("/vault") && pathname !== "/vault/unlock") {
+    const vaultToken = request.cookies.get("upsc-vault")?.value;
+    try {
+      if (!vaultToken) throw new Error("no vault session");
+      const { payload } = await jwtVerify(vaultToken, await vaultKey());
+      if (payload.scope !== "vault") throw new Error("wrong scope");
+    } catch {
+      return NextResponse.redirect(new URL("/vault/unlock", request.url));
+    }
+  }
+  return NextResponse.next();
 }
