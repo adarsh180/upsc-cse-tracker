@@ -628,3 +628,161 @@ model AiAnalysis {
   @@index([createdAt])
   @@map("ai_analyses")
 }
+
+// ── Gate: salted scrypt hashes for the dashboard-switch passwords (never plain text) ──
+model GateSecret {
+  id        String   @id @db.VarChar(32)
+  hash      String   @db.VarChar(255)
+  updatedAt DateTime @updatedAt
+
+  @@map("gate_secrets")
+}
+
+// ── Personal hub, shared by the UPSC and NEET sites. owner: adarsh | misti | joint ──
+model HubGoal {
+  id           String    @id @default(cuid())
+  owner        String    @db.VarChar(8)
+  title        String    @db.VarChar(200)
+  area         String    @default("life") @db.VarChar(24)
+  priority     Int       @default(2)
+  deadline     DateTime? @db.Date
+  status       String    @default("active") @db.VarChar(12)
+  progress     Int       @default(0)
+  targetAmount Float?
+  fundId       String?   @db.VarChar(32)
+  note         String?   @db.Text
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([owner])
+  @@map("hub_goals")
+}
+
+model HubTask {
+  id        String    @id @default(cuid())
+  owner     String    @db.VarChar(8)
+  title     String    @db.VarChar(200)
+  priority  Int       @default(2)
+  due       DateTime? @db.Date
+  goalId    String?   @db.VarChar(32)
+  status    String    @default("todo") @db.VarChar(8)
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([owner, status])
+  @@map("hub_tasks")
+}
+
+model HubTxn {
+  id        String   @id @default(cuid())
+  owner     String   @db.VarChar(8)
+  kind      String   @db.VarChar(8)
+  amount    Float
+  category  String   @db.VarChar(32)
+  method    String?  @db.VarChar(16)
+  txnDate   DateTime @db.Date
+  note      String?  @db.VarChar(300)
+  recurring Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([owner, txnDate])
+  @@map("hub_txns")
+}
+
+model HubBudget {
+  id       String @id @default(cuid())
+  owner    String @db.VarChar(8)
+  category String @db.VarChar(32)
+  monthly  Float
+
+  @@unique([owner, category])
+  @@map("hub_budgets")
+}
+
+model HubFund {
+  id         String    @id @default(cuid())
+  owner      String    @db.VarChar(8)
+  name       String    @db.VarChar(120)
+  kind       String    @default("goal") @db.VarChar(16)
+  target     Float
+  targetDate DateTime? @db.Date
+  note       String?   @db.Text
+  archived   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@map("hub_funds")
+}
+
+model HubFundEntry {
+  id        String   @id @default(cuid())
+  fundId    String   @db.VarChar(32)
+  owner     String   @db.VarChar(8)
+  amount    Float
+  entryDate DateTime @db.Date
+  note      String?  @db.VarChar(300)
+  createdAt DateTime @default(now())
+
+  @@index([fundId])
+  @@map("hub_fund_entries")
+}
+
+model HubAccount {
+  id        String   @id @default(cuid())
+  owner     String   @db.VarChar(8)
+  name      String   @db.VarChar(120)
+  kind      String   @db.VarChar(12)
+  balance   Float
+  updatedAt DateTime @updatedAt
+
+  @@map("hub_accounts")
+}
+
+model HubEvent {
+  id        String   @id @default(cuid())
+  owner     String   @db.VarChar(8)
+  title     String   @db.VarChar(200)
+  kind      String   @default("other") @db.VarChar(16)
+  eventDate DateTime @db.Date
+  budget    Float?
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([eventDate])
+  @@map("hub_events")
+}
+
+model HubPlanItem {
+  id        String    @id @default(cuid())
+  plan      String    @default("wedding") @db.VarChar(16)
+  owner     String    @db.VarChar(8)
+  title     String    @db.VarChar(200)
+  category  String    @default("other") @db.VarChar(24)
+  estimate  Float?
+  paid      Float     @default(0)
+  due       DateTime? @db.Date
+  status    String    @default("todo") @db.VarChar(8)
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  @@map("hub_plan_items")
+}
+
+model HubSetting {
+  key       String   @id @db.VarChar(64)
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("hub_settings")
+}
+
+model HubAnalysis {
+  id        String   @id @default(cuid())
+  actor     String   @db.VarChar(8)
+  model     String?  @db.VarChar(80)
+  text      String   @db.LongText
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("hub_analyses")
+}

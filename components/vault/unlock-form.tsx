@@ -11,7 +11,7 @@ export function UnlockForm() {
     <form action={action} className="fg-form">
       <label className="fg-field">
         PASSWORD
-        <input type="password" name="password" autoComplete="current-password" required autoFocus disabled={pending || Boolean(state.lockedMinutes)} />
+        <input type="password" name="password" autoComplete="off" required autoFocus disabled={pending || Boolean(state.lockedMinutes)} />
       </label>
       {state.error ? (
         <p className="fg-error" role="alert">

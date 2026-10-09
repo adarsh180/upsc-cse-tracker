@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { lockVaultAction } from "@/app/vault/actions";
+import { UpscOrbit } from "@/components/shell/upsc-orbit";
 import { ForgeMark, IconBack, IconBranch, IconChip, IconCore, IconGate, IconLock, IconLog, IconSpark, IconTrace } from "@/components/vault/icons";
 
 const LINKS = [
@@ -37,6 +38,7 @@ export function ForgeNav() {
         ))}
       </nav>
       <div className="fg-top-actions">
+        <UpscOrbit />
         <Link href="/dashboard" className="fg-iconbtn" aria-label="Back to the UPSC desk">
           <IconBack size={16} />
           <span>UPSC desk</span>

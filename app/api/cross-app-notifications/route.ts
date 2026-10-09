@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -14,23 +15,26 @@ function clean(value: unknown, fallback = "") {
 }
 
 function authorized(request: NextRequest) {
-  const secret = process.env.CROSS_APP_NOTIFY_SECRET;
-  const header = request.headers.get("x-cross-app-secret");
-  const isAuth = Boolean(secret && header && header === secret);
-  if (!isAuth) {
-    console.error("[cross-app-notifications] Authorization failed. Secret configured on server:", secret ? "Yes" : "No", "Secret header received:", header ? "Yes" : "No");
-  }
-  return isAuth;
+  const secret = process.env.CROSS_APP_NOTIFY_SECRET?.trim();
+  const header = request.headers.get("x-cross-app-secret")?.trim();
+  if (!secret || !header) return false;
+  const a = Buffer.from(secret);
+  const b = Buffer.from(header);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Messages from the NEET desk. `{ ping: true }` only checks the link and stores nothing. */
 export async function POST(request: NextRequest) {
   if (!authorized(request)) {
+    console.error("[cross-app-notifications] rejected: secret", process.env.CROSS_APP_NOTIFY_SECRET ? "configured" : "missing", "· header", request.headers.get("x-cross-app-secret") ? "present" : "missing");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const payload = await request.json().catch(() => ({}));
+  if (payload?.ping === true) return NextResponse.json({ ok: true, pong: "upsc" });
+
   await pruneExpiredNotifications();
 
-  const payload = await request.json().catch(() => ({}));
   const title = clean(payload.title).slice(0, 90);
   const body = clean(payload.body).slice(0, 420);
   const senderLabel = clean(payload.senderLabel, "Partner").slice(0, 42);
@@ -41,21 +45,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
   }
 
-  const notification = await db.appNotification.create({
-    data: {
-      title,
-      body,
-      tone,
-      senderLabel,
-      senderClientId,
-    },
-  });
-
+  const notification = await db.appNotification.create({ data: { title, body, tone, senderLabel, senderClientId } });
   const push = await sendWebPushNotification(notification, senderClientId);
 
   // Await the Discord dispatch so Vercel doesn't freeze the execution thread before it completes
-  const baseUrl = request.nextUrl.origin;
-  await sendDiscordNotification({ title, body, senderLabel, tone }, baseUrl).catch((err) => {
+  await sendDiscordNotification({ title, body, senderLabel, tone }, request.nextUrl.origin).catch((err) => {
     console.error("[cross-app-notifications] Discord background dispatch error:", err);
   });
 

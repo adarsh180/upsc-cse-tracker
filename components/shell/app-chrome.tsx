@@ -18,6 +18,7 @@ import { navGroups } from "@/components/shell/nav-config";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { SyllabusCommand } from "@/components/ui/syllabus-command";
 import { cn } from "@/lib/utils";
+import { UpscOrbit } from "@/components/shell/upsc-orbit";
 
 /* Primary destinations — desktop island + mobile dock */
 const primaryTabs = [
@@ -35,6 +36,7 @@ const desktopNav = [
   { href: "/ai-insight/guru", label: "Guru" },
   { href: "/report-card", label: "Report" },
   { href: "/vault", label: "AI-ML" },
+  { href: "/hub", label: "Saath" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -191,8 +193,8 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     setMoreOpen(false);
   }, [pathname]);
 
-  // The AI-ML vault is a separate arena with its own chrome.
-  if (pathname.startsWith("/vault")) return <>{children}</>;
+  // The AI-ML vault and Saath are separate arenas with their own chrome.
+  if (pathname.startsWith("/vault") || pathname === "/hub" || pathname.startsWith("/hub/")) return <>{children}</>;
 
   if (isPublicPage) {
     return (
@@ -238,9 +240,10 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="su-actions su-glass">
+          <UpscOrbit />
           <SyllabusCommand />
           <div className={cn("notify-host-inline", isGuruPage && "notify-host-guru")}>
-            <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET phone" />
+            <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET desk" />
           </div>
           <ThemeToggle className="theme-toggle-inline" />
           <button

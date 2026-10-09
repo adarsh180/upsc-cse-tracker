@@ -910,3 +910,23 @@ html[data-theme="light"] .su-seg::before { background: #fff; box-shadow: 0 4px 1
 /* Peacock replaces terracotta in the minute rotation (too close to a familiar brand orange). */
 html:not([data-theme="light"])[data-palette="peacock"] { --nv-a1: #3fb6d6; --nv-a2: #6f8cff; --nv-a3: #2fd3a6; }
 html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3550c4; --nv-a3: #0f8a6a; }
+
+/* Light mode: every round action in the top bar (search, messages, theme,
+   dashboard switch, menu) reads the same — no white pill on one, bare icon
+   on the next. Beats theme.css's legacy light .v2-iconbtn pill. */
+:root[data-theme="light"] .su-actions .v2-iconbtn,
+:root[data-theme="light"] .su-actions .notify-button,
+:root[data-theme="light"] .su-actions .do-trigger {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--su-ink-2) !important;
+}
+:root[data-theme="light"] .su-actions .v2-iconbtn:hover,
+:root[data-theme="light"] .su-actions .notify-button:hover {
+  background: color-mix(in srgb, var(--su-ink) 8%, transparent) !important;
+  color: var(--su-ink) !important;
+}
+.su-actions .do-trigger { width: 40px; height: 40px; background: transparent; box-shadow: none; color: var(--su-ink-2); }
+.su-actions .nc-badge { box-shadow: 0 0 0 2px var(--su-bg); }
+@media (max-width: 860px) { .su-actions .do-trigger { width: 38px; height: 38px; } }

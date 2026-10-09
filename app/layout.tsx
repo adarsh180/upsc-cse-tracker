@@ -18,6 +18,8 @@ import "./nova-goals.css";
 import "./nova-study.css";
 import "./sutra.css";
 import "./sutra-pages.css";
+import "./hub.css";
+import "./notify.css";
 
 // Sutra type system: Funnel Display for display and big figures, Geist for
 // reading, Geist Mono for labels/data, Doto (dot-matrix) only for countdowns.

@@ -21,7 +21,7 @@ export default async function VaultUnlockPage() {
           <span className="fg-kicker"><i /> PRIVATE · AI-ML VAULT</span>
           <h1>Unlock the Forge</h1>
         </div>
-        <p>Re-enter your password to open the AI engineering workspace. The vault stays open for 12 hours on this device, closes when you sign out, and locks for 15 minutes after 5 wrong tries.</p>
+        <p>Enter the dashboard-switch password to open the AI engineering workspace — it is separate from your sign-in password. The vault stays open for 12 hours on this device, closes when you sign out, and locks for 15 minutes after 5 wrong tries.</p>
         <UnlockForm />
         <Link href="/dashboard" className="fg-unlock-back">← Back to the UPSC desk</Link>
       </div>

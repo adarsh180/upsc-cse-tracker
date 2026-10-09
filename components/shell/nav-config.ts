@@ -10,7 +10,7 @@ import {
   Goal,
   GraduationCap,
   HeartPulse,
-  LockKeyhole,
+  HeartHandshake, LockKeyhole,
   LayoutDashboard,
   Newspaper,
   PenSquare,
@@ -36,7 +36,10 @@ export const navGroups = [
   },
   {
     label: "Private",
-    items: [{ href: "/vault", label: "AI-ML Vault", icon: LockKeyhole, accent: "hsl(190, 95%, 55%)" }],
+    items: [
+      { href: "/vault", label: "AI-ML Vault", icon: LockKeyhole, accent: "hsl(190, 95%, 55%)" },
+      { href: "/hub", label: "Saath · Personal", icon: HeartHandshake, accent: "hsl(340, 90%, 68%)" },
+    ],
   },
   {
     label: "AI Insight",
