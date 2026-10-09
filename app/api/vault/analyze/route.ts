@@ -36,6 +36,13 @@ export async function POST() {
     stages: m.stages.map((s) => `S${s.n} ${Math.round(s.score * 100)}%${s.passed ? " passed" : ""}`).join(", "),
     recentNotes: records.logs.slice(0, 8).map((l) => `${l.logDate} S${l.stage}: ${l.focus ?? ""} ${l.note ?? ""}`.trim()),
     lastReview: records.reviews.at(-1) ?? null,
+    journey: {
+      total: `${Math.round(m.journey.totalHours)}h logged vs ${Math.round(m.journey.planHours)}h planned so far, ${m.journey.sessions} sessions, longest streak ${m.journey.longestStreak} days`,
+      velocity: `${m.journey.velocity.toFixed(1)} items finished a week (prev 4 weeks ${m.journey.velocityPrev.toFixed(1)}); ${m.journey.hours28.toFixed(1)}h last 28 days vs ${m.journey.hoursPrev28.toFixed(1)}h the 28 before`,
+      topTopics: m.journey.topTopics.slice(0, 6).map((t) => `${t.label}: ${Math.round(t.minutes / 60 * 10) / 10}h`),
+      ownTracks: m.journey.trackStats.map((t) => `${t.name}: ${t.topics} topics, ${Math.round(t.mastery * 100)}% mastery, ${Math.round(t.minutes / 60)}h`),
+      scoredChecks: m.journey.assessments.slice(-6).map((a) => `${a.takenOn} ${a.title} (${a.kind}): ${Math.round(a.share * 100)}%`),
+    },
   };
 
   const prompt = `You are a strict staff-level AI engineering reviewer. The learner follows the "AI Engineering Field Manual" (13 gated stages, 48-week first pass, then an EvidenceOps capstone). Its standard: a passing demo is not evidence; every gate needs tests, baselines, p50/p95, failure injection and an ADR.

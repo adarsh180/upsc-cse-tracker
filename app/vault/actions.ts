@@ -73,7 +73,8 @@ export async function addLogAction(formData: FormData) {
   await guard();
   const date = String(formData.get("logDate") ?? "");
   const logDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : new Date();
-  const stage = Math.max(1, Math.min(14, Math.round(Number(formData.get("stage")) || 1)));
+  // Stage 0 = time on one of your own tracks, outside the manual.
+  const stage = Math.max(0, Math.min(14, Math.round(Number(formData.get("stage")) || 0)));
   const minutes = {
     readingMin: intIn(formData.get("readingMin"), 900),
     implementMin: intIn(formData.get("implementMin"), 900),
@@ -81,7 +82,8 @@ export async function addLogAction(formData: FormData) {
     reviewMin: intIn(formData.get("reviewMin"), 900),
   };
   if (minutes.readingMin + minutes.implementMin + minutes.adversarialMin + minutes.reviewMin === 0) return;
-  await withDbRetry(() => db.aiStudyLog.create({ data: { logDate, stage, ...minutes, focus: text(formData.get("focus"), 200), note: text(formData.get("note"), 4000) } }));
+  const { topicKey, trackId } = await sessionLinks(formData);
+  await withDbRetry(() => db.aiStudyLog.create({ data: { logDate, stage, ...minutes, topicKey, trackId, focus: text(formData.get("focus"), 200), note: text(formData.get("note"), 4000) } }));
   refresh();
 }
 
@@ -153,5 +155,141 @@ export async function saveConfigAction(formData: FormData) {
   await withDbRetry(() =>
     db.aiVaultConfig.upsert({ where: { id: "main" }, create: { id: "main", startDate: data.startDate ?? mondayOf(new Date()), weeklyHourTarget: data.weeklyHourTarget ?? 20 }, update: data }),
   );
+  refresh();
+}
+
+/* ── Your own tracks, topics and scored checks ───────────────────────── */
+
+const CONCEPT_TOPIC = /^s(1[0-3]|[1-9])\.c\d{1,2}$/;
+const LEVELS: readonly string[] = CONCEPT_LEVELS;
+const KINDS = new Set(["quiz", "interview", "coding", "design", "cert", "kaggle"]);
+
+/** A session or check may point at a manual concept (s3.c2), one of your topics (t.<id>) and/or a track. */
+async function sessionLinks(formData: FormData) {
+  const raw = text(formData.get("topicKey"), 64);
+  let topicKey: string | null = null;
+  let trackId = text(formData.get("trackId"), 32);
+  if (raw && CONCEPT_TOPIC.test(raw)) topicKey = raw;
+  else if (raw?.startsWith("t.")) {
+    const topic = await withDbRetry(() => db.aiTopic.findUnique({ where: { id: raw.slice(2) } }));
+    if (topic) {
+      topicKey = raw;
+      trackId = trackId ?? topic.trackId;
+    }
+  }
+  if (trackId) {
+    const id = trackId;
+    if (!(await withDbRetry(() => db.aiTrack.findUnique({ where: { id } })))) trackId = null;
+  }
+  return { topicKey, trackId };
+}
+
+export async function addTrackAction(formData: FormData) {
+  await guard();
+  const name = text(formData.get("name"), 120);
+  if (!name) return;
+  const count = await withDbRetry(() => db.aiTrack.count());
+  if (count >= 40) return;
+  const hue = Math.max(0, Math.min(359, Math.round(Number(formData.get("hue")) || 190)));
+  const hours = Number(formData.get("weeklyHours"));
+  await withDbRetry(() =>
+    db.aiTrack.create({ data: { name, hue, weeklyMinutes: Number.isFinite(hours) && hours > 0 ? Math.round(Math.min(80, hours) * 60) : null, note: text(formData.get("note"), 2000) } }),
+  );
+  refresh();
+}
+
+export async function archiveTrackAction(id: string, archived: boolean) {
+  await guard();
+  await withDbRetry(() => db.aiTrack.updateMany({ where: { id: String(id) }, data: { archived } }));
+  refresh();
+}
+
+/** Deletes the track and its topics; logged time and checks stay, unlinked from it. */
+export async function deleteTrackAction(id: string) {
+  await guard();
+  const trackId = String(id);
+  const topics = await withDbRetry(() => db.aiTopic.findMany({ where: { trackId }, select: { id: true } }));
+  const keys = topics.map((t) => `t.${t.id}`);
+  await withDbRetry(() =>
+    db.$transaction([
+      db.aiStudyLog.updateMany({ where: { OR: [{ trackId }, { topicKey: { in: keys } }] }, data: { trackId: null, topicKey: null } }),
+      db.aiAssessment.updateMany({ where: { OR: [{ trackId }, { topicKey: { in: keys } }] }, data: { trackId: null, topicKey: null } }),
+      db.aiTopic.deleteMany({ where: { trackId } }),
+      db.aiTrack.deleteMany({ where: { id: trackId } }),
+    ]),
+  );
+  refresh();
+}
+
+export async function addTopicAction(formData: FormData) {
+  await guard();
+  const name = text(formData.get("name"), 200);
+  if (!name) return;
+  const trackId = text(formData.get("trackId"), 32);
+  const stageRaw = Number(formData.get("stage"));
+  const stage = Number.isInteger(stageRaw) && stageRaw >= 1 && stageRaw <= 14 ? stageRaw : null;
+  if (!trackId && !stage) return;
+  if (trackId && !(await withDbRetry(() => db.aiTrack.findUnique({ where: { id: trackId } })))) return;
+  const count = await withDbRetry(() => db.aiTopic.count());
+  if (count >= 1500) return;
+  await withDbRetry(() => db.aiTopic.create({ data: { name, trackId: trackId ?? null, stage: trackId ? null : stage } }));
+  refresh();
+}
+
+export async function setTopicStatusAction(id: string, status: string) {
+  await guard();
+  if (!LEVELS.includes(status)) throw new Error("Invalid status.");
+  const done = status === "explained" || status === "proven";
+  const prev = await withDbRetry(() => db.aiTopic.findUnique({ where: { id: String(id) } }));
+  if (!prev) return;
+  await withDbRetry(() => db.aiTopic.update({ where: { id: prev.id }, data: { status, completedAt: done ? (prev.completedAt ?? new Date()) : null } }));
+  refresh();
+}
+
+export async function deleteTopicAction(id: string) {
+  await guard();
+  const key = `t.${String(id)}`;
+  await withDbRetry(() =>
+    db.$transaction([
+      db.aiStudyLog.updateMany({ where: { topicKey: key }, data: { topicKey: null } }),
+      db.aiAssessment.updateMany({ where: { topicKey: key }, data: { topicKey: null } }),
+      db.aiTopic.deleteMany({ where: { id: String(id) } }),
+    ]),
+  );
+  refresh();
+}
+
+export async function addAssessmentAction(formData: FormData) {
+  await guard();
+  const title = text(formData.get("title"), 200);
+  const score = num(formData.get("score"));
+  const maxScore = num(formData.get("maxScore"));
+  if (!title || score === null || !maxScore) return;
+  const date = String(formData.get("takenOn") ?? "");
+  const kind = String(formData.get("kind") ?? "quiz");
+  const stageRaw = Number(formData.get("stage"));
+  const { topicKey, trackId } = await sessionLinks(formData);
+  await withDbRetry(() =>
+    db.aiAssessment.create({
+      data: {
+        takenOn: /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : new Date(),
+        title,
+        kind: KINDS.has(kind) ? kind : "quiz",
+        stage: Number.isInteger(stageRaw) && stageRaw >= 1 && stageRaw <= 14 ? stageRaw : null,
+        trackId,
+        topicKey,
+        score: Math.min(score, maxScore),
+        maxScore,
+        minutes: formData.get("minutes") ? intIn(formData.get("minutes"), 600) : null,
+        note: text(formData.get("note"), 4000),
+      },
+    }),
+  );
+  refresh();
+}
+
+export async function deleteAssessmentAction(id: string) {
+  await guard();
+  await withDbRetry(() => db.aiAssessment.deleteMany({ where: { id: String(id) } }));
   refresh();
 }

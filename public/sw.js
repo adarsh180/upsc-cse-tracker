@@ -1,6 +1,6 @@
 // Bumped whenever the caching rules change: activating a new version deletes
 // every older cache, including any bad entries an older worker stored.
-const CACHE_NAME = "upsc-cse-tracker-pwa-v11";
+const CACHE_NAME = "upsc-cse-tracker-pwa-v12";
 const OFFLINE_URL = "/offline";
 const APP_SHELL_ASSETS = [
   OFFLINE_URL,

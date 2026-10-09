@@ -7,7 +7,27 @@ import { CONCEPT_VALUE, LANES, ROADMAP, RUBRIC_STAGES, TOTAL_WEEKS, key, needsEv
  */
 
 export type ProgressRow = { itemKey: string; status: string; evidenceUrl: string | null; note: string | null; completedAt: string | null };
-export type LogRow = { id: string; logDate: string; stage: number; readingMin: number; implementMin: number; adversarialMin: number; reviewMin: number; focus: string | null; note: string | null };
+export type LogRow = { id: string; logDate: string; stage: number; readingMin: number; implementMin: number; adversarialMin: number; reviewMin: number; focus: string | null; topicKey: string | null; trackId: string | null; note: string | null };
+export type TrackRow = { id: string; name: string; hue: number; weeklyMinutes: number | null; note: string | null; archived: boolean };
+export type TopicRow = { id: string; trackId: string | null; stage: number | null; name: string; status: string; note: string | null; completedAt: string | null };
+export type AssessmentRow = { id: string; takenOn: string; title: string; kind: string; stage: number | null; trackId: string | null; topicKey: string | null; score: number; maxScore: number; minutes: number | null; note: string | null };
+
+export const ASSESSMENT_KINDS = [
+  { key: "quiz", label: "Quiz / self-test" },
+  { key: "interview", label: "Mock interview" },
+  { key: "coding", label: "Coding contest" },
+  { key: "design", label: "System-design review" },
+  { key: "cert", label: "Course / certification" },
+  { key: "kaggle", label: "Kaggle / benchmark" },
+] as const;
+
+/** Readable name for a session's topic key: a manual concept (s3.c2) or one of your topics (t.<id>). */
+export function topicLabel(topicKey: string, topics: TopicRow[]) {
+  if (topicKey.startsWith("t.")) return topics.find((t) => t.id === topicKey.slice(2))?.name ?? "Removed topic";
+  const m = /^s(\d+)\.c(\d+)$/.exec(topicKey);
+  if (m) return ROADMAP.stages[Number(m[1]) - 1]?.concepts[Number(m[2])]?.title ?? topicKey;
+  return topicKey;
+}
 export type ArtifactRow = { id: string; stage: number; title: string; repoUrl: string | null; tag: string | null; p50Ms: number | null; p95Ms: number | null; peakRssMb: number | null; costPerReq: number | null; adrUrl: string | null; createdAt: string };
 export type ReviewRow = { id: string; weekStart: string; tag: string | null; wins: string | null; risks: string | null; rubric: Record<string, number> | null };
 
@@ -90,8 +110,14 @@ export function computeVault(input: {
   logs: LogRow[];
   artifacts: ArtifactRow[];
   reviews: ReviewRow[];
+  tracks?: TrackRow[];
+  topics?: TopicRow[];
+  assessments?: AssessmentRow[];
   today?: Date;
 }) {
+  const tracks = input.tracks ?? [];
+  const topics = input.topics ?? [];
+  const assessments = input.assessments ?? [];
   const today = input.today ?? new Date();
   const start = new Date(`${input.startDate}T00:00:00Z`);
   const daysIn = Math.floor((today.getTime() - start.getTime()) / DAY);
@@ -155,7 +181,17 @@ export function computeVault(input: {
   const benchmarked = reachedStages.filter((s) => input.artifacts.some((a) => a.stage === s.n && a.p95Ms !== null)).length;
   const weeksForReviews = Math.max(1, Math.min(8, Math.floor(weeksElapsed)));
   const reviews8 = input.reviews.filter((r) => today.getTime() - new Date(`${r.weekStart}T00:00:00Z`).getTime() < 8 * 7 * DAY).length;
-  const w = settle({ concepts: 20, labs: 15, gates: 25, hours: 15, cadence: 10, benchmarks: 5, reviews: 5, capstone: 5 });
+  // Scored checks: recency-weighted share of max against an 80% bar, full weight at 6 checks.
+  const sortedChecks = [...assessments].sort((a, b) => a.takenOn.localeCompare(b.takenOn));
+  let aw = 0;
+  let av = 0;
+  sortedChecks.forEach((a, i) => {
+    const wt = Math.pow(0.8, sortedChecks.length - 1 - i);
+    aw += wt;
+    av += wt * (a.maxScore > 0 ? a.score / a.maxScore : 0);
+  });
+  const assessLevel = aw ? av / aw : null;
+  const w = settle({ concepts: 20, labs: 15, gates: 25, hours: 15, cadence: 10, benchmarks: 5, reviews: 5, capstone: 5, assessments: 5 });
   const parts: Part[] = [
     { key: "concepts", label: "Concept mastery", weight: w.concepts, score: avg(stages.map((s) => s.concept)), value: `${conceptCount.proven} proven · ${conceptCount.explained} explained of 104`, note: "proven in code > explained without notes > learning", evidence: conceptCount.todo < 104 },
     { key: "labs", label: "Labs shipped", weight: w.labs, score: avg(stages.map((s) => s.lab)), value: `${stages.filter((s) => s.lab >= 0.99).length}/13 labs complete`, note: "components built and every milestone met", evidence: stages.some((s) => s.lab > 0) },
@@ -165,6 +201,7 @@ export function computeVault(input: {
     { key: "benchmarks", label: "Benchmarks recorded", weight: w.benchmarks, score: reachedStages.length ? benchmarked / reachedStages.length : 0, value: `${benchmarked}/${reachedStages.length || 0} reached stages measured`, note: "p50/p95, memory and cost on every artifact", evidence: input.artifacts.length > 0 },
     { key: "reviews", label: "Sunday reviews", weight: w.reviews, score: clamp(reviews8 / weeksForReviews), value: `${reviews8} in the last ${weeksForReviews} week${weeksForReviews === 1 ? "" : "s"}`, note: "tag the repo, archive benchmarks, note open risks — every Sunday", evidence: input.reviews.length > 0 },
     { key: "capstone", label: "Capstone", weight: w.capstone, score: capstone, value: `${Math.round(capstone * 100)}% of EvidenceOps checks`, note: "latency, quality and reliability budgets plus fault drills", evidence: capstone > 0 },
+    { key: "assessments", label: "Scored checks", weight: w.assessments, score: assessLevel === null ? 0 : clamp(assessLevel / 0.8) * (0.5 + 0.5 * clamp(assessments.length / 6)), value: assessLevel === null ? "none logged" : `${Math.round(assessLevel * 100)}% recent level · ${assessments.length} logged`, note: "quizzes, mock interviews, contests — 80% of max is the bar, full weight at 6", evidence: assessLevel !== null },
   ];
   const proficiency = Math.round(parts.reduce((s, x) => s + x.weight * x.score, 0));
   const lever = [...parts].sort((a, b) => b.weight * (1 - b.score) - a.weight * (1 - a.score))[0];
@@ -209,7 +246,107 @@ export function computeVault(input: {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((a) => ({ id: a.id, stage: a.stage, title: a.title, date: a.createdAt.slice(0, 10), p95: a.p95Ms, p50: a.p50Ms, rss: a.peakRssMb, cost: a.costPerReq }));
 
+  /* ── Journey: the whole road so far, week by week ─────────────────── */
+  const weeksSoFar = Math.max(1, Math.min(TOTAL_WEEKS + 8, week));
+  const weekIndex = (iso: string) => Math.floor((new Date(`${iso.slice(0, 10)}T00:00:00Z`).getTime() - start.getTime()) / (7 * DAY));
+  const completions = [
+    ...input.progress.filter((r) => r.completedAt && (r.status === "done" || r.status === "proven")).map((r) => ({ at: r.completedAt!, kind: /\.c\d+$/.test(r.itemKey) ? "concept" : "gate" })),
+    ...topics.filter((t) => t.completedAt && (t.status === "explained" || t.status === "proven")).map((t) => ({ at: t.completedAt!, kind: "topic" })),
+  ];
+  // The whole plan is drawn (future weeks greyed) so week 3 reads as week 3 of 48.
+  const weekly = Array.from({ length: Math.max(weeksSoFar, TOTAL_WEEKS) }, (_, i) => ({ week: i + 1, minutes: 0, done: 0, checks: 0, future: i + 1 > week }));
+  for (const l of input.logs) {
+    const i = weekIndex(l.logDate);
+    if (i >= 0 && i < weekly.length) weekly[i].minutes += minutesOf(l);
+  }
+  for (const c of completions) {
+    const i = weekIndex(c.at);
+    if (i >= 0 && i < weekly.length) weekly[i].done += 1;
+  }
+  for (const a of assessments) {
+    const i = weekIndex(a.takenOn);
+    if (i >= 0 && i < weekly.length) weekly[i].checks += 1;
+  }
+  let cum = 0;
+  const cumulative = [{ week: 0, hours: 0, plan: 0 }, ...weekly.slice(0, weeksSoFar).map((wk) => ((cum += wk.minutes / 60), { week: wk.week, hours: cum, plan: wk.week * input.weeklyHourTarget }))];
+  const done28 = completions.filter((c) => today.getTime() - new Date(c.at).getTime() < 28 * DAY).length;
+  const prior28 = completions.filter((c) => {
+    const age = today.getTime() - new Date(c.at).getTime();
+    return age >= 28 * DAY && age < 56 * DAY;
+  }).length;
+  const hoursPrev28 = within(56).filter((l) => !last28.includes(l)).reduce((s, l) => s + minutesOf(l), 0) / 60;
+  const days = [...byDay.keys()].sort();
+  let longest = 0;
+  let run = 0;
+  for (let i = 0; i < days.length; i++) {
+    run = i && new Date(`${days[i]}T00:00:00Z`).getTime() - new Date(`${days[i - 1]}T00:00:00Z`).getTime() === DAY ? run + 1 : 1;
+    longest = Math.max(longest, run);
+  }
+  const sessionMins = input.logs.map(minutesOf);
+  const weekday = [0, 0, 0, 0, 0, 0, 0];
+  for (const l of input.logs) weekday[(new Date(`${l.logDate}T00:00:00Z`).getUTCDay() + 6) % 7] += minutesOf(l);
+  const bestWeek = weekly.reduce((b, wk) => (wk.minutes > b.minutes ? wk : b), { week: 0, minutes: 0 });
+  const bestDay = [...byDay.entries()].reduce((b, [d, m]) => (m > b.minutes ? { date: d, minutes: m } : b), { date: "", minutes: 0 });
+
+  // Minutes by topic (manual concepts and your own topics) and by track.
+  const topicMinutes = new Map<string, number>();
+  for (const l of input.logs) if (l.topicKey) topicMinutes.set(l.topicKey, (topicMinutes.get(l.topicKey) ?? 0) + minutesOf(l));
+  const topTopics = [...topicMinutes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, mins]) => ({ key: k, label: topicLabel(k, topics), minutes: mins, custom: k.startsWith("t.") }));
+  const trackStats = tracks.map((t) => {
+    const own = topics.filter((x) => x.trackId === t.id);
+    const logs = input.logs.filter((l) => l.trackId === t.id || (l.topicKey?.startsWith("t.") && own.some((x) => `t.${x.id}` === l.topicKey)));
+    const mins = logs.reduce((s, l) => s + minutesOf(l), 0);
+    const mins7 = logs.filter((l) => today.getTime() - new Date(`${l.logDate}T00:00:00Z`).getTime() < 7 * DAY).reduce((s, l) => s + minutesOf(l), 0);
+    const checks = assessments.filter((a) => a.trackId === t.id);
+    return {
+      ...t,
+      topics: own.length,
+      mastery: avg(own.map((x) => CONCEPT_VALUE[x.status] ?? 0)),
+      proven: own.filter((x) => x.status === "proven").length,
+      minutes: mins,
+      minutes7: mins7,
+      checkLevel: checks.length ? avg(checks.map((a) => a.score / a.maxScore)) : null,
+    };
+  });
+  const stageTopics = ROADMAP.stages.map((s) => {
+    const own = topics.filter((x) => x.stage === s.n);
+    return { n: s.n, count: own.length, mastery: avg(own.map((x) => CONCEPT_VALUE[x.status] ?? 0)) };
+  });
+  const byKind = ASSESSMENT_KINDS.map((k) => {
+    const xs = assessments.filter((a) => a.kind === k.key);
+    return { ...k, count: xs.length, level: xs.length ? avg(xs.map((a) => a.score / a.maxScore)) : null };
+  }).filter((k) => k.count > 0);
+
+  const journey = {
+    weekly,
+    cumulative,
+    totalHours: totalMinutes / 60,
+    planHours: Math.min(week, TOTAL_WEEKS) * input.weeklyHourTarget,
+    sessions: sessionMins.length,
+    avgSession: sessionMins.length ? avg(sessionMins) : 0,
+    longestSession: sessionMins.length ? Math.max(...sessionMins) : 0,
+    activeDays: byDay.size,
+    longestStreak: longest,
+    completions: completions.length,
+    velocity: done28 / 4,
+    velocityPrev: prior28 / 4,
+    hours28,
+    hoursPrev28,
+    weekday,
+    bestWeek,
+    bestDay,
+    topTopics,
+    trackStats,
+    stageTopics,
+    customTopics: topics.length,
+    customTopicsProven: topics.filter((t) => t.status === "proven").length,
+    assessments: sortedChecks.map((a) => ({ ...a, share: a.maxScore > 0 ? a.score / a.maxScore : 0 })),
+    assessLevel,
+    byKind,
+  };
+
   return {
+    journey,
     week,
     weeksElapsed,
     startDate: input.startDate,

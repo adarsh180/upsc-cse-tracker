@@ -532,6 +532,8 @@ model AiStudyLog {
   adversarialMin Int      @default(0)
   reviewMin      Int      @default(0)
   focus          String?  @db.VarChar(200)
+  topicKey       String?  @db.VarChar(64)
+  trackId        String?  @db.VarChar(32)
   note           String?  @db.Text
   createdAt      DateTime @default(now())
 
@@ -567,6 +569,54 @@ model AiWeeklyReview {
   createdAt  DateTime @default(now())
 
   @@map("ai_weekly_reviews")
+}
+
+// Your own subjects beyond the manual (e.g. DSA, maths, MLOps), each with topics.
+model AiTrack {
+  id            String   @id @default(cuid())
+  name          String   @db.VarChar(120)
+  hue           Int      @default(190)
+  weeklyMinutes Int?
+  note          String?  @db.Text
+  archived      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@map("ai_tracks")
+}
+
+// Extra topics: on one of your tracks, or added to a roadmap stage.
+model AiTopic {
+  id          String    @id @default(cuid())
+  trackId     String?   @db.VarChar(32)
+  stage       Int?
+  name        String    @db.VarChar(200)
+  status      String    @default("todo") @db.VarChar(16)
+  note        String?   @db.Text
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([trackId])
+  @@index([stage])
+  @@map("ai_topics")
+}
+
+// Quizzes, mock interviews, coding contests, certifications — any scored check.
+model AiAssessment {
+  id        String   @id @default(cuid())
+  takenOn   DateTime @db.Date
+  title     String   @db.VarChar(200)
+  kind      String   @default("quiz") @db.VarChar(16)
+  stage     Int?
+  trackId   String?  @db.VarChar(32)
+  topicKey  String?  @db.VarChar(64)
+  score     Float
+  maxScore  Float
+  minutes   Int?
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([takenOn])
+  @@map("ai_assessments")
 }
 
 model AiAnalysis {

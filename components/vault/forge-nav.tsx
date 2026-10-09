@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { lockVaultAction } from "@/app/vault/actions";
-import { ForgeMark, IconBack, IconBranch, IconCore, IconGate, IconLock, IconLog, IconSpark } from "@/components/vault/icons";
+import { ForgeMark, IconBack, IconBranch, IconChip, IconCore, IconGate, IconLock, IconLog, IconSpark, IconTrace } from "@/components/vault/icons";
 
 const LINKS = [
   { href: "/vault", label: "Core", icon: IconCore },
   { href: "/vault/stage", label: "Gates", icon: IconGate },
   { href: "/vault/log", label: "Log", icon: IconLog },
+  { href: "/vault/journey", label: "Journey", icon: IconTrace },
+  { href: "/vault/tracks", label: "Tracks", icon: IconChip },
   { href: "/vault/review", label: "Review", icon: IconSpark },
   { href: "/vault/what-if", label: "What-if", icon: IconBranch },
 ];

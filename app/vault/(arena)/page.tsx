@@ -72,6 +72,17 @@ export default async function VaultHome() {
       </section>
 
       <section className="fg-sect">
+        <Link href="/vault/journey" className="fg-panel fg-journey-strip">
+          <span><b>{Math.round(m.journey.totalHours)}h</b><small>logged · {Math.round(m.journey.planHours)}h planned</small></span>
+          <span><b>{m.journey.velocity.toFixed(1)}</b><small>items finished a week</small></span>
+          <span><b>{m.journey.longestStreak}d</b><small>longest streak · now {m.hours.streak}d</small></span>
+          <span><b>{m.journey.assessLevel === null ? "—" : `${Math.round(m.journey.assessLevel * 100)}%`}</b><small>scored checks</small></span>
+          <span><b>{m.journey.trackStats.filter((t) => !t.archived).length}</b><small>own tracks · {m.journey.customTopics} extra topics</small></span>
+          <em>Full journey →</em>
+        </Link>
+      </section>
+
+      <section className="fg-sect">
         <div className="fg-sect-head">
           <h2>Proficiency core</h2>
           <span className="fg-tag">AGAINST THE WEEK-48 STANDARD · NOT YOUR PAST</span>

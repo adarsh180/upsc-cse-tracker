@@ -1,31 +1,53 @@
-import { addArtifactAction, addLogAction, deleteArtifactAction, deleteLogAction, saveConfigAction } from "@/app/vault/actions";
+import { addArtifactAction, addAssessmentAction, addLogAction, deleteArtifactAction, deleteAssessmentAction, deleteLogAction, saveConfigAction } from "@/app/vault/actions";
+import { TopicOptions } from "@/components/vault/topic-options";
 import { getVaultState } from "@/lib/vault/data";
+import { ASSESSMENT_KINDS, topicLabel } from "@/lib/vault/metrics";
 import { ROADMAP, titleCase } from "@/lib/vault/roadmap";
 
 export const dynamic = "force-dynamic";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+const hm = (min: number) => (min >= 60 ? `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m` : `${min}m`);
 
 export default async function VaultLogPage() {
   const { metrics: m, records } = await getVaultState();
   const stageOptions = [...ROADMAP.stages.map((s) => ({ n: s.n, label: `${String(s.n).padStart(2, "0")} · ${titleCase(s.title)}` })), { n: 14, label: "14 · Capstone" }];
+  const tracks = records.tracks.filter((t) => !t.archived);
+  const trackName = new Map(records.tracks.map((t) => [t.id, t.name]));
+  const todayMin = records.logs.filter((l) => l.logDate === today()).reduce((s, l) => s + l.readingMin + l.implementMin + l.adversarialMin + l.reviewMin, 0);
 
   return (
     <main className="fg-page">
       <header className="fg-head">
         <span className="fg-kicker"><i /> LOG · WEEK {m.week}</span>
         <h1 className="fg-title">Log the <em>work.</em></h1>
-        <p className="fg-lede">Split each session the way the manual does — reading/math, implementation, adversarial testing, design review — so the cadence ring can hold you to 20/55/15/10.</p>
+        <p className="fg-lede">
+          Split each session the way the manual does — reading/math, implementation, adversarial testing, design review — and pin it to the concept or your own topic it was about. {hm(todayMin)} logged today.
+        </p>
       </header>
 
       <section className="fg-grid g2">
         <form action={addLogAction} className="fg-panel fg-form">
-          <h2>Today&apos;s session</h2>
+          <h2>Session</h2>
           <div className="fg-row">
-            <label className="fg-field">DATE<input type="date" name="logDate" defaultValue={today()} required /></label>
+            <label className="fg-field">DATE<input type="date" name="logDate" defaultValue={today()} max={today()} required /></label>
             <label className="fg-field">STAGE
               <select name="stage" defaultValue={m.currentStage}>
                 {stageOptions.map((o) => <option key={o.n} value={o.n}>{o.label}</option>)}
+                <option value={0}>00 · Own track only</option>
+              </select>
+            </label>
+          </div>
+          <div className="fg-row">
+            <label className="fg-field">TOPIC
+              <select name="topicKey" defaultValue="">
+                <TopicOptions topics={records.topics} tracks={tracks} />
+              </select>
+            </label>
+            <label className="fg-field">TRACK
+              <select name="trackId" defaultValue="">
+                <option value="">— none —</option>
+                {tracks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </label>
           </div>
@@ -40,6 +62,106 @@ export default async function VaultLogPage() {
           <button type="submit" className="fg-btn is-primary">Save session</button>
         </form>
 
+        <form action={addAssessmentAction} className="fg-panel fg-form">
+          <h2>Scored check</h2>
+          <p className="fg-sub" style={{ margin: 0 }}>Quizzes, mock interviews, coding contests, design reviews, course exams — anything with a score. They feed the proficiency core at an 80% bar.</p>
+          <div className="fg-row">
+            <label className="fg-field">DATE<input type="date" name="takenOn" defaultValue={today()} max={today()} required /></label>
+            <label className="fg-field">KIND
+              <select name="kind" defaultValue="quiz">{ASSESSMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
+            </label>
+          </div>
+          <label className="fg-field">TITLE<input name="title" maxLength={200} required placeholder="e.g. Transformer internals self-test" /></label>
+          <div className="fg-row">
+            <label className="fg-field">SCORE<input name="score" type="number" step="any" min={0} required /></label>
+            <label className="fg-field">OUT OF<input name="maxScore" type="number" step="any" min={0.01} defaultValue={100} required /></label>
+            <label className="fg-field">MINUTES<input name="minutes" type="number" min={0} max={600} /></label>
+          </div>
+          <div className="fg-row">
+            <label className="fg-field">STAGE
+              <select name="stage" defaultValue="">
+                <option value="">— none —</option>
+                {stageOptions.map((o) => <option key={o.n} value={o.n}>{o.label}</option>)}
+              </select>
+            </label>
+            <label className="fg-field">TOPIC
+              <select name="topicKey" defaultValue=""><TopicOptions topics={records.topics} tracks={tracks} /></select>
+            </label>
+            <label className="fg-field">TRACK
+              <select name="trackId" defaultValue="">
+                <option value="">— none —</option>
+                {tracks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="fg-field">NOTES<input name="note" maxLength={4000} placeholder="What you missed and why" /></label>
+          <button type="submit" className="fg-btn is-primary">Save check</button>
+        </form>
+      </section>
+
+      <section className="fg-sect fg-panel">
+        <h2>Recent sessions</h2>
+        <p className="fg-sub">{m.hours.perWeek.toFixed(1)}h a week over the last 28 days · {Math.round(m.hours.total)}h logged in total · {m.journey.sessions} sessions.</p>
+        {records.logs.length ? (
+          <div className="fg-scroll">
+            <table className="fg-table">
+              <thead><tr><th>DATE</th><th>STAGE</th><th>TOPIC · FOCUS</th><th className="num">READ</th><th className="num">BUILD</th><th className="num">BREAK</th><th className="num">REVIEW</th><th className="num">TOTAL</th><th /></tr></thead>
+              <tbody>
+                {records.logs.slice(0, 40).map((l) => (
+                  <tr key={l.id}>
+                    <td className="fg-mono">{l.logDate}</td>
+                    <td>{l.stage || "—"}</td>
+                    <td>
+                      {l.topicKey ? <b>{topicLabel(l.topicKey, records.topics)}</b> : null}
+                      {l.trackId ? <span className="fg-pill">{trackName.get(l.trackId) ?? "track"}</span> : null}
+                      {l.focus ? <span className="fg-cell-note">{l.focus}</span> : null}
+                      {!l.topicKey && !l.focus && !l.trackId ? "—" : null}
+                    </td>
+                    <td className="num">{l.readingMin}</td>
+                    <td className="num">{l.implementMin}</td>
+                    <td className="num">{l.adversarialMin}</td>
+                    <td className="num">{l.reviewMin}</td>
+                    <td className="num">{hm(l.readingMin + l.implementMin + l.adversarialMin + l.reviewMin)}</td>
+                    <td><form action={deleteLogAction.bind(null, l.id)}><button className="fg-btn is-sm" type="submit" aria-label={`Delete session ${l.logDate}`}>✕</button></form></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="fg-empty"><b>No sessions yet</b>Your first logged session lights up the heatmap and the cadence ring.</div>
+        )}
+      </section>
+
+      <section className="fg-sect fg-panel">
+        <h2>Scored checks</h2>
+        <p className="fg-sub">{m.journey.assessLevel === null ? "None yet." : `Recent level ${Math.round(m.journey.assessLevel * 100)}% of max across ${records.assessments.length} checks.`}</p>
+        {records.assessments.length ? (
+          <div className="fg-scroll">
+            <table className="fg-table">
+              <thead><tr><th>DATE</th><th>CHECK</th><th>KIND</th><th>ABOUT</th><th className="num">SCORE</th><th className="num">%</th><th className="num">MIN</th><th /></tr></thead>
+              <tbody>
+                {[...records.assessments].reverse().map((a) => (
+                  <tr key={a.id}>
+                    <td className="fg-mono">{a.takenOn}</td>
+                    <td>{a.title}{a.note ? <span className="fg-cell-note">{a.note}</span> : null}</td>
+                    <td>{ASSESSMENT_KINDS.find((k) => k.key === a.kind)?.label ?? a.kind}</td>
+                    <td>{[a.stage ? `S${a.stage}` : null, a.topicKey ? topicLabel(a.topicKey, records.topics) : null, a.trackId ? trackName.get(a.trackId) : null].filter(Boolean).join(" · ") || "—"}</td>
+                    <td className="num">{a.score}/{a.maxScore}</td>
+                    <td className="num">{Math.round((a.score / a.maxScore) * 100)}%</td>
+                    <td className="num">{a.minutes ?? "—"}</td>
+                    <td><form action={deleteAssessmentAction.bind(null, a.id)}><button className="fg-btn is-sm" type="submit" aria-label={`Delete ${a.title}`}>✕</button></form></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="fg-empty"><b>No scored checks yet</b>Each stage ends with adversarial questions — score yourself on them and log it here.</div>
+        )}
+      </section>
+
+      <section className="fg-sect fg-grid g2">
         <form action={addArtifactAction} className="fg-panel fg-form">
           <h2>Ship an artifact</h2>
           <div className="fg-row">
@@ -61,34 +183,16 @@ export default async function VaultLogPage() {
           <label className="fg-field">ADR URL<input name="adrUrl" type="url" placeholder="https://… decision record" /></label>
           <button type="submit" className="fg-btn is-primary">Record artifact</button>
         </form>
-      </section>
 
-      <section className="fg-sect fg-panel">
-        <h2>Recent sessions</h2>
-        <p className="fg-sub">{m.hours.perWeek.toFixed(1)}h a week over the last 28 days · {Math.round(m.hours.total)}h logged in total.</p>
-        {records.logs.length ? (
-          <div className="fg-scroll">
-            <table className="fg-table">
-              <thead><tr><th>DATE</th><th>STAGE</th><th>FOCUS</th><th className="num">READ</th><th className="num">BUILD</th><th className="num">BREAK</th><th className="num">REVIEW</th><th /></tr></thead>
-              <tbody>
-                {records.logs.slice(0, 30).map((l) => (
-                  <tr key={l.id}>
-                    <td className="fg-mono">{l.logDate}</td>
-                    <td>{l.stage}</td>
-                    <td>{l.focus ?? "—"}</td>
-                    <td className="num">{l.readingMin}</td>
-                    <td className="num">{l.implementMin}</td>
-                    <td className="num">{l.adversarialMin}</td>
-                    <td className="num">{l.reviewMin}</td>
-                    <td><form action={deleteLogAction.bind(null, l.id)}><button className="fg-btn is-sm" type="submit" aria-label={`Delete session ${l.logDate}`}>✕</button></form></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <form action={saveConfigAction} className="fg-panel fg-form">
+          <h2>Plan settings</h2>
+          <p className="fg-sub">Week 1 starts on the Monday of this date. The manual asks 15–20 focused hours a week; push higher if you can hold it.</p>
+          <div className="fg-row">
+            <label className="fg-field">WEEK 1 STARTS<input type="date" name="startDate" defaultValue={records.startDate} /></label>
+            <label className="fg-field">WEEKLY HOUR TARGET<input type="number" name="weeklyHourTarget" min={5} max={80} step={0.5} defaultValue={records.weeklyHourTarget} /></label>
           </div>
-        ) : (
-          <div className="fg-empty"><b>No sessions yet</b>Your first logged session lights up the heatmap and the cadence ring.</div>
-        )}
+          <button type="submit" className="fg-btn">Save settings</button>
+        </form>
       </section>
 
       <section className="fg-sect fg-panel">
@@ -116,18 +220,6 @@ export default async function VaultLogPage() {
         ) : (
           <div className="fg-empty"><b>Nothing shipped yet</b>Stage 1&apos;s proof artifact is a C++/Python parity benchmark.</div>
         )}
-      </section>
-
-      <section className="fg-sect">
-        <form action={saveConfigAction} className="fg-panel fg-form">
-          <h2>Plan settings</h2>
-          <p className="fg-sub">Week 1 starts on the Monday of this date. The manual asks 15–20 focused hours a week; push higher if you can hold it.</p>
-          <div className="fg-row">
-            <label className="fg-field">WEEK 1 STARTS<input type="date" name="startDate" defaultValue={records.startDate} /></label>
-            <label className="fg-field">WEEKLY HOUR TARGET<input type="number" name="weeklyHourTarget" min={5} max={80} step={0.5} defaultValue={records.weeklyHourTarget} /></label>
-          </div>
-          <button type="submit" className="fg-btn">Save settings</button>
-        </form>
       </section>
     </main>
   );
