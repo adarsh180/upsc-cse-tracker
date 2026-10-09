@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { checkRateLimit, clearRateLimit, timingSafeEqual } from "@/lib/rate-limit";
 import { isNewDevice, requestInfo, securityAlert, signInLimit } from "@/lib/security-alert";
+import { storeSecret, verifyStoredSecret } from "@/lib/gate-secret";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
@@ -97,7 +98,11 @@ export async function signInAction(formData: FormData) {
   const expectedPassword = process.env.AUTH_PASSWORD ?? "";
 
   const emailOk = Boolean(expectedEmail) && timingSafeEqual(email, expectedEmail);
-  const passwordOk = Boolean(expectedPassword) && timingSafeEqual(password, expectedPassword);
+  // Hashed check: once a salted scrypt hash is stored, only the hash is compared;
+  // the first successful sign-in against the env value stores it. The password never changes.
+  const stored = emailOk ? await verifyStoredSecret("login-upsc", password) : false;
+  const passwordOk = stored === null ? Boolean(expectedPassword) && timingSafeEqual(password, expectedPassword) : stored;
+  if (emailOk && passwordOk && stored === null) await storeSecret("login-upsc", password).catch((error) => console.error("[auth] could not store password hash", error));
 
   if (emailOk && passwordOk) {
     clearRateLimit(`signin:${ip}`);

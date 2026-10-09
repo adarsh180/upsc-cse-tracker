@@ -12,7 +12,7 @@ export function UpscOrbit() {
   return (
     <DashOrbit
       items={[
-        { key: "desk", label: "UPSC desk", sub: "CSE 2027", logo: "/upsc-logo-mark.png", current: !at("/vault") && !at("/hub"), onPick: () => router.push("/dashboard") },
+        { key: "desk", label: "UPSC desk", sub: "CSE 2027", logo: "/brand/upsc-desk-160.webp", current: !at("/vault") && !at("/hub"), onPick: () => router.push("/dashboard") },
         { key: "vault", label: "AI-ML", logo: "/brand/ai-ml-160.webp", current: at("/vault"), locked: true, onPick: () => router.push("/vault") },
         { key: "hub", label: "Saath", logo: "/brand/saath-160.webp", current: at("/hub"), locked: true, onPick: () => router.push("/hub") },
       ]}
