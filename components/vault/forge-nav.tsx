@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { lockVaultAction } from "@/app/vault/actions";
 import { UpscOrbit } from "@/components/shell/upsc-orbit";
 import { ThemeCoin } from "@/components/theme-coin";
+import { PageDial } from "@/components/page-dial";
 import { IconBack, IconBranch, IconChip, IconCore, IconGate, IconLock, IconLog, IconSpark, IconTrace } from "@/components/vault/icons";
 
 const LINKS = [
@@ -40,6 +41,7 @@ export function ForgeNav() {
       </nav>
       <div className="fg-top-actions">
         <ThemeCoin />
+        <PageDial items={LINKS} title="Forge" label="All vault pages" />
         <UpscOrbit />
         <Link href="/dashboard" className="fg-iconbtn" aria-label="Back to the UPSC desk">
           <IconBack size={16} />

@@ -5,6 +5,7 @@ import { LaunchSplash } from "@/components/launch-splash";
 import { PwaRegister } from "@/components/pwa-register";
 import { AppChrome } from "@/components/shell/app-chrome";
 import { PaletteCycler } from "@/components/shell/palette-cycler";
+import { DAYCYCLE_SCRIPT } from "@/lib/daycycle";
 import { RouteProgress } from "@/components/shell/route-progress";
 
 import "./globals.css";
@@ -21,6 +22,8 @@ import "./sutra-pages.css";
 import "./hub.css";
 import "./notify.css";
 import "./orbit.css";
+import "./dial.css";
+import "./daycycle.css";
 
 // Sutra type system: Funnel Display for display and big figures, Geist for
 // reading, Geist Mono for labels/data, Doto (dot-matrix) only for countdowns.
@@ -101,7 +104,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t;var P=["brass","saffron","lotus","banyan","monsoon","peacock"];d.dataset.palette=P[Math.floor(Date.now()/60000)%P.length]}catch(e){}',
+              'try{var t=localStorage.getItem("upsc-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.dataset.theme=t;d.style.colorScheme=t;'+DAYCYCLE_SCRIPT+'}catch(e){}',
           }}
         />
         <LaunchSplash />

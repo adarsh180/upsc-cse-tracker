@@ -930,3 +930,11 @@ html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3
 .su-actions .do-trigger-logo { width: 28px; height: 28px; }
 .su-actions .nc-badge { box-shadow: 0 0 0 2px var(--su-bg); }
 @media (max-width: 860px) { .su-actions .do-trigger { width: 38px; height: 38px; } }
+
+/* ── Page dial in the chrome (components/page-dial.tsx, styles in dial.css) ── */
+.su-more-btn { display: inline-grid; }
+.su-more-btn .pd-trigger { width: 36px; height: 36px; }
+.su-dock-dial { position: relative; z-index: 1; display: grid; place-items: center; }
+.su-dock-dial .pd-trigger.is-dock { color: var(--su-ink-3); }
+.su-dock-dial .pd-trigger.is-dock .pd-glyph { width: 19px; height: 19px; }
+.su-dock-dial .pd-trigger-text { font: 500 10px/1 var(--font-body), sans-serif; color: inherit; }

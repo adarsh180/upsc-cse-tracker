@@ -1,0 +1,95 @@
+/* ==========================================================================
+   DAY-CYCLE PALETTE (UPSC) — colours follow the real time of day.
+   <html data-daypart> = dawn | noon | dusk | night, <html data-palette> =
+   <daypart>-1..3 (one of three per part, rotating every minute). Rule in
+   lib/daycycle.ts. Accents cross-fade through the registered --nv-a*
+   properties (nova.css); the canvas and the sky glow follow the daypart.
+   Semantic colours (good / warn / bad) never change.
+   ========================================================================== */
+
+@property --su-bg { syntax: "<color>"; inherits: true; initial-value: #0a0c14; }
+@property --su-bg-2 { syntax: "<color>"; inherits: true; initial-value: #0f1220; }
+
+:root {
+  transition:
+    --nv-a1 2.6s cubic-bezier(0.45, 0, 0.2, 1),
+    --nv-a2 3s cubic-bezier(0.45, 0, 0.2, 1),
+    --nv-a3 3.4s cubic-bezier(0.45, 0, 0.2, 1),
+    --su-bg 6s ease,
+    --su-bg-2 6s ease;
+}
+
+/* ── Accents — dark ─────────────────────────────────────────────────── */
+html:not([data-theme="light"])[data-palette="dawn-1"] { --nv-a1: #f4a259; --nv-a2: #8fb8ff; --nv-a3: #f28c9b; }
+html:not([data-theme="light"])[data-palette="dawn-2"] { --nv-a1: #f28c9b; --nv-a2: #f4a259; --nv-a3: #8fb8ff; }
+html:not([data-theme="light"])[data-palette="dawn-3"] { --nv-a1: #f2c14e; --nv-a2: #f28c9b; --nv-a3: #7fc8f8; }
+html:not([data-theme="light"])[data-palette="noon-1"] { --nv-a1: #3cc8c0; --nv-a2: #7aa7ff; --nv-a3: #f2c14e; }
+html:not([data-theme="light"])[data-palette="noon-2"] { --nv-a1: #7aa7ff; --nv-a2: #3cc8c0; --nv-a3: #f4a259; }
+html:not([data-theme="light"])[data-palette="noon-3"] { --nv-a1: #4fd6e0; --nv-a2: #a0b4ff; --nv-a3: #f2c14e; }
+html:not([data-theme="light"])[data-palette="dusk-1"] { --nv-a1: #f08a5d; --nv-a2: #b57bea; --nv-a3: #f2c14e; }
+html:not([data-theme="light"])[data-palette="dusk-2"] { --nv-a1: #b57bea; --nv-a2: #f08a5d; --nv-a3: #f07ab0; }
+html:not([data-theme="light"])[data-palette="dusk-3"] { --nv-a1: #f2c14e; --nv-a2: #b57bea; --nv-a3: #f08a5d; }
+html:not([data-theme="light"])[data-palette="night-1"] { --nv-a1: #8b7cf6; --nv-a2: #3ddbb4; --nv-a3: #f07ab0; }
+html:not([data-theme="light"])[data-palette="night-2"] { --nv-a1: #3ddbb4; --nv-a2: #8b7cf6; --nv-a3: #6cc3ff; }
+html:not([data-theme="light"])[data-palette="night-3"] { --nv-a1: #f07ab0; --nv-a2: #8b7cf6; --nv-a3: #3ddbb4; }
+
+/* ── Accents — light (deeper, for contrast on paper) ────────────────── */
+html[data-theme="light"][data-palette="dawn-1"] { --nv-a1: #b5560f; --nv-a2: #2f64c8; --nv-a3: #c0365a; }
+html[data-theme="light"][data-palette="dawn-2"] { --nv-a1: #b83a5a; --nv-a2: #a85a10; --nv-a3: #2f64c8; }
+html[data-theme="light"][data-palette="dawn-3"] { --nv-a1: #9a6a00; --nv-a2: #b83a5a; --nv-a3: #1f74b0; }
+html[data-theme="light"][data-palette="noon-1"] { --nv-a1: #0f7f86; --nv-a2: #2f5fd6; --nv-a3: #9a6a00; }
+html[data-theme="light"][data-palette="noon-2"] { --nv-a1: #2f5fd6; --nv-a2: #0f7f86; --nv-a3: #b5560f; }
+html[data-theme="light"][data-palette="noon-3"] { --nv-a1: #0e7490; --nv-a2: #4a55c9; --nv-a3: #9a6a00; }
+html[data-theme="light"][data-palette="dusk-1"] { --nv-a1: #b24a2c; --nv-a2: #7a45c2; --nv-a3: #9a6a00; }
+html[data-theme="light"][data-palette="dusk-2"] { --nv-a1: #7a45c2; --nv-a2: #b24a2c; --nv-a3: #b8357a; }
+html[data-theme="light"][data-palette="dusk-3"] { --nv-a1: #9a6a00; --nv-a2: #7a45c2; --nv-a3: #b24a2c; }
+html[data-theme="light"][data-palette="night-1"] { --nv-a1: #5b4bd6; --nv-a2: #0f8a72; --nv-a3: #b8357a; }
+html[data-theme="light"][data-palette="night-2"] { --nv-a1: #0f8a72; --nv-a2: #5b4bd6; --nv-a3: #1f6fb8; }
+html[data-theme="light"][data-palette="night-3"] { --nv-a1: #b8357a; --nv-a2: #5b4bd6; --nv-a3: #0f8a72; }
+
+/* ── Canvas: deep ink at night, a breath of the hour by day ─────────── */
+html:not([data-theme="light"])[data-daypart="dawn"] { --su-bg: #0e0b10; --su-bg-2: #171119; }
+html:not([data-theme="light"])[data-daypart="noon"] { --su-bg: #070d16; --su-bg-2: #0c1522; }
+html:not([data-theme="light"])[data-daypart="dusk"] { --su-bg: #100a0f; --su-bg-2: #1a1019; }
+html:not([data-theme="light"])[data-daypart="night"] { --su-bg: #0a0c14; --su-bg-2: #0f1220; }
+html[data-theme="light"][data-daypart="dawn"] { --su-bg: #fbf6f0; --su-bg-2: #f3ebe2; }
+html[data-theme="light"][data-daypart="noon"] { --su-bg: #f5f8fa; --su-bg-2: #e9eef3; }
+html[data-theme="light"][data-daypart="dusk"] { --su-bg: #faf4f0; --su-bg-2: #f1e8e2; }
+html[data-theme="light"][data-daypart="night"] { --su-bg: #f4f4f9; --su-bg-2: #e9e9f2; }
+
+/* ── Sky: the light moves like the day — low sun at dawn and dusk,
+      overhead at noon, aurora bands at night. Transform-only drift. ── */
+.su-shell::before {
+  inset: -12% !important;
+  background:
+    radial-gradient(70% 55% at 50% -10%, color-mix(in srgb, var(--nv-a1) 12%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 85% 0%, color-mix(in srgb, var(--nv-a2) 8%, transparent), transparent 70%),
+    linear-gradient(180deg, transparent 60%, color-mix(in srgb, var(--su-bg-2) 70%, transparent)) !important;
+  animation: day-sky 48s ease-in-out infinite alternate;
+  will-change: transform;
+}
+html[data-daypart="dawn"] .su-shell::before {
+  background:
+    radial-gradient(55% 45% at 12% 100%, color-mix(in srgb, var(--nv-a1) 15%, transparent), transparent 70%),
+    radial-gradient(70% 50% at 50% -10%, color-mix(in srgb, var(--nv-a3) 9%, transparent), transparent 72%),
+    radial-gradient(40% 35% at 88% 8%, color-mix(in srgb, var(--nv-a2) 8%, transparent), transparent 70%) !important;
+}
+html[data-daypart="dusk"] .su-shell::before {
+  background:
+    radial-gradient(55% 45% at 88% 100%, color-mix(in srgb, var(--nv-a1) 15%, transparent), transparent 70%),
+    radial-gradient(70% 50% at 40% -10%, color-mix(in srgb, var(--nv-a2) 11%, transparent), transparent 72%),
+    radial-gradient(35% 30% at 10% 20%, color-mix(in srgb, var(--nv-a3) 7%, transparent), transparent 70%) !important;
+}
+html[data-daypart="night"] .su-shell::before {
+  background:
+    radial-gradient(60% 18% at 30% 6%, color-mix(in srgb, var(--nv-a2) 13%, transparent), transparent 75%),
+    radial-gradient(55% 16% at 70% 14%, color-mix(in srgb, var(--nv-a1) 12%, transparent), transparent 75%),
+    radial-gradient(40% 14% at 50% 22%, color-mix(in srgb, var(--nv-a3) 7%, transparent), transparent 75%) !important;
+}
+html[data-theme="light"] .su-shell::before { opacity: 0.8; }
+@keyframes day-sky {
+  0% { transform: translate3d(-2%, 0, 0) scale(1); }
+  50% { transform: translate3d(1.5%, 1.5%, 0) scale(1.04); }
+  100% { transform: translate3d(2.5%, -1%, 0) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) { .su-shell::before { animation: none; } }

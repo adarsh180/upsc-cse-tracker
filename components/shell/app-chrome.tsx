@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ClipboardList,
   LayoutDashboard,
-  LayoutGrid,
   Sparkles,
   Target,
-  X,
 } from "lucide-react";
 
 import { SacredLogoMark } from "@/components/shell/sacred-brand";
@@ -19,6 +17,8 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { SyllabusCommand } from "@/components/ui/syllabus-command";
 import { cn } from "@/lib/utils";
 import { UpscOrbit } from "@/components/shell/upsc-orbit";
+import { PageDial, type DialItem } from "@/components/page-dial";
+import { irisGo } from "@/components/iris";
 
 /* Primary destinations — desktop island + mobile dock */
 const primaryTabs = [
@@ -104,78 +104,19 @@ function useLiquidIndicator(pathname: string) {
   return ref;
 }
 
-/* ── More sheet: every destination, grouped ─────────────────────── */
-function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const pathname = usePathname();
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="Close navigation"
-        tabIndex={open ? 0 : -1}
-        onClick={onClose}
-        className={cn("su-sheet-backdrop", open && "open")}
-      />
-      <div
-        className={cn("su-sheet su-glass", open && "open")}
-        role="dialog"
-        aria-modal="true"
-        aria-label="All pages"
-        aria-hidden={!open}
-        inert={!open}
-      >
-        <div className="su-sheet-grab" aria-hidden="true" />
-        <div className="su-sheet-head">
-          <span>Everything</span>
-          <button type="button" className="v2-iconbtn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
-        </div>
-        <nav className="su-sheet-scroll">
-          {navGroups.map((group, gi) => (
-            <div key={group.label} className="su-sheet-group" style={{ "--g": gi } as React.CSSProperties}>
-              <div className="su-sheet-label">{group.label}</div>
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn("su-sheet-link", isActive(pathname, item.href) && "active")}
-                    style={{ "--nav-accent": item.accent } as React.CSSProperties}
-                  >
-                    <span className="su-sheet-icon">
-                      <Icon size={15} />
-                    </span>
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-      </div>
-    </>
-  );
-}
+/* ── Page dial: every destination on two rings ─────────────────── */
+// Short names for the ring; the dial's hub shows the full label.
+const SHORT: Record<string, string> = {
+  "/goals": "Goals", "/tests": "Tests", "/mood": "Mood", "/mission-control": "Mission", "/todo": "Todo", "/dashboard": "Home",
+  "/ai-insight": "AI hub", "/ai-insight/guru": "Guru", "/report-card": "Report", "/ai-insight/rank-prediction": "Rank",
+  "/ai-insight/deep-analytics": "Analytics", "/ai-insight/essay-checker": "Essay AI", "/study/general-studies-1": "GS 1",
+  "/study/general-studies-2": "GS 2", "/study/general-studies-3": "GS 3", "/study/general-studies-4": "GS 4",
+  "/study/psir": "PSIR", "/study/csat": "CSAT", "/study/essay": "Essay", "/current-affairs": "Affairs",
+};
+// Workspace pages on the inner ring; AI, papers and the rest outside. AI-ML and Saath are dashboards (the switch).
+const dialItems: DialItem[] = navGroups
+  .filter((g) => g.label !== "Private")
+  .flatMap((g, gi) => g.items.map((it) => ({ href: it.href, label: it.label, short: SHORT[it.href], icon: it.icon, group: g.label === "Optional & More" ? "Optional" : g.label, ring: gi === 0 ? (0 as const) : (1 as const) })));
 
 /* ── App chrome ─────────────────────────────────────────────────── */
 export function AppChrome({ children }: { children: React.ReactNode }) {
@@ -184,14 +125,15 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   // Guru is a full-screen chat surface on phones: it brings its own header,
   // so the global top bar + dock step aside below 860px.
   const isGuruPage = pathname.startsWith("/ai-insight/guru");
-  const [moreOpen, setMoreOpen] = useState(false);
-  const closeMore = useCallback(() => setMoreOpen(false), []);
+  const router = useRouter();
+  // Rail and dock links open their page through the same circular iris as the dial.
+  const irisLink = (e: React.MouseEvent<HTMLAnchorElement>, href: string, label: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0 || isActive(pathname, href)) return;
+    e.preventDefault();
+    irisGo(() => router.push(href), { x: e.clientX, y: e.clientY }, label);
+  };
   const navRef = useLiquidIndicator(pathname);
   const dockRef = useLiquidIndicator(pathname);
-
-  useEffect(() => {
-    setMoreOpen(false);
-  }, [pathname]);
 
   // The AI-ML vault and Saath are separate arenas with their own chrome.
   if (pathname.startsWith("/vault") || pathname === "/hub" || pathname.startsWith("/hub/")) return <>{children}</>;
@@ -232,6 +174,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 data-active={active}
                 aria-current={active ? "page" : undefined}
                 className={cn("su-nav-link", active && "active")}
+                onClick={(e) => irisLink(e, item.href, item.label)}
               >
                 {item.label}
               </Link>
@@ -246,15 +189,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
             <NotificationCenter appLabel="UPSC Desk" defaultSender="Adarsh" partnerLabel="Misti's NEET desk" />
           </div>
           <ThemeToggle className="theme-toggle-inline" />
-          <button
-            type="button"
-            className="v2-iconbtn su-more-btn"
-            onClick={() => setMoreOpen((v) => !v)}
-            aria-label="All pages"
-            aria-expanded={moreOpen}
-          >
-            <LayoutGrid size={17} />
-          </button>
+          <span className="su-more-btn"><PageDial items={dialItems} title="Sacred Attempt" label="All pages" /></span>
         </div>
       </header>
 
@@ -280,26 +215,17 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               data-active={active}
               aria-current={active ? "page" : undefined}
               className={cn("su-dock-tab", active && "active")}
+              onClick={(e) => irisLink(e, tab.href, tab.label)}
             >
               <Icon size={19} strokeWidth={active ? 2.3 : 1.9} />
               <span>{tab.label}</span>
             </Link>
           );
         })}
-        <button
-          type="button"
-          data-item=""
-          className={cn("su-dock-tab", moreOpen && "active")}
-          onClick={() => setMoreOpen((v) => !v)}
-          aria-label="More pages"
-          aria-expanded={moreOpen}
-        >
-          <LayoutGrid size={19} strokeWidth={moreOpen ? 2.3 : 1.9} />
-          <span>More</span>
-        </button>
+        <span className="su-dock-dial">
+          <PageDial items={dialItems} title="Sacred Attempt" label="All pages" variant="dock" />
+        </span>
       </nav>
-
-      <MoreSheet open={moreOpen} onClose={closeMore} />
     </>
   );
 }

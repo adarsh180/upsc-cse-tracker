@@ -100,8 +100,9 @@ export async function signInAction(formData: FormData) {
   const emailOk = Boolean(expectedEmail) && timingSafeEqual(email, expectedEmail);
   // Hashed check: once a salted scrypt hash is stored, only the hash is compared;
   // the first successful sign-in against the env value stores it. The password never changes.
-  const stored = emailOk ? await verifyStoredSecret("login-upsc", password) : false;
-  const passwordOk = stored === null ? Boolean(expectedPassword) && timingSafeEqual(password, expectedPassword) : stored;
+  // The hash is checked even when the email is wrong, so response time never tells which field was wrong.
+  const stored = await verifyStoredSecret("login-upsc", password);
+  const passwordOk = emailOk && (stored === null ? Boolean(expectedPassword) && timingSafeEqual(password, expectedPassword) : stored);
   if (emailOk && passwordOk && stored === null) await storeSecret("login-upsc", password).catch((error) => console.error("[auth] could not store password hash", error));
 
   if (emailOk && passwordOk) {
