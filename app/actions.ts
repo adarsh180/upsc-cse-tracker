@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { checkRateLimit, clearRateLimit, timingSafeEqual } from "@/lib/rate-limit";
+import { isNewDevice, requestInfo, securityAlert, signInLimit } from "@/lib/security-alert";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
@@ -87,7 +88,8 @@ export async function signInAction(formData: FormData) {
     "unknown";
 
   const limit = checkRateLimit(`signin:${ip}`);
-  if (!limit.allowed) {
+  const dbLimit = await signInLimit(ip);
+  if (!limit.allowed || dbLimit.locked) {
     redirect("/sign-in?error=ratelimited");
   }
 
@@ -99,11 +101,20 @@ export async function signInAction(formData: FormData) {
 
   if (emailOk && passwordOk) {
     clearRateLimit(`signin:${ip}`);
+    await dbLimit.clear();
     await createSession(email);
+    if (await isNewDevice()) {
+      const info = await requestInfo();
+      await securityAlert("New sign-in to your UPSC desk", `Signed in from ${info.label}. If this wasn't you, sign out everywhere by changing AUTH_SECRET and your password.`, "care");
+    }
     redirect("/dashboard");
   }
 
   // Uniform small delay on failure to blunt automated guessing
+  if (await dbLimit.fail()) {
+    const info = await requestInfo();
+    await securityAlert("Sign-in locked", `5 wrong passwords in a row from ${info.label}. Sign-in from there is locked for 15 minutes.`);
+  }
   await new Promise((resolve) => setTimeout(resolve, 600));
   redirect("/sign-in?error=invalid");
 }

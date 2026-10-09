@@ -164,6 +164,7 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       const row = await editable(actor, await db.hubGoal.findUnique({ where: { id: id(body.id) } }));
       const status = typeof body.status === "string" && ["planned", "active", "paused", "done", "dropped"].includes(body.status) ? body.status : undefined;
       const progress = body.progress === undefined ? undefined : Math.max(0, Math.min(100, Math.round(Number(body.progress) || 0)));
+      if (typeof body.fundId === "string" && body.fundId) await editable(actor, await db.hubFund.findUnique({ where: { id: id(body.fundId) } }));
       await db.hubGoal.update({
         where: { id: row.id },
         data: {
@@ -172,8 +173,31 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
           completedAt: status === "done" ? new Date() : status ? null : undefined,
           priority: body.priority === undefined ? undefined : prio(body.priority),
           deadline: body.deadline === undefined ? undefined : date(body.deadline),
+          title: body.title === undefined ? undefined : need(body.title, 200, "Goal"),
+          area: body.area === undefined ? undefined : oneOf(body.area, GOAL_AREAS, "life"),
+          note: body.note === undefined ? undefined : str(body.note, 4000),
+          targetAmount: body.targetAmount === undefined ? undefined : optMoney(body.targetAmount),
+          fundId: body.fundId === undefined ? undefined : typeof body.fundId === "string" && body.fundId ? body.fundId : null,
+          owner: body.owner === undefined ? undefined : ownerFor(actor, body.owner),
         },
       });
+      return;
+    }
+    /** Money towards a goal goes into its fund; a goal without one gets a fund created and linked. */
+    case "goal.addMoney": {
+      const goal = await editable(actor, await db.hubGoal.findUnique({ where: { id: id(body.id) } }));
+      const amount = money(body.amount, "Amount", true);
+      if (!amount) throw new HubError("Amount must not be zero");
+      let fundId = goal.fundId;
+      if (fundId) await editable(actor, await db.hubFund.findUnique({ where: { id: fundId } }));
+      else {
+        if (!goal.targetAmount) throw new HubError("Set how much this goal needs first (Edit → money needed)");
+        const kind = goal.area === "marriage" ? "marriage" : goal.area === "home" ? "home" : goal.area === "travel" ? "travel" : goal.area === "study" || goal.area === "learning" ? "education" : goal.area === "finance" ? "emergency" : "goal";
+        const fund = await db.hubFund.create({ data: { owner: goal.owner, name: goal.title.slice(0, 120), kind, target: goal.targetAmount, targetDate: goal.deadline } });
+        fundId = fund.id;
+        await db.hubGoal.update({ where: { id: goal.id }, data: { fundId } });
+      }
+      await db.hubFundEntry.create({ data: { fundId, owner: actor, amount, entryDate: date(body.entryDate, new Date())!, note: str(body.note, 300) ?? `For “${goal.title.slice(0, 60)}”` } });
       return;
     }
     case "goal.delete": {
@@ -193,6 +217,64 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
     case "task.delete": {
       const row = await editable(actor, await db.hubTask.findUnique({ where: { id: id(body.id) } }));
       await db.hubTask.delete({ where: { id: row.id } });
+      return;
+    }
+    case "task.update": {
+      const row = await editable(actor, await db.hubTask.findUnique({ where: { id: id(body.id) } }));
+      await db.hubTask.update({
+        where: { id: row.id },
+        data: {
+          title: body.title === undefined ? undefined : need(body.title, 200, "Task"),
+          priority: body.priority === undefined ? undefined : prio(body.priority),
+          due: body.due === undefined ? undefined : date(body.due),
+          goalId: body.goalId === undefined ? undefined : typeof body.goalId === "string" && body.goalId ? id(body.goalId) : null,
+        },
+      });
+      return;
+    }
+    case "fund.update": {
+      const row = await editable(actor, await db.hubFund.findUnique({ where: { id: id(body.id) } }));
+      await db.hubFund.update({
+        where: { id: row.id },
+        data: {
+          name: body.name === undefined ? undefined : need(body.name, 120, "Fund name"),
+          kind: body.kind === undefined ? undefined : oneOf(body.kind, FUND_KINDS, "goal"),
+          target: body.target === undefined ? undefined : money(body.target, "Target"),
+          targetDate: body.targetDate === undefined ? undefined : date(body.targetDate),
+          note: body.note === undefined ? undefined : str(body.note, 2000),
+          owner: body.owner === undefined ? undefined : ownerFor(actor, body.owner),
+        },
+      });
+      return;
+    }
+    case "event.update": {
+      const row = await editable(actor, await db.hubEvent.findUnique({ where: { id: id(body.id) } }));
+      await db.hubEvent.update({
+        where: { id: row.id },
+        data: {
+          title: body.title === undefined ? undefined : need(body.title, 200, "Event"),
+          kind: body.kind === undefined ? undefined : oneOf(body.kind, EVENT_KINDS, "other"),
+          eventDate: body.eventDate === undefined ? undefined : reqDate(body.eventDate, "Date"),
+          budget: body.budget === undefined ? undefined : optMoney(body.budget),
+          note: body.note === undefined ? undefined : str(body.note, 2000),
+        },
+      });
+      return;
+    }
+    case "txn.update": {
+      const row = await db.hubTxn.findUnique({ where: { id: id(body.id) } });
+      if (!row || row.owner !== actor) throw new HubError("You can edit only your own entries");
+      await db.hubTxn.update({
+        where: { id: row.id },
+        data: {
+          amount: body.amount === undefined ? undefined : money(body.amount),
+          category: body.category === undefined ? undefined : oneOf(body.category, row.kind === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES, "other"),
+          method: body.method === undefined ? undefined : oneOf(body.method, METHODS, "upi"),
+          txnDate: body.txnDate === undefined ? undefined : date(body.txnDate, row.txnDate)!,
+          note: body.note === undefined ? undefined : str(body.note, 300),
+          recurring: body.recurring === undefined ? undefined : body.recurring === true || body.recurring === "on",
+        },
+      });
       return;
     }
     case "fund.add":
@@ -223,7 +305,7 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       const data = { owner: ownerFor(actor, body.owner), name: need(body.name, 120, "Account name"), kind: oneOf(body.kind, ACCOUNT_KINDS, "bank"), balance: money(body.balance, "Balance", true) };
       if (typeof body.id === "string" && body.id) {
         const row = await editable(actor, await db.hubAccount.findUnique({ where: { id: id(body.id) } }));
-        await db.hubAccount.update({ where: { id: row.id }, data: { balance: data.balance, name: data.name } });
+        await db.hubAccount.update({ where: { id: row.id }, data: { balance: data.balance, name: data.name, kind: data.kind } });
       } else await db.hubAccount.create({ data });
       return;
     }
@@ -249,7 +331,12 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
         where: { id: row.id },
         data: {
           status: typeof body.status === "string" && ["todo", "booked", "done"].includes(body.status) ? body.status : undefined,
-          paid: body.paid === undefined ? undefined : Math.max(0, money(body.paid, "Paid", true)),
+          paid: body.addPaid !== undefined ? Math.max(0, row.paid + money(body.addPaid, "Amount", true)) : body.paid === undefined ? undefined : Math.max(0, money(body.paid, "Paid", true)),
+          title: body.title === undefined ? undefined : need(body.title, 200, "Item"),
+          category: body.category === undefined ? undefined : oneOf(body.category, PLAN_CATEGORIES, "other"),
+          estimate: body.estimate === undefined ? undefined : optMoney(body.estimate),
+          due: body.due === undefined ? undefined : date(body.due),
+          note: body.note === undefined ? undefined : str(body.note, 2000),
         },
       });
       return;

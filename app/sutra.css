@@ -915,8 +915,7 @@ html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3
    dashboard switch, menu) reads the same — no white pill on one, bare icon
    on the next. Beats theme.css's legacy light .v2-iconbtn pill. */
 :root[data-theme="light"] .su-actions .v2-iconbtn,
-:root[data-theme="light"] .su-actions .notify-button,
-:root[data-theme="light"] .su-actions .do-trigger {
+:root[data-theme="light"] .su-actions .notify-button {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
@@ -927,6 +926,7 @@ html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3
   background: color-mix(in srgb, var(--su-ink) 8%, transparent) !important;
   color: var(--su-ink) !important;
 }
-.su-actions .do-trigger { width: 40px; height: 40px; background: transparent; box-shadow: none; color: var(--su-ink-2); }
+.su-actions .do-trigger { width: 40px; height: 40px; margin: 0 2px; }
+.su-actions .do-trigger-logo { width: 28px; height: 28px; }
 .su-actions .nc-badge { box-shadow: 0 0 0 2px var(--su-bg); }
 @media (max-width: 860px) { .su-actions .do-trigger { width: 38px; height: 38px; } }

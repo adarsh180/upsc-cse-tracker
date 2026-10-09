@@ -90,6 +90,8 @@ html[data-theme="light"] .forge {
 .fg-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 14px; padding: 14px clamp(14px, 3vw, 32px); background: linear-gradient(180deg, var(--fg-bg) 30%, transparent); }
 .fg-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--fg-ink); text-decoration: none; }
 .fg-brand svg { color: var(--fg-cyan); filter: drop-shadow(0 0 8px rgba(57, 220, 255, 0.5)); }
+.fg-logo { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(57, 220, 255, 0.35)); }
+.fg-unlock-mark img { width: 48px; height: 48px; object-fit: contain; }
 .fg-brand .fi-core { fill: rgba(57, 220, 255, 0.25); animation: fg-breathe 3.2s ease-in-out infinite; }
 @keyframes fg-breathe { 50% { fill: rgba(182, 255, 90, 0.35); } }
 .fg-brand b { display: block; font: 700 16px/1 var(--font-forge); letter-spacing: -0.02em; }

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 import { lockVaultAction } from "@/app/vault/actions";
 import { UpscOrbit } from "@/components/shell/upsc-orbit";
-import { ForgeMark, IconBack, IconBranch, IconChip, IconCore, IconGate, IconLock, IconLog, IconSpark, IconTrace } from "@/components/vault/icons";
+import { ThemeCoin } from "@/components/theme-coin";
+import { IconBack, IconBranch, IconChip, IconCore, IconGate, IconLock, IconLog, IconSpark, IconTrace } from "@/components/vault/icons";
 
 const LINKS = [
   { href: "/vault", label: "Core", icon: IconCore },
@@ -23,7 +24,7 @@ export function ForgeNav() {
   return (
     <header className="fg-top">
       <Link href="/vault" className="fg-brand" aria-label="Forge — AI-ML vault home">
-        <ForgeMark />
+        <img className="fg-logo" src="/brand/ai-ml-160.webp" alt="" width={34} height={34} />
         <span>
           <b>Forge</b>
           <small>AI-ML VAULT</small>
@@ -38,6 +39,7 @@ export function ForgeNav() {
         ))}
       </nav>
       <div className="fg-top-actions">
+        <ThemeCoin />
         <UpscOrbit />
         <Link href="/dashboard" className="fg-iconbtn" aria-label="Back to the UPSC desk">
           <IconBack size={16} />

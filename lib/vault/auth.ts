@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { verifyGatePassword } from "@/lib/gate-secret";
+import { isNewDevice, requestInfo, securityAlert } from "@/lib/security-alert";
 
 /**
  * Private dashboards (the AI-ML vault and the personal hub) sit behind their
@@ -94,6 +95,7 @@ export async function unlockGate(scope: GateScope, password: string): Promise<Un
       .upsert({ where: { keyHash }, create: { keyHash, failures, lockedUntil }, update: { failures, lockedUntil } })
       .catch((error) => console.error("[gate] attempt write failed", error));
     await logVaultEvent(`${scope}:${lockedUntil ? "locked" : "failed"}`);
+    if (lockedUntil) await securityAlert(`${scope === "hub" ? "Saath" : "AI-ML vault"} locked`, `5 wrong dashboard passwords from ${(await requestInfo()).label}. It is locked there for 15 minutes.`);
     await new Promise((r) => setTimeout(r, 500));
     return lockedUntil
       ? { ok: false, error: `Locked after ${MAX_FAILURES} wrong attempts.`, lockedMinutes: LOCK_MINUTES }
@@ -106,6 +108,7 @@ export async function unlockGate(scope: GateScope, password: string): Promise<Un
   const store = await cookies();
   store.set(GATE_COOKIE[scope], token, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/", maxAge: hours * 3600 });
   await logVaultEvent(`${scope}:unlocked`);
+  if (await isNewDevice()) await securityAlert(`${scope === "hub" ? "Saath" : "AI-ML vault"} opened on a new browser`, `Opened from ${(await requestInfo()).label}. If this wasn't you, change the dashboard password.`, "care");
   return { ok: true };
 }
 export const unlockVault = (password: string) => unlockGate("vault", password);

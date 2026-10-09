@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { UnlockForm } from "@/components/vault/unlock-form";
-import { ForgeMark } from "@/components/vault/icons";
 import { getSession } from "@/lib/auth";
 import { hasVaultSession } from "@/lib/vault/auth";
 
@@ -15,7 +14,7 @@ export default async function VaultUnlockPage() {
     <main className="fg-unlock">
       <div className="fg-unlock-card">
         <span className="fg-unlock-mark">
-          <ForgeMark size={34} />
+          <img src="/brand/ai-ml-160.webp" alt="" width={56} height={56} />
         </span>
         <div>
           <span className="fg-kicker"><i /> PRIVATE · AI-ML VAULT</span>
