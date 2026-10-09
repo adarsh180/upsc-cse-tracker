@@ -13,7 +13,7 @@ export function SacredLogoMark({
 }) {
   return (
     <div className={cn("sacred-logo sacred-logo-image", `sacred-logo-${size}`, className)} aria-hidden="true">
-      <img src="/upsc-logo-mark.png" alt="" draggable={false} />
+      <img src="/brand/upsc-desk-512.webp" alt="" draggable={false} />
     </div>
   );
 }

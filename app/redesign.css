@@ -10450,3 +10450,8 @@ html[data-theme="light"] .dlf-range::-moz-range-thumb { border-color: #fff; }
 
 html[data-theme="light"] .dlf-grade-emoji { background: color-mix(in srgb, var(--tone) 14%, rgba(255,255,255,0.5)); }
 
+
+/* Brand mark: the circular UPSC badge fills its round container edge to edge. */
+.sacred-logo-image { padding: 0; background: transparent; }
+.sacred-logo-image img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.ld3-lens .sacred-logo img { border-radius: 50%; object-fit: cover; }
