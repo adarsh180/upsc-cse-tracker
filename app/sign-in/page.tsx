@@ -53,7 +53,6 @@ export default async function SignInPage({
                 id="password"
                 type="password"
                 name="password"
-                defaultValue={process.env.NODE_ENV === "development" ? process.env.AUTH_PASSWORD : ""}
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"

@@ -24,6 +24,7 @@ import "./notify.css";
 import "./orbit.css";
 import "./dial.css";
 import "./daycycle.css";
+import "./material.css";
 
 // Sutra type system: Funnel Display for display and big figures, Geist for
 // reading, Geist Mono for labels/data, Doto (dot-matrix) only for countdowns.
