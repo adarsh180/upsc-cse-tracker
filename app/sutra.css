@@ -943,3 +943,107 @@ html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3
    bar around it never repaints while it moves; one blur filter fewer. ── */
 .su-blob { will-change: transform, width; contain: layout paint; }
 .su-glass::after { -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%); }
+
+/* ── Syllabus search, skeuomorphic: a solid console with a recessed screen,
+      keycap buttons and raised result keys that press in. ─────────────── */
+.syllabus-command-panel {
+  --sk-face: linear-gradient(180deg, #2b2e37 0%, #1d1f26 58%, #17191f 100%);
+  --sk-edge: #0a0b0e;
+  --sk-bevel: rgba(255, 255, 255, 0.14);
+  --sk-well: linear-gradient(180deg, #0c0e12, #15171c);
+  --sk-well-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 1px 0 rgba(255, 255, 255, 0.07);
+  --sk-key: linear-gradient(180deg, #2a2d36, #20222a);
+  --sk-key-hover: linear-gradient(180deg, #31353f, #252830);
+  --sk-key-edge: #101116;
+  --sk-key-base: #0c0d11;
+  --sk-ink: #eceff6;
+  --sk-ink-2: #a8aebe;
+  --sk-engrave: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.7);
+  position: relative;
+  border: 1px solid var(--sk-edge);
+  border-radius: 24px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    var(--sk-face);
+  box-shadow: inset 0 1px 0 var(--sk-bevel), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 3px 0 #07080a, 0 34px 80px rgba(0, 0, 0, 0.62);
+  color: var(--sk-ink);
+  animation: skPanelIn 0.32s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+html[data-theme="light"] .syllabus-command-panel {
+  --sk-face: linear-gradient(180deg, #fdfcf9 0%, #f2efe8 60%, #e9e5dc 100%);
+  --sk-edge: #cfc8b8;
+  --sk-bevel: #ffffff;
+  --sk-well: linear-gradient(180deg, #e3dfd5, #eeebe4);
+  --sk-well-shadow: inset 0 2px 6px rgba(90, 76, 50, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.8), 0 1px 0 #fff;
+  --sk-key: linear-gradient(180deg, #ffffff, #efebe2);
+  --sk-key-hover: linear-gradient(180deg, #ffffff, #f6f3ec);
+  --sk-key-edge: #d6cfbf;
+  --sk-key-base: #c9c1af;
+  --sk-ink: #22201b;
+  --sk-ink-2: #6b6558;
+  --sk-engrave: 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 0 rgba(90, 76, 50, 0.18);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(90, 76, 50, 0.15), 0 3px 0 #cbc3b1, 0 30px 70px rgba(70, 58, 36, 0.3);
+}
+@keyframes skPanelIn { from { opacity: 0; transform: translateY(-14px) scale(0.97); } }
+
+/* The input sits in a recessed screen. */
+.syllabus-command-head {
+  min-height: 56px;
+  margin: 14px 14px 6px;
+  padding: 0 8px 0 14px;
+  border: 1px solid var(--sk-edge);
+  border-bottom: 1px solid var(--sk-edge);
+  border-radius: 14px;
+  background: var(--sk-well);
+  box-shadow: var(--sk-well-shadow);
+  color: var(--su-acc, #e6be6a);
+}
+.syllabus-command-head > svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--su-acc, #e6be6a) 60%, transparent)); }
+.syllabus-command-head input { color: var(--sk-ink); caret-color: var(--su-acc, #e6be6a); font-size: 16px; letter-spacing: -0.005em; }
+.syllabus-command-head input::placeholder { color: var(--sk-ink-2); opacity: 0.8; }
+/* Close: a keycap. */
+.syllabus-command-head button {
+  width: 36px; height: 34px; border: 1px solid var(--sk-key-edge); border-radius: 9px;
+  background: var(--sk-key); color: var(--sk-ink-2);
+  box-shadow: inset 0 1px 0 var(--sk-bevel), 0 2px 0 var(--sk-key-base), 0 3px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, color 0.15s;
+}
+.syllabus-command-head button:hover { color: var(--sk-ink); }
+.syllabus-command-head button:active { transform: translateY(2px); box-shadow: inset 0 1px 0 var(--sk-bevel), 0 0 0 var(--sk-key-base); }
+
+/* Results: raised keys that press in. */
+.syllabus-command-results { gap: 8px; padding: 10px 14px 6px; }
+.syllabus-command-result {
+  border: 1px solid var(--sk-key-edge);
+  background: var(--sk-key);
+  box-shadow: inset 0 1px 0 var(--sk-bevel), 0 2px 0 var(--sk-key-base), 0 5px 12px -6px rgba(0, 0, 0, 0.5);
+  color: var(--sk-ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s;
+}
+.syllabus-command-result:hover, .syllabus-command-result:focus-visible {
+  border-color: var(--sk-key-edge);
+  background: var(--sk-key-hover);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 var(--sk-bevel), 0 3px 0 var(--sk-key-base), 0 8px 16px -8px rgba(0, 0, 0, 0.55), 0 0 0 2px color-mix(in srgb, var(--su-acc, #e6be6a) 35%, transparent);
+}
+.syllabus-command-result:active { transform: translateY(2px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35), 0 0 0 var(--sk-key-base); }
+/* The icon: an embossed button in the live accent. */
+.syllabus-command-result-icon {
+  border: 1px solid color-mix(in srgb, var(--su-acc, #e6be6a) 50%, #000);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--su-acc, #e6be6a) 55%, #fff), var(--su-acc, #e6be6a) 58%, color-mix(in srgb, var(--su-acc, #e6be6a) 60%, #000));
+  color: color-mix(in srgb, var(--su-acc, #e6be6a) 25%, #0b0b0b);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -2px 3px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+.syllabus-command-result-copy small { color: var(--sk-ink-2); }
+.syllabus-command-result > svg:last-child { color: var(--sk-ink-2); }
+/* Empty states read as engraved. */
+.syllabus-command-empty { color: var(--sk-ink-2); text-shadow: var(--sk-engrave); }
+/* A nameplate under the keys. */
+.syllabus-command-panel::after {
+  content: "SYLLABUS FINDER · 4,000+ ENTRIES";
+  display: block; padding: 4px 18px 14px; color: var(--sk-ink-2); opacity: 0.7;
+  font: 600 9px/1 var(--font-mono, ui-monospace), ui-monospace, monospace; letter-spacing: 0.22em; text-align: right; text-shadow: var(--sk-engrave);
+}
+@media (prefers-reduced-motion: reduce) { .syllabus-command-panel { animation: none; } .syllabus-command-result, .syllabus-command-head button { transition: none; } }
+.syllabus-command-head input, .syllabus-command-head input:focus { border: 0 !important; background: transparent !important; box-shadow: none !important; outline: 0 !important; padding: 0 !important; }
