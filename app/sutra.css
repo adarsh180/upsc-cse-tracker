@@ -938,3 +938,8 @@ html[data-theme="light"][data-palette="peacock"] { --nv-a1: #0b6f8f; --nv-a2: #3
 .su-dock-dial .pd-trigger.is-dock { color: var(--su-ink-3); }
 .su-dock-dial .pd-trigger.is-dock .pd-glyph { width: 19px; height: 19px; }
 .su-dock-dial .pd-trigger-text { font: 500 10px/1 var(--font-body), sans-serif; color: inherit; }
+
+/* ── Smooth menus: the sliding pill gets its own GPU layer, so the frosted
+   bar around it never repaints while it moves; one blur filter fewer. ── */
+.su-blob { will-change: transform, width; contain: layout paint; }
+.su-glass::after { -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%); }

@@ -3,6 +3,8 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { originOf, shiftTheme } from "./theme-shift";
+
 type ThemeName = "dark" | "light";
 
 /**
@@ -23,14 +25,16 @@ export function ThemeCoin({ storageKey = "upsc-theme" }: { storageKey?: string }
       className={`theme-coin ${light ? "is-light" : ""}`}
       aria-label={light ? "Switch to dark mode" : "Switch to light mode"}
       title={light ? "Dark mode" : "Light mode"}
-      onClick={() => {
+      onClick={(e) => {
         const next: ThemeName = light ? "dark" : "light";
         setTheme(next);
         try {
           localStorage.setItem(storageKey, next);
         } catch {}
-        document.documentElement.dataset.theme = next;
-        document.documentElement.style.colorScheme = next;
+        shiftTheme(() => {
+          document.documentElement.dataset.theme = next;
+          document.documentElement.style.colorScheme = next;
+        }, originOf(e.currentTarget));
       }}
     >
       <span className="theme-coin-icon"><Sun size={17} className="sun" /><Moon size={17} className="moon" /></span>

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { shiftPalette } from "@/components/theme-shift";
 import { daypartFor, paletteForNow } from "@/lib/daycycle";
 
 /**
@@ -16,8 +17,15 @@ export function PaletteCycler() {
 
     const apply = () => {
       const now = Date.now();
-      root.dataset.daypart = daypartFor(new Date(now));
-      root.dataset.palette = paletteForNow(now);
+      const part = daypartFor(new Date(now));
+      const palette = paletteForNow(now);
+      if (root.dataset.palette !== palette || root.dataset.daypart !== part) {
+        // A soft cross-fade of the whole page, played once by the GPU.
+        shiftPalette(() => {
+          root.dataset.daypart = part;
+          root.dataset.palette = palette;
+        });
+      }
       timer = window.setTimeout(apply, 60000 - (Date.now() % 60000) + 40);
     };
 

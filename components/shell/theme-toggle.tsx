@@ -3,6 +3,8 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { originOf, shiftTheme } from "@/components/theme-shift";
+
 const storageKey = "upsc-theme";
 type ThemeName = "dark" | "light";
 
@@ -34,11 +36,11 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       className={`v2-iconbtn theme-toggle ${className}`.trim()}
-      onClick={() => {
+      onClick={(e) => {
         const next: ThemeName = isLight ? "dark" : "light";
         setTheme(next);
         window.localStorage.setItem(storageKey, next);
-        applyTheme(next);
+        shiftTheme(() => applyTheme(next), originOf(e.currentTarget));
       }}
       aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
       title={isLight ? "Dark mode" : "Light mode"}

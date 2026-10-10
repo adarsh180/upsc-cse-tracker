@@ -7,17 +7,11 @@
    Semantic colours (good / warn / bad) never change.
    ========================================================================== */
 
-@property --su-bg { syntax: "<color>"; inherits: true; initial-value: #0a0c14; }
-@property --su-bg-2 { syntax: "<color>"; inherits: true; initial-value: #0f1220; }
 
-:root {
-  transition:
-    --nv-a1 2.6s cubic-bezier(0.45, 0, 0.2, 1),
-    --nv-a2 3s cubic-bezier(0.45, 0, 0.2, 1),
-    --nv-a3 3.4s cubic-bezier(0.45, 0, 0.2, 1),
-    --su-bg 6s ease,
-    --su-bg-2 6s ease;
-}
+/* No colour-variable transitions on the root: animating them restyles and repaints
+   the whole page every frame. Palette and theme changes cross-fade as one view
+   transition instead (components/theme-shift.ts). */
+:root { transition: none; }
 
 /* ── Accents — dark ─────────────────────────────────────────────────── */
 html:not([data-theme="light"])[data-palette="dawn-1"] { --nv-a1: #f4a259; --nv-a2: #8fb8ff; --nv-a3: #f28c9b; }
@@ -65,8 +59,7 @@ html[data-theme="light"][data-daypart="night"] { --su-bg: #f4f4f9; --su-bg-2: #e
     radial-gradient(70% 55% at 50% -10%, color-mix(in srgb, var(--nv-a1) 12%, transparent), transparent 70%),
     radial-gradient(45% 40% at 85% 0%, color-mix(in srgb, var(--nv-a2) 8%, transparent), transparent 70%),
     linear-gradient(180deg, transparent 60%, color-mix(in srgb, var(--su-bg-2) 70%, transparent)) !important;
-  animation: day-sky 48s ease-in-out infinite alternate;
-  will-change: transform;
+  /* Still: a drifting light under the frosted bars made their blur redraw every frame. */
 }
 html[data-daypart="dawn"] .su-shell::before {
   background:
