@@ -1,0 +1,87 @@
+name: Android and iOS apps
+
+on:
+  pull_request:
+    paths: ['mobile/**', 'public/icon-192.png', 'public/icon-512.png', '.github/workflows/mobile-build.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Check navigation safety
+        run: |
+          mkdir -p /tmp/mobile-policy
+          javac -d /tmp/mobile-policy mobile/android/app/src/main/java/com/adarsh/upsc/NavigationPolicy.java mobile/android/policy-tests/NavigationPolicyTest.java
+          java -cp /tmp/mobile-policy NavigationPolicyTest
+      - name: Build installable Android test app
+        working-directory: mobile/android
+        run: gradle --no-daemon assembleDebug lintDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sacred-attempt-android-test-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-lint-report
+          path: mobile/android/app/build/reports/lint-results-debug.html
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Xcode project
+        run: |
+          brew install xcodegen
+          python3 mobile/ios/prepare-icons.py
+          cd mobile/ios
+          xcodegen generate
+      - name: Build unsigned iPhone app
+        working-directory: mobile/ios
+        run: xcodebuild -project SacredAttempt.xcodeproj -scheme SacredAttempt -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath DerivedData/device CODE_SIGNING_ALLOWED=NO build
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          devices = json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))['devices']
+          phones = [d for runtime, rows in devices.items() if 'iOS' in runtime for d in rows if d['name'].startswith('iPhone') and d['isAvailable']]
+          if not phones: raise SystemExit('No iPhone simulator installed on this runner')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('id=' + phones[0]['udid'] + '\n')
+          PY
+      - name: Test on iPhone simulator
+        working-directory: mobile/ios
+        run: xcodebuild -project SacredAttempt.xcodeproj -scheme SacredAttempt -configuration Debug -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' -derivedDataPath DerivedData/simulator CODE_SIGNING_ALLOWED=NO test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sacred-attempt-ios-simulator
+          path: mobile/ios/DerivedData/simulator/Build/Products/Debug-iphonesimulator/SacredAttempt.app
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-test-results
+          path: mobile/ios/DerivedData/simulator/Logs/Test/*.xcresult
