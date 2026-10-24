@@ -686,6 +686,8 @@ model HubTxn {
   txnDate   DateTime @db.Date
   note      String?  @db.VarChar(300)
   recurring Boolean  @default(false)
+  /// What exactly within the category (rotis, milk, metro, date…) — set by quick logs and pantry restocks.
+  tag       String?  @db.VarChar(24)
   createdAt DateTime @default(now())
 
   @@index([owner, txnDate])
@@ -768,6 +770,45 @@ model HubPlanItem {
   createdAt DateTime  @default(now())
 
   @@map("hub_plan_items")
+}
+
+/// Kitchen stock: how much was there at `stockAt` and how fast it is used, so Saath can tell when it runs out.
+model HubPantry {
+  id        String   @id @default(cuid())
+  owner     String   @db.VarChar(8)
+  name      String   @db.VarChar(80)
+  kind      String   @default("staple") @db.VarChar(16)
+  unit      String   @default("kg") @db.VarChar(8)
+  stock     Float    @default(0)
+  stockAt   DateTime @default(now())
+  perDay    Float    @default(0)
+  packSize  Float    @default(1)
+  packPrice Float?
+  store     String   @default("blinkit") @db.VarChar(12)
+  altPrice  Float?
+  altStore  String?  @db.VarChar(12)
+  leadDays  Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([owner])
+  @@map("hub_pantry")
+}
+
+/// One-tap spends (rotis, milk, metro…). `count` above 1 asks how many before logging.
+model HubQuick {
+  id        String   @id @default(cuid())
+  owner     String   @db.VarChar(8)
+  label     String   @db.VarChar(60)
+  unitPrice Float
+  count     Int      @default(1)
+  category  String   @db.VarChar(32)
+  tag       String   @db.VarChar(24)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([owner])
+  @@map("hub_quick")
 }
 
 model HubSetting {
