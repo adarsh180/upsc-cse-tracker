@@ -19,6 +19,7 @@ import {
   type HubRecords,
   type KitchenPlan,
   type KitchenSettings,
+  type LifeDay,
   type Meal,
   type Owner,
   type Person,
@@ -56,6 +57,24 @@ export function verifyCrossHub(headers: Headers, body: string): Person | null {
 }
 
 /* ── Load ──────────────────────────────────────────────────────────────── */
+/**
+ * Adarsh's study days (daily log hours, else the sum of that day's study logs) with
+ * that day's mood — only ever sent to Adarsh, for the study-vs-life patterns.
+ */
+async function loadLife(): Promise<LifeDay[]> {
+  const since = new Date(Date.now() - 180 * 86_400_000);
+  const [daily, logs, moods] = await Promise.all([
+    db.dailyLog.findMany({ where: { logDate: { gte: since } }, select: { logDate: true, totalHours: true } }),
+    db.studyLog.findMany({ where: { logDate: { gte: since } }, select: { logDate: true, hours: true } }),
+    db.moodEntry.findMany({ where: { moodDate: { gte: since } }, select: { moodDate: true, energy: true, focus: true, stress: true } }),
+  ]);
+  const hours = new Map<string, number>();
+  for (const l of logs) hours.set(day(l.logDate), (hours.get(day(l.logDate)) ?? 0) + l.hours);
+  for (const d of daily) if (d.totalHours > 0) hours.set(day(d.logDate), d.totalHours);
+  const mood = new Map(moods.map((m) => [day(m.moodDate), { energy: m.energy, focus: m.focus, stress: m.stress }]));
+  return [...hours.entries()].map(([date, h]) => ({ date, hours: Math.round(h * 100) / 100, mood: mood.get(date) ?? null })).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export async function loadHub(actor: Person): Promise<HubRecords> {
   const [goals, tasks, txns, budgets, funds, fundEntries, accounts, events, planItems, settings, pantry, quicks, kitchen, pantryLog] = await withDbRetry(() =>
     Promise.all([
@@ -91,6 +110,7 @@ export async function loadHub(actor: Person): Promise<HubRecords> {
     pantryLog: pantryLog.map((l) => ({ id: l.id, itemId: l.itemId, owner: l.owner as Person, kind: (l.kind === "count" || l.kind === "out" ? l.kind : "restock") as "restock" | "count" | "out", packs: l.packs, left: l.left, unitPrice: l.unitPrice, store: l.store, at: l.at.toISOString() })),
     quicks: quicks.map((q) => ({ id: q.id, owner: q.owner as Person, label: q.label, unitPrice: q.unitPrice, count: q.count, category: q.category, tag: q.tag, sort: q.sort })),
     kitchen: Object.fromEntries(kitchen.map((k) => [k.key.slice(8), k.value as KitchenSettings])) as HubRecords["kitchen"],
+    life: actor === "adarsh" ? await withDbRetry(loadLife).catch(() => []) : undefined,
   };
 }
 
@@ -236,6 +256,16 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       const row = await db.hubTxn.findUnique({ where: { id: id(body.id) } });
       if (!row || row.owner !== actor) throw new HubError("You can delete only your own entries");
       await db.hubTxn.delete({ where: { id: row.id } });
+      return;
+    }
+    /** Several budgets at once (the optimiser's suggestion). */
+    case "budget.many": {
+      const items = Array.isArray(body.items) ? (body.items as Array<Record<string, unknown>>).slice(0, EXPENSE_CATEGORIES.length) : [];
+      for (const it of items) {
+        const category = oneOf(it.category, EXPENSE_CATEGORIES, "other");
+        const monthly = Number(it.monthly);
+        if (Number.isFinite(monthly) && monthly > 0) await db.hubBudget.upsert({ where: { owner_category: { owner: actor, category } }, create: { owner: actor, category, monthly: money(monthly) }, update: { monthly: money(monthly) } });
+      }
       return;
     }
     case "budget.set": {

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { computeKitchen } from "@/lib/hub/kitchen";
 import { learnKitchen, type KitchenAlert } from "@/lib/hub/learn";
+import { findRecurring } from "@/lib/hub/smart";
 import type { Person } from "@/lib/hub/metrics";
 import { loadHub } from "@/lib/hub/store";
 import { forwardToPartner } from "@/lib/partner-notify";
@@ -31,11 +32,12 @@ export async function runKitchenAlerts(slot: "morning" | "evening", { dryRun = f
         continue;
       }
       const k = computeKitchen(records, person, now);
-      if (!k.pantry.length && !k.quicks.length) {
-        results[person] = "no kitchen";
-        continue;
-      }
-      const L = learnKitchen(records, k, now);
+      const kitchenAlerts = k.pantry.length || k.quicks.length ? learnKitchen(records, k, now).alerts : [];
+      // Repeating bills Saath is sure of, two days ahead (works without a kitchen too).
+      const bills: KitchenAlert[] = findRecurring(records, person, today)
+        .filter((x) => x.kind === "expense" && x.dueIn >= 0 && x.dueIn <= 2 && x.confidence >= 0.6)
+        .map((x) => ({ key: `bill:${x.key}:${x.next}`, kind: "bill", tone: "warn", slot: "morning", title: `${x.label} ${x.dueIn === 0 ? "is due today" : x.dueIn === 1 ? "is due tomorrow" : "is due in 2 days"}`, body: `Usually ${x.amount.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })} — tap Paid under Money → Coming up once it's done.` }));
+      const L = { alerts: [...bills, ...kitchenAlerts] };
       const sentRow = await db.hubSetting.findUnique({ where: { key: sentKey(person) } });
       const sent = ((sentRow?.value as Record<string, string> | null) ?? {}) as Record<string, string>;
       const fresh = (a: KitchenAlert) => {
