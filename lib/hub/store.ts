@@ -25,6 +25,7 @@ import {
   type Settings,
 } from "@/lib/hub/metrics";
 import { pantryLeft, SEED_MENU, SEED_PANTRY, SEED_PLAN, SEED_QUICKS } from "@/lib/hub/kitchen";
+import { kalmanStep, priorVariance } from "@/lib/hub/learn";
 
 /**
  * The personal hub's data lives here, in the UPSC database. Adarsh reaches it
@@ -56,7 +57,7 @@ export function verifyCrossHub(headers: Headers, body: string): Person | null {
 
 /* ── Load ──────────────────────────────────────────────────────────────── */
 export async function loadHub(actor: Person): Promise<HubRecords> {
-  const [goals, tasks, txns, budgets, funds, fundEntries, accounts, events, planItems, settings, pantry, quicks, kitchen] = await withDbRetry(() =>
+  const [goals, tasks, txns, budgets, funds, fundEntries, accounts, events, planItems, settings, pantry, quicks, kitchen, pantryLog] = await withDbRetry(() =>
     Promise.all([
       db.hubGoal.findMany({ orderBy: [{ priority: "asc" }, { deadline: "asc" }], take: 400 }),
       db.hubTask.findMany({ orderBy: { createdAt: "desc" }, take: 800 }),
@@ -71,13 +72,14 @@ export async function loadHub(actor: Person): Promise<HubRecords> {
       db.hubPantry.findMany({ orderBy: { name: "asc" }, take: 600 }),
       db.hubQuick.findMany({ orderBy: [{ sort: "asc" }, { createdAt: "asc" }], take: 200 }),
       db.hubSetting.findMany({ where: { key: { in: ["kitchen:adarsh", "kitchen:misti"] } } }),
+      db.hubPantryLog.findMany({ where: { at: { gte: new Date(Date.now() - 240 * 86_400_000) } }, orderBy: { at: "desc" }, take: 3000 }),
     ]),
   );
   return {
     actor,
     goals: goals.map((g) => ({ id: g.id, owner: g.owner as Owner, title: g.title, area: g.area, priority: g.priority, deadline: g.deadline ? day(g.deadline) : null, status: g.status, progress: g.progress, targetAmount: g.targetAmount, fundId: g.fundId, note: g.note, completedAt: g.completedAt?.toISOString() ?? null, createdAt: g.createdAt.toISOString() })),
     tasks: tasks.map((t) => ({ id: t.id, owner: t.owner as Owner, title: t.title, priority: t.priority, due: t.due ? day(t.due) : null, goalId: t.goalId, status: t.status, doneAt: t.doneAt?.toISOString() ?? null, createdAt: t.createdAt.toISOString() })),
-    txns: txns.map((t) => ({ id: t.id, owner: t.owner as Person, kind: t.kind === "income" ? "income" : "expense", amount: t.amount, category: t.category, method: t.method, txnDate: day(t.txnDate), note: t.note, recurring: t.recurring, tag: t.tag })),
+    txns: txns.map((t) => ({ id: t.id, owner: t.owner as Person, kind: t.kind === "income" ? "income" : "expense", amount: t.amount, category: t.category, method: t.method, txnDate: day(t.txnDate), note: t.note, recurring: t.recurring, tag: t.tag, quickId: t.quickId })),
     budgets: budgets.map((b) => ({ id: b.id, owner: b.owner as Person, category: b.category, monthly: b.monthly })),
     funds: funds.map((f) => ({ id: f.id, owner: f.owner as Owner, name: f.name, kind: f.kind, target: f.target, targetDate: f.targetDate ? day(f.targetDate) : null, note: f.note, archived: f.archived, createdAt: f.createdAt.toISOString() })),
     fundEntries: fundEntries.map((e) => ({ id: e.id, fundId: e.fundId, owner: e.owner as Person, amount: e.amount, entryDate: day(e.entryDate), note: e.note })),
@@ -85,7 +87,8 @@ export async function loadHub(actor: Person): Promise<HubRecords> {
     events: events.map((e) => ({ id: e.id, owner: e.owner as Owner, title: e.title, kind: e.kind, eventDate: day(e.eventDate), budget: e.budget, note: e.note })),
     planItems: planItems.map((p) => ({ id: p.id, plan: p.plan, owner: p.owner as Owner, title: p.title, category: p.category, estimate: p.estimate, paid: p.paid, due: p.due ? day(p.due) : null, status: p.status, note: p.note })),
     settings: (settings?.value as Settings | null) ?? {},
-    pantry: pantry.map((p) => ({ id: p.id, owner: p.owner as Owner, name: p.name, kind: p.kind, unit: p.unit, stock: p.stock, stockAt: p.stockAt.toISOString(), perDay: p.perDay, packSize: p.packSize, packPrice: p.packPrice, store: p.store, altPrice: p.altPrice, altStore: p.altStore, leadDays: p.leadDays })),
+    pantry: pantry.map((p) => ({ id: p.id, owner: p.owner as Owner, name: p.name, kind: p.kind, unit: p.unit, stock: p.stock, stockAt: p.stockAt.toISOString(), perDay: p.perDay, packSize: p.packSize, packPrice: p.packPrice, store: p.store, altPrice: p.altPrice, altStore: p.altStore, leadDays: p.leadDays, basePerDay: p.basePerDay, rateVar: p.rateVar, obsCount: p.obsCount, learnedAt: p.learnedAt?.toISOString() ?? null })),
+    pantryLog: pantryLog.map((l) => ({ id: l.id, itemId: l.itemId, owner: l.owner as Person, kind: (l.kind === "count" || l.kind === "out" ? l.kind : "restock") as "restock" | "count" | "out", packs: l.packs, left: l.left, unitPrice: l.unitPrice, store: l.store, at: l.at.toISOString() })),
     quicks: quicks.map((q) => ({ id: q.id, owner: q.owner as Person, label: q.label, unitPrice: q.unitPrice, count: q.count, category: q.category, tag: q.tag, sort: q.sort })),
     kitchen: Object.fromEntries(kitchen.map((k) => [k.key.slice(8), k.value as KitchenSettings])) as HubRecords["kitchen"],
   };
@@ -167,6 +170,33 @@ function cleanPlan(v: unknown): KitchenPlan | undefined {
   const save = Math.max(0, Math.min(1e8, Math.round(Number(p.save) || 0)));
   return { income, fixed, save, buckets };
 }
+/**
+ * A measured amount left (a count, or 0 when finished) corrects the item's learned
+ * daily use with one Kalman step, then becomes the new anchor the stock counts from.
+ */
+async function measureLeft(actor: Person, row: { id: string; stock: number; stockAt: Date; perDay: number; packSize: number; rateVar: number | null; obsCount: number; basePerDay: number | null }, left: number, kind: "count" | "out") {
+  const now = new Date();
+  const days = (now.getTime() - row.stockAt.getTime()) / 86_400_000;
+  const used = row.stock - left;
+  const last = await db.hubPantryLog.findFirst({ where: { itemId: row.id }, orderBy: { at: "desc" } });
+  // A count right after the last anchor, or one that shows more than was there, teaches nothing about the rate.
+  const learnable = days >= 0.5 && used >= -0.05 * row.packSize && (row.perDay > 0 || used > 0);
+  const next = learnable
+    ? kalmanStep({ rate: row.perDay, variance: row.rateVar ?? (row.perDay > 0 ? priorVariance(row.perDay, row.packSize) : (Math.max(used, 0) / Math.max(days, 0.5)) ** 2 * 4 + 1e-9) }, { used, days, anchorMeasured: !last || last.kind !== "restock", packSize: row.packSize })
+    : null;
+  await db.$transaction([
+    db.hubPantry.update({
+      where: { id: row.id },
+      data: {
+        stock: left,
+        stockAt: now,
+        ...(next ? { perDay: Math.round(next.rate * 1e5) / 1e5, rateVar: next.variance, obsCount: row.obsCount + 1, learnedAt: now, basePerDay: row.basePerDay ?? row.perDay } : {}),
+      },
+    }),
+    db.hubPantryLog.create({ data: { itemId: row.id, owner: actor, kind, left, at: now } }),
+  ]);
+}
+
 async function kitchenSettings(actor: Person) {
   return ((await db.hubSetting.findUnique({ where: { key: `kitchen:${actor}` } }))?.value as KitchenSettings | null) ?? {};
 }
@@ -448,7 +478,7 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       if (!row || row.owner !== actor) throw new HubError("That button no longer exists");
       const count = Math.max(1, Math.min(200, Math.round(Number(body.count ?? row.count) || 1)));
       await db.hubTxn.create({
-        data: { owner: actor, kind: "expense", amount: money(row.unitPrice * count), category: row.category, method: oneOf(body.method, METHODS, "upi"), txnDate: date(body.txnDate, new Date())!, note: count > 1 ? `${row.label} × ${count}` : row.label, recurring: false, tag: row.tag },
+        data: { owner: actor, kind: "expense", amount: money(row.unitPrice * count), category: row.category, method: oneOf(body.method, METHODS, "upi"), txnDate: date(body.txnDate, new Date())!, note: count > 1 ? `${row.label} × ${count}` : row.label, recurring: false, tag: row.tag, quickId: row.id },
       });
       return;
     }
@@ -457,23 +487,32 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
     case "pantry.add": {
       const d = pantryData(body, false);
       const stock = amountIn(body.stock ?? 0, "Stock");
-      await db.hubPantry.create({ data: { owner: ownerFor(actor, body.owner), ...(d as { [K in keyof typeof d]-?: Exclude<(typeof d)[K], undefined> }), stock, stockAt: new Date() } });
+      await db.hubPantry.create({ data: { owner: ownerFor(actor, body.owner), ...(d as { [K in keyof typeof d]-?: Exclude<(typeof d)[K], undefined> }), basePerDay: d.perDay ?? 0, stock, stockAt: new Date() } });
       return;
     }
     case "pantry.update": {
       const row = await editable(actor, await db.hubPantry.findUnique({ where: { id: id(body.id) } }));
-      await db.hubPantry.update({ where: { id: row.id }, data: { ...pantryData(body, true), owner: body.owner === undefined ? undefined : ownerFor(actor, body.owner) } });
+      const d = pantryData(body, true);
+      // Typing a new daily use by hand overrides what was learned; learning restarts from it.
+      const reset = d.perDay !== undefined && Math.abs(d.perDay - row.perDay) > 1e-9 ? { basePerDay: d.perDay, rateVar: null, obsCount: 0, learnedAt: null } : {};
+      await db.hubPantry.update({ where: { id: row.id }, data: { ...d, ...reset, owner: body.owner === undefined ? undefined : ownerFor(actor, body.owner) } });
       return;
     }
     case "pantry.delete": {
       const row = await editable(actor, await db.hubPantry.findUnique({ where: { id: id(body.id) } }));
-      await db.hubPantry.delete({ where: { id: row.id } });
+      await db.$transaction([db.hubPantryLog.deleteMany({ where: { itemId: row.id } }), db.hubPantry.delete({ where: { id: row.id } })]);
       return;
     }
-    /** How much is really left: resets the clock the stock is counted from. */
+    /** How much is really left: teaches the daily use, then the stock counts from here. */
     case "pantry.stock": {
       const row = await editable(actor, await db.hubPantry.findUnique({ where: { id: id(body.id) } }));
-      await db.hubPantry.update({ where: { id: row.id }, data: { stock: amountIn(body.left, "Amount left"), stockAt: new Date() } });
+      await measureLeft(actor, row, amountIn(body.left, "Amount left"), "count");
+      return;
+    }
+    /** Finished: the strongest signal there is (exactly zero left today). */
+    case "pantry.out": {
+      const row = await editable(actor, await db.hubPantry.findUnique({ where: { id: id(body.id) } }));
+      await measureLeft(actor, row, 0, "out");
       return;
     }
     /** Bought more: adds the packs to what is left now and, when a price is given, logs the spend. */
@@ -484,10 +523,13 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       const paid = optAmount(body.paid, "Paid");
       const store = oneOf(body.store, STORES, row.store as (typeof STORES)[number]["key"]);
       const left = pantryLeft({ stock: row.stock, stockAt: row.stockAt.toISOString(), perDay: row.perDay });
-      await db.hubPantry.update({
-        where: { id: row.id },
-        data: { stock: Math.round((left + packs * row.packSize) * 1000) / 1000, stockAt: new Date(), store, packPrice: paid ? Math.round((paid / packs) * 100) / 100 : row.packPrice },
-      });
+      await db.$transaction([
+        db.hubPantry.update({
+          where: { id: row.id },
+          data: { stock: Math.round((left + packs * row.packSize) * 1000) / 1000, stockAt: new Date(), store, packPrice: paid ? Math.round((paid / packs) * 100) / 100 : row.packPrice },
+        }),
+        db.hubPantryLog.create({ data: { itemId: row.id, owner: actor, kind: "restock", packs, unitPrice: paid ? paid / (packs * row.packSize) : null, store } }),
+      ]);
       if (paid && body.log !== false && body.log !== "false") {
         const tag = row.kind === "veg" ? "veggies" : row.kind === "dairy" ? "dairy" : row.kind === "home" ? "home" : "groceries";
         const storeLabel = STORES.find((s) => s.key === store)?.label ?? store;
@@ -504,6 +546,7 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
       const next: KitchenSettings = { ...prev };
       if ("plan" in body) next.plan = cleanPlan(body.plan);
       if ("menu" in body) next.menu = { ...prev.menu, ...cleanMenu(body.menu) };
+      if ("reminders" in body) next.reminders = body.reminders !== false && body.reminders !== "off" && body.reminders !== "false";
       await db.hubSetting.upsert({ where: { key: `kitchen:${actor}` }, create: { key: `kitchen:${actor}`, value: next }, update: { value: next } });
       return;
     }
@@ -520,7 +563,7 @@ export async function applyHubAction(actor: Person, body: Record<string, unknown
     case "kitchen.seed": {
       const [items, buttons] = await Promise.all([db.hubPantry.count({ where: { owner: actor } }), db.hubQuick.count({ where: { owner: actor } })]);
       const now = new Date();
-      if (!items) await db.hubPantry.createMany({ data: SEED_PANTRY.map((p) => ({ owner: actor, ...p, leadDays: p.leadDays ?? 5, altPrice: p.altPrice ?? null, altStore: p.altStore ?? null, stockAt: now })) });
+      if (!items) await db.hubPantry.createMany({ data: SEED_PANTRY.map((p) => ({ owner: actor, ...p, basePerDay: p.perDay, leadDays: p.leadDays ?? 5, altPrice: p.altPrice ?? null, altStore: p.altStore ?? null, stockAt: now })) });
       if (!buttons) await db.hubQuick.createMany({ data: SEED_QUICKS.map((q, i) => ({ owner: actor, ...q, sort: i + 1 })) });
       const prev = await kitchenSettings(actor);
       const next: KitchenSettings = { plan: prev.plan ?? SEED_PLAN[actor] ?? undefined, menu: prev.menu ?? SEED_MENU };

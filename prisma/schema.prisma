@@ -688,6 +688,8 @@ model HubTxn {
   recurring Boolean  @default(false)
   /// What exactly within the category (rotis, milk, metro, date…) — set by quick logs and pantry restocks.
   tag       String?  @db.VarChar(24)
+  /// The one-tap button that logged it (the habit model learns from these).
+  quickId   String?  @db.VarChar(32)
   createdAt DateTime @default(now())
 
   @@index([owner, txnDate])
@@ -788,11 +790,34 @@ model HubPantry {
   altPrice  Float?
   altStore  String?  @db.VarChar(12)
   leadDays  Int      @default(5)
+  /// The daily use you set; `perDay` is what Saath has learned since (Kalman filter).
+  basePerDay Float?
+  /// Uncertainty of the learned rate (variance, unit²/day²).
+  rateVar   Float?
+  obsCount  Int      @default(0)
+  learnedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([owner])
   @@map("hub_pantry")
+}
+
+/// Every purchase, count and "finished" for a pantry item — the history the learning reads.
+model HubPantryLog {
+  id        String   @id @default(cuid())
+  itemId    String   @db.VarChar(32)
+  owner     String   @db.VarChar(8)
+  kind      String   @db.VarChar(8)
+  packs     Float?
+  left      Float?
+  unitPrice Float?
+  store     String?  @db.VarChar(12)
+  at        DateTime @default(now())
+
+  @@index([itemId, at])
+  @@index([owner, at])
+  @@map("hub_pantry_log")
 }
 
 /// One-tap spends (rotis, milk, metro…). `count` above 1 asks how many before logging.
