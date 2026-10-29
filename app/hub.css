@@ -1240,3 +1240,19 @@ html[data-theme="light"] .sm {
   .sm-kpis, .sm-grid3 { grid-template-columns: minmax(0, 1fr); }
   .sm-search input { width: 130px; }
 }
+
+/* SEMDIV tab: money, Pro gifts and refunds */
+.sm-mini { height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--sm-line); background: var(--sm-sunk); color: var(--sm-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.sm-mini:hover:not(:disabled) { border-color: var(--sm-accent); color: var(--sm-accent); }
+.sm-mini:disabled { opacity: 0.5; cursor: default; }
+.sm-mini.is-bad { color: var(--sm-bad); }
+.sm-pro { display: grid; gap: 8px; margin: 10px 0 14px; padding: 12px; border-radius: 12px; border: 1px solid var(--sm-line); }
+.sm-pro h4 { margin: 0; }
+.sm-pro-status { margin: 0; font-size: 13px; }
+.sm-pro-tools { display: grid; gap: 8px; }
+.sm-pro-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.sm-pro-row input { height: 28px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--sm-line); background: var(--sm-panel); color: var(--sm-ink); font: inherit; font-size: 12.5px; }
+.sm-pro-row input[type="number"] { width: 76px; }
+.sm-pro-note { flex: 1 1 180px; min-width: 0; }
+.sm-pays td { vertical-align: middle; }
+.sm-pays td:last-child { text-align: right; }

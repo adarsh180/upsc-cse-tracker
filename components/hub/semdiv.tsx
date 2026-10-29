@@ -26,6 +26,18 @@ type PersonRow = {
   topApp: { app: string; minutes: number } | null;
   signins30: number;
   docs: number;
+  pro?: { source: ProSource; until: string | null };
+};
+type ProSource = "lifetime" | "paid" | "trial" | "gift" | null;
+type Pay = { id: string; txnid: string; userId: string; name: string; email: string; plan: string; amount: number; status: string; mode: string | null; payuId: string | null; error: string | null; createdAt: string; paidAt: string | null; periodTo: string | null; refundedAt: string | null; refundNote: string | null };
+type Billing = {
+  gateway: { ready: boolean; live: boolean };
+  revenue: { today: number; d7: number; d30: number; all: number; payments: number; payers: number };
+  refunded: { count: number; amount: number };
+  pro: { paid: number; trial: number; gift: number; lifetime: number; endingIn3Days: number };
+  byDay: { day: string; amount: number; n: number }[];
+  byPlan: { plan: string; n: number }[];
+  recent: Pay[];
 };
 type Search =
   | { configured: false }
@@ -56,6 +68,8 @@ type Stats = {
   people: PersonRow[];
   search: Search;
   health: { up: boolean; status: number; ms: number; checkedAt: string };
+  billing?: Billing;
+  canEdit?: boolean;
 };
 type Event = { id: string; type: string; app: string | null; detail: Record<string, unknown> | string | null; ip: string | null; country: string | null; region: string | null; city: string | null; lat: number | null; lon: number | null; accuracy: number | null; device: string | null; os: string | null; browser: string | null; createdAt: string };
 type PersonDetail = {
@@ -66,6 +80,7 @@ type PersonDetail = {
   sessions: { createdAt: string; expiresAt: string; userAgent: string | null }[];
   usage: { byApp: { app: string; minutes: number }[]; byDay: { day: string; minutes: number }[] };
   events: Event[];
+  billing?: { pro: { plan: string; until: string | null; trialUsedAt: string | null; remindedFor: string | null; source: ProSource } | null; payments: Pay[] };
 };
 
 const APP_NAME: Record<string, string> = { scribe: "Scribe", folio: "Folio", sparkdeck: "Sparkdeck", gridora: "Gridora", pressa: "Pressa", fluxcut: "FluxCut", dashboard: "Workspace", account: "Account", site: "Site" };
@@ -81,7 +96,23 @@ const EVENT_LABEL: Record<string, string> = {
   terms_accepted: "Accepted terms",
   location_pref: "Location setting",
   app_open: "Opened",
+  trial_started: "Started Pro trial",
+  payment: "Payment",
+  pro_changed: "Pro changed",
+  two_step: "Two-step sign-in",
 };
+const PLAN_NAME: Record<string, string> = { week: "Weekly", month: "Monthly", year: "Yearly" };
+const SOURCE_LABEL: Record<string, string> = { paid: "Pro · paid", trial: "Pro · trial", gift: "Pro · gift", lifetime: "Pro · lifetime" };
+const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const day = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—");
+
+/** Calls this site's /api/hub/semdiv POST (changes are made on SEMDIV, signed). */
+async function act(api: string, body: Record<string, unknown>) {
+  const r = await fetch(api, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const j = (await r.json().catch(() => ({}))) as { error?: string } & Record<string, unknown>;
+  if (!r.ok || j.error) throw new Error(j.error || "That didn't work.");
+  return j;
+}
 const num = (n: number) => n.toLocaleString("en-IN");
 const hours = (m: number) => (m >= 90 ? `${(m / 60).toFixed(m >= 600 ? 0 : 1)} h` : `${m} min`);
 const when = (s: string | null) => (s ? new Date(s).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—");
@@ -216,6 +247,8 @@ export function HubSemdiv({ api }: { api: string }) {
               <Kpi label="Sign-up method" value={`${data.users.google} Google`} sub={`${data.users.email} email · ${data.users.precise} share precise location`} />
             </section>
 
+            {data.billing && <Money api={api} b={data.billing} canEdit={!!data.canEdit} onChange={load} onOpen={setOpen} />}
+
             <section className="sm-grid3">
               <Bars label="New people per day" data={data.daily.map((d) => ({ x: d.day.slice(5), y: d.signups }))} />
               <Bars label="Active people per day" data={data.daily.map((d) => ({ x: d.day.slice(5), y: d.active }))} />
@@ -278,6 +311,7 @@ export function HubSemdiv({ api }: { api: string }) {
                       <th>Device</th>
                       <th>Most used</th>
                       <th>Time · 30 d</th>
+                      <th>Plan</th>
                       <th>Consent</th>
                     </tr>
                   </thead>
@@ -304,6 +338,15 @@ export function HubSemdiv({ api }: { api: string }) {
                         <td>{p.topApp ? `${APP_NAME[p.topApp.app]} · ${hours(p.topApp.minutes)}` : "—"}</td>
                         <td>{hours(p.minutes30)}</td>
                         <td>
+                          {p.pro?.source ? (
+                            <span className="sm-tag is-ok" title={p.pro.until ? `until ${day(p.pro.until)}` : "no end date"}>
+                              {SOURCE_LABEL[p.pro.source]}
+                            </span>
+                          ) : (
+                            <span className="sm-tag">Free</span>
+                          )}
+                        </td>
+                        <td>
                           <span className={`sm-tag ${p.consent.current ? "is-ok" : "is-warn"}`}>{p.consent.current ? `v${p.consent.version}` : "Pending"}</span>
                         </td>
                       </tr>
@@ -315,7 +358,7 @@ export function HubSemdiv({ api }: { api: string }) {
           </>
         )}
       </div>
-      {open && <PersonPanel api={api} id={open} onClose={() => setOpen(null)} />}
+      {open && <PersonPanel api={api} id={open} canEdit={!!data?.canEdit} onClose={() => setOpen(null)} onChange={load} />}
     </Page>
   );
 }
@@ -389,10 +432,15 @@ function SearchPanel({ s }: { s: Search }) {
   );
 }
 
-function PersonPanel({ api, id, onClose }: { api: string; id: string; onClose: () => void }) {
+function PersonPanel({ api, id, canEdit, onClose, onChange }: { api: string; id: string; canEdit: boolean; onClose: () => void; onChange: () => void }) {
   const [p, setP] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [rev, setRev] = useState(0);
+  const refresh = useCallback(() => {
+    setRev((n) => n + 1);
+    onChange();
+  }, [onChange]);
   useEffect(() => {
     let live = true;
     fetch(`${api}?view=person&id=${encodeURIComponent(id)}`, { cache: "no-store" })
@@ -408,7 +456,7 @@ function PersonPanel({ api, id, onClose }: { api: string; id: string; onClose: (
       live = false;
       window.removeEventListener("keydown", esc);
     };
-  }, [api, id, onClose]);
+  }, [api, id, onClose, rev]);
 
   const report = async () => {
     setSaving(true);
@@ -486,6 +534,7 @@ function PersonPanel({ api, id, onClose }: { api: string; id: string; onClose: (
               <dt>Signed in on</dt>
               <dd>{p.sessions.length ? `${p.sessions.length} device${p.sessions.length === 1 ? "" : "s"} now` : "No active sessions"}</dd>
             </dl>
+            {p.billing && <ProBlock api={api} userId={id} billing={p.billing} canEdit={canEdit && !!u} onChange={refresh} />}
             <h4>Time in each app · 90 days</h4>
             <Meter items={p.usage.byApp.map((a) => ({ label: APP_NAME[a.app] ?? a.app, value: a.minutes }))} unit={hours} />
             {p.usage.byDay.length > 1 && <Bars label="Minutes per day" data={p.usage.byDay.map((d) => ({ x: d.day.slice(5), y: d.minutes }))} format={hours} />}
@@ -524,5 +573,205 @@ function PersonPanel({ api, id, onClose }: { api: string; id: string; onClose: (
       </aside>
     </div>,
     document.body,
+  );
+}
+
+/** Revenue, who has Pro, and recent payments (with refunds). */
+function Money({ api, b, canEdit, onChange, onOpen }: { api: string; b: Billing; canEdit: boolean; onChange: () => void; onOpen: (id: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const reminders = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const r = (await act(api, { action: "reminders" })) as { due?: number; sent?: number };
+      setNote(`Reminders: ${r.sent ?? 0} sent (${r.due ?? 0} ending within 2 days).`);
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Couldn't send reminders.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <div className="sm-status">
+        <span className={`sm-pill ${b.gateway.ready ? (b.gateway.live ? "is-ok" : "is-warn") : "is-bad"}`}>{b.gateway.ready ? (b.gateway.live ? "PayU live" : "PayU test mode") : "PayU keys missing"}</span>
+        {b.pro.endingIn3Days > 0 && <span className="sm-pill is-warn">{b.pro.endingIn3Days} Pro ending in 3 days</span>}
+        {b.refunded.count > 0 && (
+          <span className="sm-pill">
+            {b.refunded.count} refunded · {inr(b.refunded.amount)}
+          </span>
+        )}
+        {canEdit && (
+          <button type="button" className="sth-btn" onClick={() => void reminders()} disabled={busy}>
+            {busy ? "Sending…" : "Send reminders now"}
+          </button>
+        )}
+        {note && <span className="sm-pill">{note}</span>}
+      </div>
+      <section className="sm-kpis">
+        <Kpi label="Revenue today" value={inr(b.revenue.today)} sub={`${inr(b.revenue.d7)} this week · ${inr(b.revenue.d30)} in 30 days`} />
+        <Kpi label="Revenue, all time" value={inr(b.revenue.all)} sub={`${num(b.revenue.payments)} payments from ${num(b.revenue.payers)} people`} />
+        <Kpi label="Pro right now" value={num(b.pro.paid + b.pro.trial + b.pro.gift + b.pro.lifetime)} sub={`${b.pro.paid} paid · ${b.pro.trial} trial · ${b.pro.gift} gift · ${b.pro.lifetime} lifetime`} />
+        <Kpi label="Passes sold" value={num(b.byPlan.reduce((n, p) => n + p.n, 0))} sub={b.byPlan.map((p) => `${p.n} ${PLAN_NAME[p.plan]?.toLowerCase() ?? p.plan}`).join(" · ")} />
+      </section>
+      <section className="sm-grid2">
+        <Bars label="Revenue per day" data={b.byDay.map((d) => ({ x: d.day.slice(5), y: d.amount }))} format={inr} />
+        <div className="sm-card">
+          <h3>Recent payments</h3>
+          {b.recent.length === 0 ? (
+            <p className="sm-muted">No payments yet.</p>
+          ) : (
+            <div className="sm-table-wrap">
+              <table className="sm-table sm-pays">
+                <tbody>
+                  {b.recent.slice(0, 12).map((p) => (
+                    <PayRow key={p.id} api={api} p={p} canEdit={canEdit} onChange={onChange} onOpen={() => onOpen(p.userId)} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PayRow({ api, p, canEdit, onChange, onOpen }: { api: string; p: Pay; canEdit: boolean; onChange: () => void; onOpen?: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const refund = async () => {
+    const ok = window.confirm(
+      `Mark ${inr(p.amount)} from ${p.name} as refunded and take away the Pro days it bought?\n\nRefund the money in the PayU dashboard first (Transactions → this payment → Refund). This only records it here.`,
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await act(api, { action: "refund", txnid: p.txnid, removePro: true });
+      onChange();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Couldn't mark the refund.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <tr onClick={onOpen} tabIndex={onOpen ? 0 : undefined}>
+      <td>
+        <b>{p.name}</b>
+        <small>
+          {PLAN_NAME[p.plan] ?? p.plan} · {p.mode ?? "—"} · {p.txnid}
+        </small>
+      </td>
+      <td>{inr(p.amount)}</td>
+      <td>{when(p.paidAt ?? p.createdAt)}</td>
+      <td>
+        <span className={`sm-tag ${p.status === "success" ? "is-ok" : p.status === "failure" ? "is-warn" : ""}`} title={p.error ?? p.refundNote ?? ""}>
+          {p.status === "success" ? "Paid" : p.status === "failure" ? "Failed" : p.status === "refunded" ? "Refunded" : "Pending"}
+        </span>
+      </td>
+      <td>
+        {canEdit && p.status === "success" && (
+          <button
+            type="button"
+            className="sm-mini"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              void refund();
+            }}
+          >
+            Refund
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/** A person's Pro status, gifts of Pro, and their payments. */
+function ProBlock({ api, userId, billing, canEdit, onChange }: { api: string; userId: string; billing: NonNullable<PersonDetail["billing"]>; canEdit: boolean; onChange: () => void }) {
+  const [days, setDays] = useState("30");
+  const [date, setDate] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const pro = billing.pro;
+  const run = async (change: "add" | "until" | "lifetime" | "end", extra: Record<string, unknown> = {}) => {
+    if (change === "end" && !window.confirm("Take Pro away from this account now? Payments stay recorded.")) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = (await act(api, { action: "pro", id: userId, change, note, ...extra })) as { plan?: string; until?: string | null };
+      setMsg(r.plan === "pro" ? "Pro for life." : r.until && +new Date(r.until) > Date.now() ? `Pro until ${day(r.until)}.` : "Back on Free.");
+      setNote("");
+      onChange();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "That didn't work.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const status = !pro
+    ? "Account deleted"
+    : pro.source === "lifetime"
+      ? "Pro for life (no end date)"
+      : pro.source
+        ? `${SOURCE_LABEL[pro.source]} until ${day(pro.until)}`
+        : pro.until
+          ? `Free · Pro ended ${day(pro.until)}`
+          : "Free";
+  return (
+    <div className="sm-pro">
+      <h4>Plan</h4>
+      <p className="sm-pro-status">
+        <span className={`sm-tag ${pro?.source ? "is-ok" : ""}`}>{status}</span>
+        {pro?.trialUsedAt && <small> · trial used {day(pro.trialUsedAt)}</small>}
+      </p>
+      {canEdit && pro && (
+        <div className="sm-pro-tools">
+          <div className="sm-pro-row">
+            <span>Give Pro:</span>
+            {[7, 30, 90, 365].map((d) => (
+              <button key={d} type="button" className="sm-mini" disabled={busy} onClick={() => void run("add", { days: d })}>
+                +{d === 365 ? "1 year" : `${d} days`}
+              </button>
+            ))}
+          </div>
+          <div className="sm-pro-row">
+            <input type="number" min={1} max={3650} value={days} onChange={(e) => setDays(e.target.value)} aria-label="Days" />
+            <button type="button" className="sm-mini" disabled={busy || !(+days >= 1)} onClick={() => void run("add", { days: Math.round(+days) })}>
+              Add days
+            </button>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Pro until" />
+            <button type="button" className="sm-mini" disabled={busy || !date} onClick={() => void run("until", { date })}>
+              Pro until date
+            </button>
+          </div>
+          <div className="sm-pro-row">
+            <button type="button" className="sm-mini" disabled={busy || pro.source === "lifetime"} onClick={() => void run("lifetime")}>
+              Pro for life
+            </button>
+            <button type="button" className="sm-mini is-bad" disabled={busy || !pro.source} onClick={() => void run("end")}>
+              End Pro now
+            </button>
+            <input className="sm-pro-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional, e.g. why)" maxLength={200} />
+          </div>
+          {msg && <p className="sm-muted">{msg}</p>}
+          <p className="sm-muted">Gifts are added after any Pro they already have. Every change shows in their timeline below.</p>
+        </div>
+      )}
+      {billing.payments.length > 0 && (
+        <div className="sm-table-wrap">
+          <table className="sm-table sm-pays">
+            <tbody>
+              {billing.payments.map((p) => (
+                <PayRow key={p.id} api={api} p={p} canEdit={canEdit} onChange={onChange} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
