@@ -39,6 +39,7 @@ type Billing = {
   byPlan: { plan: string; n: number }[];
   byTier?: { tier: string; n: number }[];
   recent: Pay[];
+  csp?: { directive: string; blocked: string; page: string; count: number; lastAt: string }[];
   paused?: { id: string; token: string; at: string; bytes: number; downloadsToday: number; downloads: number; file: string; size: number; owner: { id: string; name: string; email: string } }[];
 };
 type Search =
@@ -629,6 +630,30 @@ function Money({ api, b, canEdit, onChange, onOpen }: { api: string; b: Billing;
               <tbody>
                 {b.paused.map((l) => (
                   <PausedRow key={l.id} api={api} link={l} canEdit={canEdit} onChange={onChange} onOpen={() => onOpen(l.owner.id)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {!!b.csp?.length && (
+        <section className="sm-card">
+          <h3>Security policy reports ({b.csp.length})</h3>
+          <p className="sm-muted">What the stricter policy would block if it were switched on. Nothing is being blocked yet.</p>
+          <div className="sm-table-wrap">
+            <table className="sm-table sm-pays">
+              <tbody>
+                {b.csp.map((c) => (
+                  <tr key={`${c.directive}${c.blocked}${c.page}`}>
+                    <td>
+                      <b>{c.blocked || "(inline)"}</b>
+                      <small>
+                        {c.directive} on {c.page}
+                      </small>
+                    </td>
+                    <td>{num(c.count)}×</td>
+                    <td>{when(c.lastAt)}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
