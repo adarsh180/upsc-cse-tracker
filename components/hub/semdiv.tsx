@@ -18,7 +18,7 @@ type PersonRow = {
   joined: string;
   lastActive: string | null;
   method: "email" | "google" | "both";
-  consent: { version: string | null; current: boolean; at: string | null; location: string | null };
+  consent: { version: string | null; declined?: boolean; current: boolean; at: string | null; location: string | null };
   place: { city: string | null; region: string | null; country: string | null } | null;
   precise: { lat: number; lon: number; at: string } | null;
   device: { device: string | null; os: string | null; browser: string | null } | null;
@@ -103,6 +103,9 @@ const EVENT_LABEL: Record<string, string> = {
   payment: "Payment",
   pro_changed: "Pro changed",
   two_step: "Two-step sign-in",
+  terms_declined: "Declined updated terms",
+  kosh_removed: "Kosh files removed",
+  share_paused: "Share link paused",
 };
 const ORIGIN_SITE = "https://www.semdiv.com";
 const PLAN_NAME: Record<string, string> = { week: "Weekly", month: "Monthly", year: "Yearly", "200-month": "200 GB monthly", "200-year": "200 GB yearly", "1tb-month": "1 TB monthly", "1tb-year": "1 TB yearly" };
@@ -353,7 +356,7 @@ export function HubSemdiv({ api }: { api: string }) {
                           )}
                         </td>
                         <td>
-                          <span className={`sm-tag ${p.consent.current ? "is-ok" : "is-warn"}`}>{p.consent.current ? `v${p.consent.version}` : "Pending"}</span>
+                          <span className={`sm-tag ${p.consent.current ? "is-ok" : "is-warn"}`}>{p.consent.current ? `v${p.consent.version}` : p.consent.declined ? "Declined update" : "Pending"}</span>
                         </td>
                       </tr>
                     ))}
