@@ -39,6 +39,7 @@ type Billing = {
   byPlan: { plan: string; n: number }[];
   byTier?: { tier: string; n: number }[];
   recent: Pay[];
+  paused?: { id: string; token: string; at: string; bytes: number; downloadsToday: number; downloads: number; file: string; size: number; owner: { id: string; name: string; email: string } }[];
 };
 type Search =
   | { configured: false }
@@ -102,6 +103,7 @@ const EVENT_LABEL: Record<string, string> = {
   pro_changed: "Pro changed",
   two_step: "Two-step sign-in",
 };
+const ORIGIN_SITE = "https://www.semdiv.com";
 const PLAN_NAME: Record<string, string> = { week: "Weekly", month: "Monthly", year: "Yearly", "200-month": "200 GB monthly", "200-year": "200 GB yearly", "1tb-month": "1 TB monthly", "1tb-year": "1 TB yearly" };
 const TIER_NAME: Record<string, string> = { pro: "50 GB", pro200: "200 GB", pro1tb: "1 TB", pro5tb: "5 TB" };
 const SOURCE_LABEL: Record<string, string> = { paid: "Pro · paid", trial: "Pro · trial", gift: "Pro · gift", lifetime: "Pro · lifetime" };
@@ -618,6 +620,21 @@ function Money({ api, b, canEdit, onChange, onOpen }: { api: string; b: Billing;
         <Kpi label="Pro right now" value={num(b.pro.paid + b.pro.trial + b.pro.gift + b.pro.lifetime)} sub={`${b.pro.paid} paid · ${b.pro.trial} trial · ${b.pro.gift} gift · ${b.pro.lifetime} lifetime${b.byTier ? ` · ${b.byTier.filter((t) => t.n && t.tier !== "pro").map((t) => `${t.n} on ${TIER_NAME[t.tier]}`).join(" · ")}` : ""}`.replace(/ · $/, "")} />
         <Kpi label="Passes sold" value={num(b.byPlan.reduce((n, p) => n + p.n, 0))} sub={b.byPlan.map((p) => `${p.n} ${PLAN_NAME[p.plan]?.toLowerCase() ?? p.plan}`).join(" · ")} />
       </section>
+      {!!b.paused?.length && (
+        <section className="sm-card">
+          <h3>Paused share links ({b.paused.length})</h3>
+          <p className="sm-muted">Paused automatically for unusual traffic. Check the file, then switch the link back on or turn it off for good.</p>
+          <div className="sm-table-wrap">
+            <table className="sm-table sm-pays">
+              <tbody>
+                {b.paused.map((l) => (
+                  <PausedRow key={l.id} api={api} link={l} canEdit={canEdit} onChange={onChange} onOpen={() => onOpen(l.owner.id)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       <section className="sm-grid2">
         <Bars label="Revenue per day" data={b.byDay.map((d) => ({ x: d.day.slice(5), y: d.amount }))} format={inr} />
         <div className="sm-card">
@@ -638,6 +655,69 @@ function Money({ api, b, canEdit, onChange, onOpen }: { api: string; b: Billing;
         </div>
       </section>
     </>
+  );
+}
+
+function PausedRow({ api, link, canEdit, onChange, onOpen }: { api: string; link: NonNullable<Billing["paused"]>[number]; canEdit: boolean; onChange: () => void; onOpen: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const run = async (change: "resume" | "off") => {
+    setBusy(true);
+    try {
+      await act(api, { action: "share", id: link.id, change });
+      onChange();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "That didn't work.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const gb = (n: number) => (n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : `${Math.round(n / 1024 ** 2)} MB`);
+  return (
+    <tr onClick={onOpen} tabIndex={0}>
+      <td>
+        <b>{link.file}</b>
+        <small>
+          {link.owner.name} · {link.owner.email}
+        </small>
+      </td>
+      <td>
+        {gb(link.bytes)} · {num(link.downloadsToday)} downloads
+      </td>
+      <td>{when(link.at)}</td>
+      <td>
+        <a className="sm-mini" href={`${ORIGIN_SITE}/k/${link.token}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+          Open
+        </a>
+      </td>
+      <td>
+        {canEdit && (
+          <>
+            <button
+              type="button"
+              className="sm-mini"
+              disabled={busy}
+              onClick={(e) => {
+                e.stopPropagation();
+                void run("resume");
+              }}
+            >
+              Switch on
+            </button>{" "}
+            <button
+              type="button"
+              className="sm-mini is-bad"
+              disabled={busy}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("Turn this link off for good?")) void run("off");
+              }}
+            >
+              Turn off
+            </button>
+          </>
+        )}
+      </td>
+    </tr>
   );
 }
 

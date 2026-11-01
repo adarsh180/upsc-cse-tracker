@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action: "pro", id, change: "add"|"until"|"lifetime"|"end", days?, date?, tier?, note? }
-//      { action: "refund", txnid, removePro, note? } · { action: "reminders" }
+//      { action: "refund", txnid, removePro, note? } · { action: "share", id, change: "resume"|"off" } · { action: "reminders" }
 // Only Adarsh can change plans and payments; the NEET view stays read-only.
 export async function POST(req: NextRequest) {
   const actor = await actorFor(req);
@@ -80,6 +80,10 @@ export async function POST(req: NextRequest) {
     q.set("removePro", b.removePro ? "1" : "0");
     if (b.note) q.set("note", str(b.note).slice(0, 200));
     path = "/api/owner/refund";
+  } else if (b.action === "share") {
+    q.set("id", str(b.id));
+    q.set("action", str(b.change));
+    path = "/api/owner/share";
   } else if (b.action === "reminders") path = "/api/owner/reminders";
   else return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   // The query string is part of what the owner signature covers.

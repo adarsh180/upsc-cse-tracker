@@ -1257,3 +1257,4 @@ html[data-theme="light"] .sm {
 .sm-pro-note { flex: 1 1 180px; min-width: 0; }
 .sm-pays td { vertical-align: middle; }
 .sm-pays td:last-child { text-align: right; }
+a.sm-mini { display: inline-flex; align-items: center; text-decoration: none; }
