@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ...body, health: up, canEdit: actor === "adarsh" });
 }
 
-// POST { action: "pro", id, change: "add"|"until"|"lifetime"|"end", days?, date?, note? }
+// POST { action: "pro", id, change: "add"|"until"|"lifetime"|"end", days?, date?, tier?, note? }
 //      { action: "refund", txnid, removePro, note? } · { action: "reminders" }
 // Only Adarsh can change plans and payments; the NEET view stays read-only.
 export async function POST(req: NextRequest) {
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
     q.set("action", str(b.change));
     if (b.days != null) q.set("days", str(b.days));
     if (b.date) q.set("date", str(b.date));
+    if (b.tier) q.set("tier", str(b.tier));
     if (b.note) q.set("note", str(b.note).slice(0, 200));
     path = "/api/owner/pro";
   } else if (b.action === "refund") {

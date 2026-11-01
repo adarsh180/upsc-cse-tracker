@@ -26,7 +26,7 @@ type PersonRow = {
   topApp: { app: string; minutes: number } | null;
   signins30: number;
   docs: number;
-  pro?: { source: ProSource; until: string | null };
+  pro?: { source: ProSource; until: string | null; tier?: string | null };
 };
 type ProSource = "lifetime" | "paid" | "trial" | "gift" | null;
 type Pay = { id: string; txnid: string; userId: string; name: string; email: string; plan: string; amount: number; status: string; mode: string | null; payuId: string | null; error: string | null; createdAt: string; paidAt: string | null; periodTo: string | null; refundedAt: string | null; refundNote: string | null };
@@ -37,6 +37,7 @@ type Billing = {
   pro: { paid: number; trial: number; gift: number; lifetime: number; endingIn3Days: number };
   byDay: { day: string; amount: number; n: number }[];
   byPlan: { plan: string; n: number }[];
+  byTier?: { tier: string; n: number }[];
   recent: Pay[];
 };
 type Search =
@@ -80,7 +81,7 @@ type PersonDetail = {
   sessions: { createdAt: string; expiresAt: string; userAgent: string | null }[];
   usage: { byApp: { app: string; minutes: number }[]; byDay: { day: string; minutes: number }[] };
   events: Event[];
-  billing?: { pro: { plan: string; until: string | null; trialUsedAt: string | null; remindedFor: string | null; source: ProSource } | null; payments: Pay[] };
+  billing?: { pro: { plan: string; until: string | null; trialUsedAt: string | null; remindedFor: string | null; source: ProSource; tier?: string | null; tierUntil?: string | null; nextTier?: string | null; overSince?: string | null } | null; payments: Pay[] };
 };
 
 const APP_NAME: Record<string, string> = { scribe: "Scribe", folio: "Folio", sparkdeck: "Sparkdeck", gridora: "Gridora", pressa: "Pressa", fluxcut: "FluxCut", dashboard: "Workspace", account: "Account", site: "Site" };
@@ -101,7 +102,8 @@ const EVENT_LABEL: Record<string, string> = {
   pro_changed: "Pro changed",
   two_step: "Two-step sign-in",
 };
-const PLAN_NAME: Record<string, string> = { week: "Weekly", month: "Monthly", year: "Yearly" };
+const PLAN_NAME: Record<string, string> = { week: "Weekly", month: "Monthly", year: "Yearly", "200-month": "200 GB monthly", "200-year": "200 GB yearly", "1tb-month": "1 TB monthly", "1tb-year": "1 TB yearly" };
+const TIER_NAME: Record<string, string> = { pro: "50 GB", pro200: "200 GB", pro1tb: "1 TB", pro5tb: "5 TB" };
 const SOURCE_LABEL: Record<string, string> = { paid: "Pro · paid", trial: "Pro · trial", gift: "Pro · gift", lifetime: "Pro · lifetime" };
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const day = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -341,6 +343,7 @@ export function HubSemdiv({ api }: { api: string }) {
                           {p.pro?.source ? (
                             <span className="sm-tag is-ok" title={p.pro.until ? `until ${day(p.pro.until)}` : "no end date"}>
                               {SOURCE_LABEL[p.pro.source]}
+                              {p.pro.tier && p.pro.tier !== "pro" ? ` · ${TIER_NAME[p.pro.tier]}` : ""}
                             </span>
                           ) : (
                             <span className="sm-tag">Free</span>
@@ -612,7 +615,7 @@ function Money({ api, b, canEdit, onChange, onOpen }: { api: string; b: Billing;
       <section className="sm-kpis">
         <Kpi label="Revenue today" value={inr(b.revenue.today)} sub={`${inr(b.revenue.d7)} this week · ${inr(b.revenue.d30)} in 30 days`} />
         <Kpi label="Revenue, all time" value={inr(b.revenue.all)} sub={`${num(b.revenue.payments)} payments from ${num(b.revenue.payers)} people`} />
-        <Kpi label="Pro right now" value={num(b.pro.paid + b.pro.trial + b.pro.gift + b.pro.lifetime)} sub={`${b.pro.paid} paid · ${b.pro.trial} trial · ${b.pro.gift} gift · ${b.pro.lifetime} lifetime`} />
+        <Kpi label="Pro right now" value={num(b.pro.paid + b.pro.trial + b.pro.gift + b.pro.lifetime)} sub={`${b.pro.paid} paid · ${b.pro.trial} trial · ${b.pro.gift} gift · ${b.pro.lifetime} lifetime${b.byTier ? ` · ${b.byTier.filter((t) => t.n && t.tier !== "pro").map((t) => `${t.n} on ${TIER_NAME[t.tier]}`).join(" · ")}` : ""}`.replace(/ · $/, "")} />
         <Kpi label="Passes sold" value={num(b.byPlan.reduce((n, p) => n + p.n, 0))} sub={b.byPlan.map((p) => `${p.n} ${PLAN_NAME[p.plan]?.toLowerCase() ?? p.plan}`).join(" · ")} />
       </section>
       <section className="sm-grid2">
@@ -694,6 +697,7 @@ function ProBlock({ api, userId, billing, canEdit, onChange }: { api: string; us
   const [days, setDays] = useState("30");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
+  const [tier, setTier] = useState("pro");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const pro = billing.pro;
@@ -702,7 +706,7 @@ function ProBlock({ api, userId, billing, canEdit, onChange }: { api: string; us
     setBusy(true);
     setMsg(null);
     try {
-      const r = (await act(api, { action: "pro", id: userId, change, note, ...extra })) as { plan?: string; until?: string | null };
+      const r = (await act(api, { action: "pro", id: userId, change, note, tier: tier === "pro" ? undefined : tier, ...extra })) as { plan?: string; until?: string | null };
       setMsg(r.plan === "pro" ? "Pro for life." : r.until && +new Date(r.until) > Date.now() ? `Pro until ${day(r.until)}.` : "Back on Free.");
       setNote("");
       onChange();
@@ -717,7 +721,7 @@ function ProBlock({ api, userId, billing, canEdit, onChange }: { api: string; us
     : pro.source === "lifetime"
       ? "Pro for life (no end date)"
       : pro.source
-        ? `${SOURCE_LABEL[pro.source]} until ${day(pro.until)}`
+        ? `${SOURCE_LABEL[pro.source]}${pro.tier ? ` · ${TIER_NAME[pro.tier]}` : ""} until ${day(pro.until)}`
         : pro.until
           ? `Free · Pro ended ${day(pro.until)}`
           : "Free";
@@ -727,11 +731,20 @@ function ProBlock({ api, userId, billing, canEdit, onChange }: { api: string; us
       <p className="sm-pro-status">
         <span className={`sm-tag ${pro?.source ? "is-ok" : ""}`}>{status}</span>
         {pro?.trialUsedAt && <small> · trial used {day(pro.trialUsedAt)}</small>}
+        {pro?.tierUntil && pro.tier && pro.tier !== "pro" && pro.until && +new Date(pro.tierUntil) < +new Date(pro.until) - 60000 && <small> · {TIER_NAME[pro.tier]} until {day(pro.tierUntil)}, then {TIER_NAME[pro.nextTier ?? "pro"]}</small>}
+        {pro?.overSince && <small> · over its space since {day(pro.overSince)}</small>}
       </p>
       {canEdit && pro && (
         <div className="sm-pro-tools">
           <div className="sm-pro-row">
-            <span>Give Pro:</span>
+            <span>Give Pro with</span>
+            <select value={tier} onChange={(e) => setTier(e.target.value)} aria-label="Storage">
+              {Object.entries(TIER_NAME).map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
             {[7, 30, 90, 365].map((d) => (
               <button key={d} type="button" className="sm-mini" disabled={busy} onClick={() => void run("add", { days: d })}>
                 +{d === 365 ? "1 year" : `${d} days`}
