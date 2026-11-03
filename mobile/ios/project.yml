@@ -1,0 +1,36 @@
+name: SacredAttempt
+options:
+  bundleIdPrefix: com.adarsh
+  deploymentTarget:
+    iOS: '16.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+targets:
+  SacredAttempt:
+    type: application
+    platform: iOS
+    sources:
+      - path: SacredAttempt
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.adarsh.upsc
+        TARGETED_DEVICE_FAMILY: '1,2'
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: SacredAttempt/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      testTargets:
+        - SacredAttemptTests
+  SacredAttemptTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: SacredAttemptTests
+    dependencies:
+      - target: SacredAttempt
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
