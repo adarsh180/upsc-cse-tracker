@@ -1258,3 +1258,28 @@ html[data-theme="light"] .sm {
 .sm-pays td { vertical-align: middle; }
 .sm-pays td:last-child { text-align: right; }
 a.sm-mini { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Saath → SEMDIV: visit summaries and legal records (components/hub/semdiv-legal.tsx) */
+.lg-h2 { margin: 8px 0 0; font-size: 15px; font-weight: 600; color: var(--sm-ink2, inherit); }
+.lg { display: grid; gap: 12px; }
+.lg h3 { display: flex; align-items: center; gap: 6px; margin: 0; }
+.lg-muted { margin: 0; color: var(--sm-ink3); font-size: 13px; }
+.lg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lg-row input { flex: 1; min-width: 200px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--sm-line); background: var(--sm-sunk, transparent); color: inherit; font: inherit; font-size: 13px; }
+.lg-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.lg-tabs { display: inline-flex; gap: 4px; padding: 3px; border-radius: 9px; border: 1px solid var(--sm-line); }
+.lg-tabs button { border: 0; background: none; color: var(--sm-ink3); padding: 5px 10px; border-radius: 7px; font: inherit; font-size: 13px; cursor: pointer; }
+.lg-tabs button.is-on { background: var(--sm-panel); color: inherit; box-shadow: 0 0 0 1px var(--sm-line); }
+.lg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.lg-list li { display: flex; justify-content: space-between; gap: 12px; }
+.lg-list li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-table-wrap { overflow-x: auto; display: grid; gap: 10px; }
+.lg-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px; }
+.lg-table th, .lg-table td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--sm-line); }
+.lg-table th { color: var(--sm-ink3); font-weight: 600; font-size: 12px; }
+.lg-table td small { display: block; color: var(--sm-ink3); font-size: 12px; }
+.lg-table code { font-size: 12px; }
+.lg-detail { display: grid; gap: 10px; font-size: 13px; }
+.lg-steps { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.lg-steps li { display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 10px; }
+.lg-steps time { color: var(--sm-ink3); }

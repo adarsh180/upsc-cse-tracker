@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, ExternalLink, MapPin, RefreshCw, Search, X } from "lucide-react";
+import { LegalRecords, VisitSummary, type Visits } from "./semdiv-legal";
 import { Page } from "./pages";
 
 type Tally = { label: string; n: number }[];
@@ -72,6 +73,7 @@ type Stats = {
   search: Search;
   health: { up: boolean; status: number; ms: number; checkedAt: string };
   billing?: Billing;
+  visits?: Visits;
   canEdit?: boolean;
 };
 type Event = { id: string; type: string; app: string | null; detail: Record<string, unknown> | string | null; ip: string | null; country: string | null; region: string | null; city: string | null; lat: number | null; lon: number | null; accuracy: number | null; device: string | null; os: string | null; browser: string | null; createdAt: string };
@@ -256,6 +258,9 @@ export function HubSemdiv({ api }: { api: string }) {
             </section>
 
             {data.billing && <Money api={api} b={data.billing} canEdit={!!data.canEdit} onChange={load} onOpen={setOpen} />}
+
+            {data.visits && <VisitSummary v={data.visits} />}
+            {data.canEdit && <LegalRecords api={api} />}
 
             <section className="sm-grid3">
               <Bars label="New people per day" data={data.daily.map((d) => ({ x: d.day.slice(5), y: d.signups }))} />

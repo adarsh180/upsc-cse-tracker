@@ -17,13 +17,13 @@ async function actorFor(req: NextRequest): Promise<Person | null> {
 const ORIGIN = (process.env.SEMDIV_ORIGIN || "https://www.semdiv.com").replace(/\/$/, "");
 
 /** Calls SEMDIV's owner API, signed with the shared OWNER_API_SECRET. */
-async function owner(path: string, method: "GET" | "POST" = "GET") {
+async function owner(path: string, method: "GET" | "POST" = "GET", extra: Record<string, string> = {}) {
   const secret = process.env.OWNER_API_SECRET;
   if (!secret) return NextResponse.json({ error: "The SEMDIV link isn't set up: OWNER_API_SECRET is missing on this site." }, { status: 503 });
   const ts = String(Date.now());
   const sig = createHmac("sha256", secret).update(`${ts}.${path}`).digest("hex");
   try {
-    const res = await fetch(ORIGIN + path, { method, headers: { "x-owner-ts": ts, "x-owner-sig": sig }, cache: "no-store", signal: AbortSignal.timeout(25000) });
+    const res = await fetch(ORIGIN + path, { method, headers: { "x-owner-ts": ts, "x-owner-sig": sig, ...extra }, cache: "no-store", signal: AbortSignal.timeout(25000) });
     if (res.status === 401) return NextResponse.json({ error: "SEMDIV refused the request — OWNER_API_SECRET differs between SEMDIV and this site." }, { status: 502 });
     return new NextResponse(await res.text(), { status: res.status, headers: { "Content-Type": "application/json" } });
   } catch {
@@ -64,6 +64,19 @@ export async function POST(req: NextRequest) {
   if (!actor) return NextResponse.json({ error: "Locked" }, { status: 401 });
   if (actor !== "adarsh") return NextResponse.json({ error: "Only Adarsh can change plans and payments." }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  // Legal records (scan records and visit records): only Adarsh, with the separate
+  // legal-records password, which SEMDIV checks (5 wrong tries lock it for 5 hours).
+  // The password is passed through in a header and never stored here.
+  if (b.action === "legal") {
+    const views = new Set(["scans", "scan", "visits", "visit"]);
+    const view = typeof b.view === "string" && views.has(b.view) ? b.view : "scans";
+    const lq = new URLSearchParams({ view });
+    if (typeof b.q === "string" && b.q.trim()) lq.set("q", b.q.trim().slice(0, 120));
+    if (typeof b.page === "number" && b.page > 0) lq.set("page", String(Math.floor(b.page)));
+    if (typeof b.id === "string" && b.id) lq.set("id", b.id.slice(0, 40));
+    const pw = typeof b.password === "string" ? b.password.slice(0, 200) : "";
+    return owner(`/api/owner/legal?${lq}`, "GET", { "x-legal-password": pw });
+  }
   const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
   const q = new URLSearchParams();
   let path: string;
