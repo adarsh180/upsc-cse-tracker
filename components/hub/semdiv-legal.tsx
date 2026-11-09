@@ -1,10 +1,12 @@
 "use client";
 
 import { Download, FileText, Lock, Search } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ChatLogTable, ReportDetail, ReportsTable, type LogRow, type ReportRow } from "./semdiv-chat-records";
 
 // Saath → SEMDIV: visit summaries (counts only), and Legal records: scan records (PDFs
-// made with Scan in Folio, kept 30 days) and visit records (kept 180 days), opened with
+// made with Scan in Folio, kept 30 days), visit records (kept 180 days), Chat reports (kept
+// a year) and Chat records (metadata only, kept 180 days), opened with
 // the separate legal-records password that SEMDIV checks. The password lives only in this
 // component's memory; five wrong tries lock SEMDIV's legal records for five hours.
 
@@ -110,7 +112,11 @@ function downloadBlob(data: BlobPart, type: string, name: string) {
 export function LegalRecords({ api }: { api: string }) {
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [view, setView] = useState<"scans" | "visits">("scans");
+  const [view, setView] = useState<View>("scans");
+  const [reports, setReports] = useState<{ total: number; reports: ReportRow[] } | null>(null);
+  const [report, setReport] = useState<string | null>(null);
+  const [rStatus, setRStatus] = useState("");
+  const [chatlog, setChatlog] = useState<{ total: number; records: LogRow[] } | null>(null);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -138,12 +144,17 @@ export function LegalRecords({ api }: { api: string }) {
     }
   };
 
-  const list = async (v = view, p = page, query = q) => {
-    const j = await call({ view: v, q: query, page: p });
-    if (!j) return;
+  // Only the newest list request may fill the table (a slow earlier one mustn't overwrite a search).
+  const latest = useRef(0);
+  const list = async (v = view, p = page, query = q, st = rStatus) => {
+    const mine = ++latest.current;
+    const j = await call({ view: v, q: query, page: p, ...(v === "reports" && st ? { status: st } : {}) });
+    if (!j || mine !== latest.current) return;
     setUnlocked(true);
     if (v === "scans") setScans(j);
-    else setVisits(j);
+    else if (v === "visits") setVisits(j);
+    else if (v === "reports") setReports(j);
+    else setChatlog(j);
   };
 
   const openScan = async (r: ScanRow) => {
@@ -169,7 +180,7 @@ export function LegalRecords({ api }: { api: string }) {
         <h3>
           <Lock size={14} /> Legal records
         </h3>
-        <p className="lg-muted">Scan records (30 days) and visit records (180 days), for lawful requests only. Five wrong passwords lock them for 5 hours.</p>
+        <p className="lg-muted">Scan records (30 days), visit records (180 days), Chat reports (1 year) and Chat records (180 days, never message contents), for lawful requests only. Five wrong passwords lock them for 5 hours.</p>
         <form
           className="lg-row"
           onSubmit={(e) => {
@@ -198,7 +209,7 @@ export function LegalRecords({ api }: { api: string }) {
           <Lock size={14} /> Legal records
         </h3>
         <div className="lg-tabs" role="tablist">
-          {(["scans", "visits"] as const).map((v) => (
+          {(["scans", "visits", "reports", "chatlog"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -209,10 +220,11 @@ export function LegalRecords({ api }: { api: string }) {
                 setView(v);
                 setPage(0);
                 setVisit(null);
+                setReport(null);
                 void list(v, 0);
               }}
             >
-              {v === "scans" ? "Scan records" : "Visit records"}
+              {TAB[v]}
             </button>
           ))}
         </div>
@@ -225,6 +237,9 @@ export function LegalRecords({ api }: { api: string }) {
             setScans(null);
             setVisits(null);
             setVisit(null);
+            setReports(null);
+            setReport(null);
+            setChatlog(null);
           }}
         >
           Lock
@@ -235,10 +250,11 @@ export function LegalRecords({ api }: { api: string }) {
         onSubmit={(e) => {
           e.preventDefault();
           setPage(0);
+          setReport(null);
           void list(view, 0, q);
         }}
       >
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={view === "scans" ? "Email, file name, fingerprint or IP" : "Email, IP, city or visitor id"} aria-label="Search" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={HINT[view]} aria-label="Search" />
         <button type="submit" className="sth-btn" disabled={busy}>
           <Search size={14} /> Search
         </button>
@@ -345,6 +361,28 @@ export function LegalRecords({ api }: { api: string }) {
         </div>
       )}
 
+      {view === "reports" && reports && !report && (
+        <>
+          <ReportsTable
+            rows={reports.reports}
+            q={q}
+            busy={busy}
+            status={rStatus}
+            onStatus={(st) => (setRStatus(st), setPage(0), void list("reports", 0, q, st))}
+            onOpen={(r) => setReport(r.id)}
+          />
+          <Pager total={reports.total} page={page} onPage={(p) => (setPage(p), void list("reports", p))} />
+        </>
+      )}
+      {view === "reports" && report && <ReportDetail id={report} call={call} busy={busy} onBack={() => setReport(null)} onChanged={() => void list("reports", page)} />}
+
+      {view === "chatlog" && chatlog && (
+        <>
+          <ChatLogTable rows={chatlog.records} q={q} />
+          <Pager total={chatlog.total} page={page} onPage={(p) => (setPage(p), void list("chatlog", p))} />
+        </>
+      )}
+
       {visit && (
         <div className="lg-detail">
           <button type="button" className="sth-btn" onClick={() => setVisit(null)}>
@@ -367,6 +405,15 @@ export function LegalRecords({ api }: { api: string }) {
     </section>
   );
 }
+
+type View = "scans" | "visits" | "reports" | "chatlog";
+const TAB: Record<View, string> = { scans: "Scan records", visits: "Visit records", reports: "Chat reports", chatlog: "Chat records" };
+const HINT: Record<View, string> = {
+  scans: "Email, file name, fingerprint or IP",
+  visits: "Email, IP, city or visitor id",
+  reports: "Email, @username, account id or IP",
+  chatlog: "Email, @username, account id, chat id, meeting code or IP",
+};
 
 function Pager({ total, page, onPage }: { total: number; page: number; onPage: (p: number) => void }) {
   const pages = Math.ceil(total / 50);

@@ -68,13 +68,19 @@ export async function POST(req: NextRequest) {
   // legal-records password, which SEMDIV checks (5 wrong tries lock it for 5 hours).
   // The password is passed through in a header and never stored here.
   if (b.action === "legal") {
-    const views = new Set(["scans", "scan", "visits", "visit"]);
+    const pw = typeof b.password === "string" ? b.password.slice(0, 200) : "";
+    // Marking a Chat report reviewed or actioned.
+    if (b.view === "report-status") {
+      const sq = new URLSearchParams({ id: typeof b.id === "string" ? b.id.slice(0, 40) : "", status: typeof b.status === "string" ? b.status : "" });
+      return owner(`/api/owner/legal?${sq}`, "POST", { "x-legal-password": pw });
+    }
+    const views = new Set(["scans", "scan", "visits", "visit", "reports", "report", "chatlog"]);
     const view = typeof b.view === "string" && views.has(b.view) ? b.view : "scans";
     const lq = new URLSearchParams({ view });
     if (typeof b.q === "string" && b.q.trim()) lq.set("q", b.q.trim().slice(0, 120));
     if (typeof b.page === "number" && b.page > 0) lq.set("page", String(Math.floor(b.page)));
     if (typeof b.id === "string" && b.id) lq.set("id", b.id.slice(0, 40));
-    const pw = typeof b.password === "string" ? b.password.slice(0, 200) : "";
+    if (typeof b.status === "string" && ["open", "reviewed", "actioned"].includes(b.status)) lq.set("status", b.status);
     return owner(`/api/owner/legal?${lq}`, "GET", { "x-legal-password": pw });
   }
   const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");

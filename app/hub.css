@@ -1283,3 +1283,21 @@ a.sm-mini { display: inline-flex; align-items: center; text-decoration: none; }
 .lg-steps { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .lg-steps li { display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 10px; }
 .lg-steps time { color: var(--sm-ink3); }
+
+/* Chat reports and Chat records (Legal records) */
+.lg-grow { flex: 1; }
+.lg-h4 { margin: 14px 0 6px; font-size: 13.5px; font-weight: 650; }
+.lg-status { display: inline-block; margin-top: 2px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; text-transform: capitalize; background: color-mix(in srgb, var(--sm-ink3) 14%, transparent); }
+.lg-status.is-open { background: color-mix(in srgb, var(--sm-bad) 16%, transparent); color: var(--sm-bad); }
+.lg-status.is-actioned { background: color-mix(in srgb, #2f9e68 18%, transparent); color: #2f9e68; }
+.lg-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 0; font-size: 13px; }
+.lg-dl dt { color: var(--sm-ink3); }
+.lg-dl dd { margin: 0; overflow-wrap: anywhere; }
+.lg-evidence { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lg-evidence li { padding: 10px 12px; border: 1px solid var(--sm-line); border-radius: 10px; font-size: 13px; }
+.lg-evidence header { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.lg-evidence time { color: var(--sm-ink3); font-size: 12px; }
+.lg-evidence p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lg-evidence small { color: var(--sm-ink3); font-size: 11.5px; overflow-wrap: anywhere; }
+.lg-ok { color: #2f9e68; font-size: 12px; font-weight: 600; }
+@media (max-width: 640px) { .lg-dl { grid-template-columns: 1fr; } .lg-dl dt { margin-top: 6px; } }
