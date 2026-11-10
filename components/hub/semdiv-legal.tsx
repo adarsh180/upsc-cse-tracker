@@ -6,7 +6,8 @@ import { ChatLogTable, ReportDetail, ReportsTable, type LogRow, type ReportRow }
 
 // Saath → SEMDIV: visit summaries (counts only), and Legal records: scan records (PDFs
 // made with Scan in Folio, kept 30 days), visit records (kept 180 days), Chat reports (kept
-// a year) and Chat records (metadata only, kept 180 days), opened with
+// a year), Chat records (metadata only, kept 180 days), and DPDP Security & Consent Ledger
+// (kept 365 days under DPDP Rule 6, with SHA-256 receipt hashes), opened with
 // the separate legal-records password that SEMDIV checks. The password lives only in this
 // component's memory; five wrong tries lock SEMDIV's legal records for five hours.
 
@@ -25,6 +26,31 @@ type Window = { visits: number; visitors: number; signedIn: number; avgMinutes: 
 type ScanRow = { id: string; createdAt: string; expiresAt: string; email: string | null; userId: string | null; visitorId: string | null; name: string; pages: number; bytes: number; mode: string; sha256: string; ip: string | null; place: string | null; device: string | null; hasCopy: boolean; copyBytes?: number | null };
 type VisitRow = { id: string; startedAt: string; lastSeenAt: string; visitorId: string; userId: string | null; email: string | null; ip: string | null; country: string | null; region: string | null; city: string | null; browser: string | null; os: string | null; device: string | null; src: string | null; seconds: number; pages: number };
 type Step = { id: string; path: string; app: string | null; at: string; seconds: number };
+type DpdpRow = {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  userId: string | null;
+  email: string | null;
+  type: string;
+  detail: string | null;
+  ip: string | null;
+  place: string | null;
+  device: string | null;
+  receiptHash: string;
+};
+type DpdpPayload = {
+  total: number;
+  page: number;
+  retentionTiers: {
+    scansDays: number;
+    activityAndVisitsDays: number;
+    securityAndConsentDays: number;
+    statutoryTaxYears: number;
+    counts: { scans: number; visits: number; chatReports: number; securityEvents: number; taxInvoices: number };
+  };
+  records: DpdpRow[];
+};
 
 const APP_NAME: Record<string, string> = { scribe: "Scribe", folio: "Folio", sparkdeck: "Sparkdeck", gridora: "Gridora", pressa: "Pressa", fluxcut: "FluxCut", kosh: "Drive", samay: "Calendar", karya: "Todo", sampark: "Contacts", smriti: "Memo" };
 const n = (v: number) => new Intl.NumberFormat("en-IN").format(v);
@@ -117,6 +143,7 @@ export function LegalRecords({ api }: { api: string }) {
   const [report, setReport] = useState<string | null>(null);
   const [rStatus, setRStatus] = useState("");
   const [chatlog, setChatlog] = useState<{ total: number; records: LogRow[] } | null>(null);
+  const [dpdp, setDpdp] = useState<DpdpPayload | null>(null);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -154,6 +181,7 @@ export function LegalRecords({ api }: { api: string }) {
     if (v === "scans") setScans(j);
     else if (v === "visits") setVisits(j);
     else if (v === "reports") setReports(j);
+    else if (v === "dpdp") setDpdp(j as DpdpPayload);
     else setChatlog(j);
   };
 
@@ -174,13 +202,30 @@ export function LegalRecords({ api }: { api: string }) {
     if (j) setVisit(j.visit);
   };
 
+  const downloadDpdpDossier = () => {
+    if (!dpdp) return;
+    const bundle = JSON.stringify(
+      {
+        kind: "SEMDIV DPDP Act 2023 & Rules 2025 Statutory Compliance Ledger",
+        generatedAt: new Date().toISOString(),
+        query: q || "all",
+        retentionTiers: dpdp.retentionTiers,
+        records: dpdp.records,
+        note: "Each record includes a cryptographic SHA-256 receiptHash computed by SEMDIV Rust Core over (id|userId|type|createdAt|ip|termsVersion).",
+      },
+      null,
+      2,
+    );
+    downloadBlob(bundle, "application/json", `semdiv-dpdp-audit-${new Date().toISOString().slice(0, 10)}.json`);
+  };
+
   if (!unlocked) {
     return (
       <section className="sm-card lg">
         <h3>
           <Lock size={14} /> Legal records
         </h3>
-        <p className="lg-muted">Scan records (30 days), visit records (180 days), Chat reports (1 year) and Chat records (180 days, never message contents), for lawful requests only. Five wrong passwords lock them for 5 hours.</p>
+        <p className="lg-muted">Scan records (30 days), visit records (180 days), Chat reports (1 year), Chat records (180 days, never message contents) and DPDP Security &amp; Consent Ledger (365 days), for lawful requests only. Five wrong passwords lock them for 5 hours.</p>
         <form
           className="lg-row"
           onSubmit={(e) => {
@@ -209,7 +254,7 @@ export function LegalRecords({ api }: { api: string }) {
           <Lock size={14} /> Legal records
         </h3>
         <div className="lg-tabs" role="tablist">
-          {(["scans", "visits", "reports", "chatlog"] as const).map((v) => (
+          {(["scans", "visits", "reports", "chatlog", "dpdp"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -240,6 +285,7 @@ export function LegalRecords({ api }: { api: string }) {
             setReports(null);
             setReport(null);
             setChatlog(null);
+            setDpdp(null);
           }}
         >
           Lock
@@ -258,6 +304,11 @@ export function LegalRecords({ api }: { api: string }) {
         <button type="submit" className="sth-btn" disabled={busy}>
           <Search size={14} /> Search
         </button>
+        {view === "dpdp" && dpdp && (
+          <button type="button" className="sth-btn" onClick={downloadDpdpDossier} disabled={busy}>
+            <Download size={14} /> Download DPDP bundle
+          </button>
+        )}
       </form>
       {err && (
         <p className="sm-alert" role="alert">
@@ -383,6 +434,73 @@ export function LegalRecords({ api }: { api: string }) {
         </>
       )}
 
+      {view === "dpdp" && dpdp && (
+        <div className="lg-table-wrap">
+          <section className="sm-kpis">
+            <div className="sm-kpi">
+              <small>Folio Scans ({dpdp.retentionTiers.scansDays} days)</small>
+              <b>{n(dpdp.retentionTiers.counts.scans)}</b>
+              <span>AES-256-GCM sealed + SHA-256</span>
+            </div>
+            <div className="sm-kpi">
+              <small>Visits &amp; Activity ({dpdp.retentionTiers.activityAndVisitsDays} days)</small>
+              <b>{n(dpdp.retentionTiers.counts.visits)}</b>
+              <span>CERT-In / IT Rules 180-day window</span>
+            </div>
+            <div className="sm-kpi">
+              <small>DPDP Security &amp; Consent ({dpdp.retentionTiers.securityAndConsentDays} days)</small>
+              <b>{n(dpdp.retentionTiers.counts.securityEvents)}</b>
+              <span>DPDP Rule 6 mandatory 1-year log</span>
+            </div>
+            <div className="sm-kpi">
+              <small>Tax Invoices ({dpdp.retentionTiers.statutoryTaxYears} years)</small>
+              <b>{n(dpdp.retentionTiers.counts.taxInvoices)}</b>
+              <span>Income Tax Act Sec 149 retention</span>
+            </div>
+          </section>
+          <table className="lg-table">
+            <thead>
+              <tr>
+                <th>Logged</th>
+                <th>Event</th>
+                <th>Data Principal</th>
+                <th>IP &amp; Device</th>
+                <th>SHA-256 Receipt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dpdp.records.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    {when(r.createdAt)}
+                    <small>kept until {when(r.expiresAt)}</small>
+                  </td>
+                  <td>
+                    <b>{r.type}</b>
+                    {r.detail && <small title={r.detail}>{r.detail.slice(0, 64)}</small>}
+                  </td>
+                  <td>
+                    {r.email ?? "–"}
+                    <small>{r.userId ?? ""}</small>
+                  </td>
+                  <td>
+                    {r.ip ?? "–"}
+                    <small>
+                      {r.place ?? ""} {r.device ? `· ${r.device}` : ""}
+                    </small>
+                  </td>
+                  <td>
+                    <code title={r.receiptHash}>{r.receiptHash.slice(0, 14)}…</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!dpdp.records.length && <p className="lg-muted">No DPDP security or consent records{q ? " match" : " yet"}.</p>}
+          <Pager total={dpdp.total} page={page} onPage={(p) => (setPage(p), void list("dpdp", p))} />
+        </div>
+      )}
+
       {visit && (
         <div className="lg-detail">
           <button type="button" className="sth-btn" onClick={() => setVisit(null)}>
@@ -406,13 +524,20 @@ export function LegalRecords({ api }: { api: string }) {
   );
 }
 
-type View = "scans" | "visits" | "reports" | "chatlog";
-const TAB: Record<View, string> = { scans: "Scan records", visits: "Visit records", reports: "Chat reports", chatlog: "Chat records" };
+type View = "scans" | "visits" | "reports" | "chatlog" | "dpdp";
+const TAB: Record<View, string> = {
+  scans: "Scan records",
+  visits: "Visit records",
+  reports: "Chat reports",
+  chatlog: "Chat records",
+  dpdp: "DPDP & Audit (1 yr)",
+};
 const HINT: Record<View, string> = {
   scans: "Email, file name, fingerprint or IP",
   visits: "Email, IP, city or visitor id",
   reports: "Email, @username, account id or IP",
   chatlog: "Email, @username, account id, chat id, meeting code or IP",
+  dpdp: "Email, @username, account id, event type (terms_accepted, signin…) or IP",
 };
 
 function Pager({ total, page, onPage }: { total: number; page: number; onPage: (p: number) => void }) {

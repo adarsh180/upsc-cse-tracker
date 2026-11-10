@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   if (!actor) return NextResponse.json({ error: "Locked" }, { status: 401 });
   if (actor !== "adarsh") return NextResponse.json({ error: "Only Adarsh can change plans and payments." }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  // Legal records (scan records and visit records): only Adarsh, with the separate
-  // legal-records password, which SEMDIV checks (5 wrong tries lock it for 5 hours).
+  // Legal records (scan records, visit records, chat reports, chatlog, and DPDP 365-day audit ledger):
+  // only Adarsh, with the separate legal-records password, which SEMDIV checks (5 wrong tries lock it for 5 hours).
   // The password is passed through in a header and never stored here.
   if (b.action === "legal") {
     const pw = typeof b.password === "string" ? b.password.slice(0, 200) : "";
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       const sq = new URLSearchParams({ id: typeof b.id === "string" ? b.id.slice(0, 40) : "", status: typeof b.status === "string" ? b.status : "" });
       return owner(`/api/owner/legal?${sq}`, "POST", { "x-legal-password": pw });
     }
-    const views = new Set(["scans", "scan", "visits", "visit", "reports", "report", "chatlog"]);
+    const views = new Set(["scans", "scan", "visits", "visit", "reports", "report", "chatlog", "dpdp"]);
     const view = typeof b.view === "string" && views.has(b.view) ? b.view : "scans";
     const lq = new URLSearchParams({ view });
     if (typeof b.q === "string" && b.q.trim()) lq.set("q", b.q.trim().slice(0, 120));
