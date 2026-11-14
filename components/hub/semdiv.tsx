@@ -19,7 +19,19 @@ type PersonRow = {
   joined: string;
   lastActive: string | null;
   method: "email" | "google" | "both";
-  consent: { version: string | null; declined?: boolean; current: boolean; at: string | null; location: string | null };
+  consent: {
+    version: string | null;
+    status?: "granted" | "revoked" | "pending";
+    declined?: boolean;
+    current: boolean;
+    at: string | null;
+    grantedAt?: string | null;
+    revokedAt?: string | null;
+    location: string | null;
+    isMinor?: boolean;
+    hasGuardian?: boolean;
+    parentEmail?: string | null;
+  };
   place: { city: string | null; region: string | null; country: string | null } | null;
   precise: { lat: number; lon: number; at: string } | null;
   device: { device: string | null; os: string | null; browser: string | null } | null;
@@ -106,6 +118,14 @@ const EVENT_LABEL: Record<string, string> = {
   pro_changed: "Pro changed",
   two_step: "Two-step sign-in",
   terms_declined: "Declined updated terms",
+  consent_granted: "Granted DPDP consent",
+  consent_withdrawn: "Revoked DPDP consent",
+  dpdp_parental_consent: "Parent OTP verified",
+  dpdp_guardian_consent: "Guardian OTP verified",
+  dpdp_nominee_registered: "Nominee registered",
+  dpdp_grievance_filed: "Grievance filed",
+  dpdp_grievance_resolved: "Grievance resolved",
+  dpbi_breach_notified: "DPDP Sec 8(6) notice",
   kosh_removed: "Kosh files removed",
   share_paused: "Share link paused",
 };
@@ -361,7 +381,16 @@ export function HubSemdiv({ api }: { api: string }) {
                           )}
                         </td>
                         <td>
-                          <span className={`sm-tag ${p.consent.current ? "is-ok" : "is-warn"}`}>{p.consent.current ? `v${p.consent.version}` : p.consent.declined ? "Declined update" : "Pending"}</span>
+                          <span className={`sm-tag ${p.consent.current ? "is-ok" : "is-warn"}`}>
+                            {p.consent.current
+                              ? `Granted v${p.consent.version ?? ""}`
+                              : p.consent.status === "revoked" || p.consent.declined
+                                ? "Revoked"
+                                : "Pending"}
+                          </span>
+                          {p.consent.parentEmail && (
+                            <small title="Verified Parent / Guardian">{p.consent.parentEmail}</small>
+                          )}
                         </td>
                       </tr>
                     ))}

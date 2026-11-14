@@ -17,13 +17,24 @@ async function actorFor(req: NextRequest): Promise<Person | null> {
 const ORIGIN = (process.env.SEMDIV_ORIGIN || "https://www.semdiv.com").replace(/\/$/, "");
 
 /** Calls SEMDIV's owner API, signed with the shared OWNER_API_SECRET. */
-async function owner(path: string, method: "GET" | "POST" = "GET", extra: Record<string, string> = {}) {
+async function owner(path: string, method: "GET" | "POST" = "GET", extra: Record<string, string> = {}, jsonBody?: string) {
   const secret = process.env.OWNER_API_SECRET;
   if (!secret) return NextResponse.json({ error: "The SEMDIV link isn't set up: OWNER_API_SECRET is missing on this site." }, { status: 503 });
   const ts = String(Date.now());
   const sig = createHmac("sha256", secret).update(`${ts}.${path}`).digest("hex");
   try {
-    const res = await fetch(ORIGIN + path, { method, headers: { "x-owner-ts": ts, "x-owner-sig": sig, ...extra }, cache: "no-store", signal: AbortSignal.timeout(25000) });
+    const res = await fetch(ORIGIN + path, {
+      method,
+      headers: {
+        "x-owner-ts": ts,
+        "x-owner-sig": sig,
+        ...(jsonBody ? { "Content-Type": "application/json" } : {}),
+        ...extra,
+      },
+      ...(jsonBody ? { body: jsonBody } : {}),
+      cache: "no-store",
+      signal: AbortSignal.timeout(25000),
+    });
     if (res.status === 401) return NextResponse.json({ error: "SEMDIV refused the request — OWNER_API_SECRET differs between SEMDIV and this site." }, { status: 502 });
     return new NextResponse(await res.text(), { status: res.status, headers: { "Content-Type": "application/json" } });
   } catch {
@@ -73,6 +84,11 @@ export async function POST(req: NextRequest) {
     if (b.view === "report-status") {
       const sq = new URLSearchParams({ id: typeof b.id === "string" ? b.id.slice(0, 40) : "", status: typeof b.status === "string" ? b.status : "" });
       return owner(`/api/owner/legal?${sq}`, "POST", { "x-legal-password": pw });
+    }
+    const allowedOps = new Set(["revoke-consent", "erase-account", "resolve-grievance", "resolve-nominee", "broadcast-breach"]);
+    if (typeof b.op === "string" && allowedOps.has(b.op)) {
+      const payload = b.payload && typeof b.payload === "object" && !Array.isArray(b.payload) ? (b.payload as Record<string, unknown>) : {};
+      return owner("/api/owner/legal", "POST", { "x-legal-password": pw }, JSON.stringify({ action: b.op, ...payload }));
     }
     const views = new Set(["scans", "scan", "visits", "visit", "reports", "report", "chatlog", "dpdp"]);
     const view = typeof b.view === "string" && views.has(b.view) ? b.view : "scans";

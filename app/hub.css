@@ -1300,4 +1300,13 @@ a.sm-mini { display: inline-flex; align-items: center; text-decoration: none; }
 .lg-evidence p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .lg-evidence small { color: var(--sm-ink3); font-size: 11.5px; overflow-wrap: anywhere; }
 .lg-ok { color: #2f9e68; font-size: 12px; font-weight: 600; }
+.lg-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.lg-subtabs button { border: 1px solid var(--sm-line); background: var(--sm-sunk, transparent); color: var(--sm-ink3); padding: 4px 10px; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.lg-subtabs button.is-on { background: var(--sm-ink); color: var(--sm-panel); border-color: var(--sm-ink); }
+.lg-panel { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--sm-line); border-radius: 12px; background: var(--sm-sunk, transparent); font-size: 13px; }
+.lg-danger { border-color: color-mix(in srgb, var(--sm-bad) 45%, var(--sm-line)); }
+.lg-btn-bad { height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--sm-bad); color: #fff; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.lg-btn-bad:disabled { opacity: 0.45; cursor: default; }
+.lg-field { display: grid; gap: 4px; font-size: 12px; color: var(--sm-ink2); }
+.lg-field input, .lg-field textarea, .lg-field select { width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--sm-line); background: var(--sm-panel); color: inherit; font: inherit; font-size: 13px; }
 @media (max-width: 640px) { .lg-dl { grid-template-columns: 1fr; } .lg-dl dt { margin-top: 6px; } }
